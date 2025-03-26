@@ -74,7 +74,7 @@ const AudioPlayer = ({
             size="sm"
             onClick={onStop}
           >
-            <Stop size={16} />
+            <Square size={16} />
           </Button>
         </div>
         
