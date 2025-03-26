@@ -1,122 +1,161 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
-import { APP_CONFIG } from '../lib/constants';
+import { useState, useEffect, useRef } from 'react';
 
 export function useQuranAudio(reciterId: string) {
-  const [isPlaying, setIsPlaying] = useState(false);
+  const [audioState, setAudioState] = useState<'idle' | 'playing' | 'paused'>('idle');
+  const [currentAyahIndex, setCurrentAyahIndex] = useState(0);
+  const [ayahQueue, setAyahQueue] = useState<string[]>([]);
   const [progress, setProgress] = useState(0);
   const [duration, setDuration] = useState(0);
-  const [currentAyahIndex, setCurrentAyahIndex] = useState(0);
-  const [ayahIds, setAyahIds] = useState<string[]>([]);
   
   const audioRef = useRef<HTMLAudioElement | null>(null);
-  const intervalRef = useRef<number | null>(null);
+  const progressIntervalRef = useRef<number | null>(null);
   
-  // Initialize audio element
+  // تهيئة عنصر الصوت
   useEffect(() => {
-    audioRef.current = new Audio();
-    
-    // Set up event listeners
-    audioRef.current.addEventListener('timeupdate', updateProgress);
-    audioRef.current.addEventListener('loadedmetadata', updateDuration);
-    audioRef.current.addEventListener('ended', handleAudioEnd);
-    
-    return () => {
-      if (audioRef.current) {
-        audioRef.current.removeEventListener('timeupdate', updateProgress);
-        audioRef.current.removeEventListener('loadedmetadata', updateDuration);
-        audioRef.current.removeEventListener('ended', handleAudioEnd);
-        audioRef.current.pause();
-      }
+    if (typeof window !== 'undefined') {
+      audioRef.current = new Audio();
+      audioRef.current.preload = 'auto';
       
-      if (intervalRef.current) {
-        clearInterval(intervalRef.current);
-      }
-    };
+      // استماع لأحداث الصوت
+      audioRef.current.addEventListener('loadedmetadata', handleLoadedMetadata);
+      audioRef.current.addEventListener('ended', handleEnded);
+      audioRef.current.addEventListener('error', handleError);
+      
+      return () => {
+        if (audioRef.current) {
+          audioRef.current.removeEventListener('loadedmetadata', handleLoadedMetadata);
+          audioRef.current.removeEventListener('ended', handleEnded);
+          audioRef.current.removeEventListener('error', handleError);
+          audioRef.current.pause();
+        }
+        
+        if (progressIntervalRef.current) {
+          clearInterval(progressIntervalRef.current);
+        }
+      };
+    }
   }, []);
   
-  // Update duration when audio is loaded
-  const updateDuration = () => {
+  // عند تحميل بيانات الصوت
+  const handleLoadedMetadata = () => {
     if (audioRef.current) {
       setDuration(audioRef.current.duration);
     }
   };
   
-  // Update progress during playback
-  const updateProgress = () => {
-    if (audioRef.current) {
-      setProgress(audioRef.current.currentTime);
-    }
-  };
-  
-  // Handle audio end event
-  const handleAudioEnd = () => {
-    if (currentAyahIndex < ayahIds.length - 1) {
-      // Play next ayah
-      setCurrentAyahIndex(currentAyahIndex + 1);
+  // عند انتهاء تشغيل الآية
+  const handleEnded = () => {
+    // انتقل إلى الآية التالية
+    if (currentAyahIndex < ayahQueue.length - 1) {
+      setCurrentAyahIndex(prevIndex => prevIndex + 1);
     } else {
-      // End of playlist
-      setIsPlaying(false);
-      setProgress(0);
-      setCurrentAyahIndex(0);
+      // توقف عند انتهاء كل الآيات
+      stopRecitation();
     }
   };
   
-  // Effect to load and play audio when currentAyahIndex changes
+  // معالجة الأخطاء
+  const handleError = (error: Event) => {
+    console.error('Audio playback error:', error);
+    stopRecitation();
+  };
+  
+  // تحديث مسار الصوت عند تغيير الآية أو القارئ
   useEffect(() => {
-    if (ayahIds.length > 0 && isPlaying) {
-      const ayahId = ayahIds[currentAyahIndex];
-      const [surahNumber, ayahNumber] = ayahId.split(':').map(Number);
-      
-      // Construct audio URL
-      const audioUrl = `${APP_CONFIG.audioBaseURL}${reciterId}/${surahNumber}/${ayahNumber}.mp3`;
-      
+    if (audioState === 'playing' && ayahQueue.length > 0 && currentAyahIndex < ayahQueue.length) {
+      const ayahId = ayahQueue[currentAyahIndex];
       if (audioRef.current) {
+        const [surahNumber, ayahNumber] = ayahId.split(':');
+        
+        // تكوين رابط الصوت بناءً على القارئ والسورة والآية
+        const audioUrl = getAudioUrl(reciterId, surahNumber, ayahNumber);
+        
         audioRef.current.src = audioUrl;
         audioRef.current.load();
-        audioRef.current.play().catch((error) => {
-          console.error('Error playing audio:', error);
-          setIsPlaying(false);
-        });
+        audioRef.current.play()
+          .catch(error => {
+            console.error('Failed to play audio:', error);
+          });
       }
     }
-  }, [currentAyahIndex, isPlaying, ayahIds, reciterId]);
+  }, [currentAyahIndex, ayahQueue, reciterId, audioState]);
   
-  // Start recitation
-  const startRecitation = useCallback((newAyahIds: string[]) => {
-    setAyahIds(newAyahIds);
+  // تحديث التقدم
+  useEffect(() => {
+    if (audioState === 'playing') {
+      if (progressIntervalRef.current) {
+        clearInterval(progressIntervalRef.current);
+      }
+      
+      progressIntervalRef.current = window.setInterval(() => {
+        if (audioRef.current) {
+          setProgress(audioRef.current.currentTime);
+        }
+      }, 100);
+    } else {
+      if (progressIntervalRef.current) {
+        clearInterval(progressIntervalRef.current);
+        progressIntervalRef.current = null;
+      }
+    }
+    
+    return () => {
+      if (progressIntervalRef.current) {
+        clearInterval(progressIntervalRef.current);
+      }
+    };
+  }, [audioState]);
+  
+  // بدء التلاوة
+  const startRecitation = (ayahIds: string[]) => {
+    setAyahQueue(ayahIds);
     setCurrentAyahIndex(0);
-    setIsPlaying(true);
-  }, []);
+    setAudioState('playing');
+  };
   
-  // Pause recitation
-  const pauseRecitation = useCallback(() => {
+  // إيقاف التلاوة مؤقتًا
+  const pauseRecitation = () => {
     if (audioRef.current) {
       audioRef.current.pause();
     }
-    setIsPlaying(false);
-  }, []);
+    setAudioState('paused');
+  };
   
-  // Stop recitation
-  const stopRecitation = useCallback(() => {
+  // استئناف التلاوة
+  const resumeRecitation = () => {
+    if (audioRef.current) {
+      audioRef.current.play()
+        .catch(error => {
+          console.error('Failed to resume audio:', error);
+        });
+    }
+    setAudioState('playing');
+  };
+  
+  // إيقاف التلاوة تمامًا
+  const stopRecitation = () => {
     if (audioRef.current) {
       audioRef.current.pause();
       audioRef.current.currentTime = 0;
     }
-    setIsPlaying(false);
     setProgress(0);
+    setAudioState('idle');
     setCurrentAyahIndex(0);
-  }, []);
+  };
+  
+  // الحصول على رابط صوت الآية
+  const getAudioUrl = (reciter: string, surah: string, ayah: string) => {
+    return `https://verses.quran.com/${reciter}/${surah}/${ayah}.mp3`;
+  };
   
   return {
-    audioState: {
-      currentAyahIndex,
-      totalAyahs: ayahIds.length
-    },
-    isPlaying,
+    audioState,
+    currentAyahIndex,
+    isPlaying: audioState === 'playing',
     progress,
     duration,
     startRecitation,
-    pauseRecitation,
-    stopRecitation
+    pauseRecitation: audioState === 'playing' ? pauseRecitation : resumeRecitation,
+    stopRecitation,
   };
 }

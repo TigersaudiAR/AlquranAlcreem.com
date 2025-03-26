@@ -1,4 +1,7 @@
-import { useState, useEffect, useRef } from 'react';
+import React, { useRef, useEffect } from 'react';
+import { Play, Pause, Square } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Slider } from '@/components/ui/slider';
 
 interface AudioPlayerProps {
   isPlaying: boolean;
@@ -17,24 +20,21 @@ const AudioPlayer = ({
   onPause,
   onStop
 }: AudioPlayerProps) => {
-  const [volume, setVolume] = useState(1);
-  const [repeat, setRepeat] = useState(false);
-  const [showVolumeSlider, setShowVolumeSlider] = useState(false);
-  const volumeRef = useRef<HTMLDivElement>(null);
+  const playerRef = useRef<HTMLDivElement>(null);
   
-  // Format time as mm:ss
-  const formatTime = (seconds: number) => {
-    if (isNaN(seconds)) return '0:00';
+  // تنسيق الوقت من ثوانٍ إلى mm:ss
+  const formatTime = (seconds: number): string => {
     const mins = Math.floor(seconds / 60);
     const secs = Math.floor(seconds % 60);
-    return `${mins}:${secs.toString().padStart(2, '0')}`;
+    return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
   };
   
-  // Click outside volume slider to close it
+  // معالجة النقر خارج مشغل الصوت
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (volumeRef.current && !volumeRef.current.contains(event.target as Node)) {
-        setShowVolumeSlider(false);
+      if (playerRef.current && !playerRef.current.contains(event.target as Node)) {
+        // يمكن إضافة منطق هنا إذا كنت ترغب في القيام بشيء عند النقر خارج المشغل
+        // مثل إغلاق مؤثرات أو قوائم
       }
     };
     
@@ -45,86 +45,54 @@ const AudioPlayer = ({
   }, []);
   
   return (
-    <div className="flex items-center justify-between bg-gray-200 dark:bg-gray-800 p-3 rounded-lg mt-4">
-      <div className="flex items-center gap-2">
-        {!isPlaying ? (
-          <button 
-            className="p-2 rounded-full bg-primary text-white hover:bg-opacity-90"
-            onClick={onPlay}
-          >
-            <i className="fas fa-play"></i>
-          </button>
-        ) : (
-          <button 
-            className="p-2 rounded-full bg-gray-300 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-400 dark:hover:bg-gray-600"
-            onClick={onPause}
-          >
-            <i className="fas fa-pause"></i>
-          </button>
-        )}
-        <button 
-          className="p-2 rounded-full bg-gray-300 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-400 dark:hover:bg-gray-600"
-          onClick={onStop}
-        >
-          <i className="fas fa-stop"></i>
-        </button>
-      </div>
-      
-      <div className="flex-1 mx-4">
-        <div className="relative">
-          <div className="h-2 bg-gray-300 dark:bg-gray-600 rounded-full overflow-hidden">
-            <div 
-              className="h-full bg-primary" 
-              style={{ width: `${(progress / duration) * 100 || 0}%` }}
-            ></div>
-          </div>
-          <div 
-            className="absolute -top-1 right-0 w-4 h-4 bg-primary rounded-full shadow" 
-            style={{ right: `${(progress / duration) * 100 || 0}%`, transform: 'translateX(50%)' }}
-          ></div>
-        </div>
-        <div className="flex justify-between mt-1 text-xs text-gray-600 dark:text-gray-400">
-          <span>{formatTime(progress)}</span>
-          <span>{formatTime(duration)}</span>
-        </div>
-      </div>
-      
-      <div className="flex items-center gap-2">
-        <div className="relative" ref={volumeRef}>
-          <button 
-            className="p-2 rounded-full bg-gray-300 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-400 dark:hover:bg-gray-600"
-            onClick={() => setShowVolumeSlider(!showVolumeSlider)}
-          >
-            {volume > 0.5 ? (
-              <i className="fas fa-volume-high"></i>
-            ) : volume > 0 ? (
-              <i className="fas fa-volume-low"></i>
-            ) : (
-              <i className="fas fa-volume-xmark"></i>
-            )}
-          </button>
-          
-          {showVolumeSlider && (
-            <div className="absolute bottom-full right-0 mb-2 p-2 bg-white dark:bg-gray-700 rounded-lg shadow-lg">
-              <input 
-                type="range" 
-                min="0" 
-                max="1" 
-                step="0.01" 
-                value={volume} 
-                onChange={(e) => setVolume(parseFloat(e.target.value))}
-                className="w-24"
-              />
-            </div>
+    <div 
+      ref={playerRef}
+      className="fixed bottom-0 left-0 right-0 bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-800 shadow-md p-3 z-50"
+    >
+      <div className="flex items-center justify-between max-w-7xl mx-auto">
+        <div className="flex gap-2">
+          {isPlaying ? (
+            <Button 
+              className="bg-amber-600 hover:bg-amber-700 text-white"
+              size="sm"
+              onClick={onPause}
+            >
+              <Pause size={16} />
+            </Button>
+          ) : (
+            <Button 
+              className="bg-amber-600 hover:bg-amber-700 text-white"
+              size="sm"
+              onClick={onPlay}
+            >
+              <Play size={16} />
+            </Button>
           )}
+          
+          <Button 
+            className="bg-gray-600 hover:bg-gray-700 text-white"
+            size="sm"
+            onClick={onStop}
+          >
+            <Stop size={16} />
+          </Button>
         </div>
         
-        <button 
-          className={`p-2 rounded-full ${repeat ? 'bg-primary text-white' : 'bg-gray-300 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-400 dark:hover:bg-gray-600'}`}
-          onClick={() => setRepeat(!repeat)}
-        >
-          <i className="fas fa-repeat"></i>
-        </button>
+        <div className="flex-1 mx-4">
+          <Slider
+            defaultValue={[0]}
+            value={[progress]} 
+            max={duration || 100}
+            step={0.1}
+            disabled // لتلاوة القرآن، نجعل شريط التقدم معروضًا فقط ولا يمكن التفاعل معه
+          />
+        </div>
+        
+        <div className="text-sm">
+          <span className="text-gray-700 dark:text-gray-300">
+            {formatTime(progress)} / {formatTime(duration || 0)}
+          </span>
+        </div>
       </div>
     </div>
   );

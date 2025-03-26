@@ -1,3 +1,7 @@
+import React from 'react';
+import { Button } from '@/components/ui/button';
+import { AlertCircle } from 'lucide-react';
+
 interface ErrorDisplayProps {
   error: string;
   onRetry?: () => void;
@@ -5,19 +9,21 @@ interface ErrorDisplayProps {
 }
 
 const ErrorDisplay = ({ error, onRetry, retryText = "إعادة المحاولة" }: ErrorDisplayProps) => (
-  <div className="bg-red-100 dark:bg-red-900 p-6 rounded-lg text-center">
-    <div className="w-12 h-12 text-red-600 dark:text-red-400 mx-auto mb-3">
-      <i className="fas fa-triangle-exclamation text-4xl"></i>
+  <div className="flex flex-col items-center justify-center p-8 rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800">
+    <div className="text-red-500 dark:text-red-400 mb-2">
+      <AlertCircle size={40} />
     </div>
-    <div className="text-red-600 dark:text-red-400 font-bold text-lg mb-2">حدث خطأ!</div>
-    <div className="text-red-700 dark:text-red-300 mb-4">{error}</div>
+    <h3 className="text-lg font-medium text-red-800 dark:text-red-300 mb-2">حدث خطأ</h3>
+    <p className="text-sm text-red-600 dark:text-red-400 text-center mb-4">{error}</p>
+    
     {onRetry && (
-      <button 
+      <Button 
+        variant="default" 
         onClick={onRetry}
-        className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg"
+        className="bg-red-600 hover:bg-red-700 text-white"
       >
         {retryText}
-      </button>
+      </Button>
     )}
   </div>
 );
