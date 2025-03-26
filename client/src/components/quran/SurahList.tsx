@@ -47,30 +47,30 @@ interface SurahCardProps {
 
 function SurahCard({ surah, fontFamily, fontSize }: SurahCardProps) {
   return (
-    <Link href={`/quran/surah/${surah.number}`}>
-      <a className="block bg-gray-50 dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 rounded-lg p-4 transition duration-150 ease-in-out">
-        <div className="flex justify-between items-center mb-2">
-          <div className="flex items-center">
-            <div className="bg-primary-600 text-white w-8 h-8 flex items-center justify-center rounded-full ml-2">
-              {surah.number}
-            </div>
-            <div>
-              <h3 className="font-bold text-lg">{surah.name}</h3>
-              <p className="text-sm text-gray-600 dark:text-gray-300">{surah.englishName}</p>
-            </div>
+    <div 
+      onClick={() => window.location.href = `/quran/surah/${surah.number}`}
+      className="block bg-gray-50 dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 rounded-lg p-4 transition duration-150 ease-in-out cursor-pointer">
+      <div className="flex justify-between items-center mb-2">
+        <div className="flex items-center">
+          <div className="bg-primary-600 text-white w-8 h-8 flex items-center justify-center rounded-full ml-2">
+            {surah.number}
           </div>
-          <div className="text-gray-500 dark:text-gray-400 text-sm">
-            {surah.revelationType === 'Meccan' ? 'مكية' : 'مدنية'}
+          <div>
+            <h3 className="font-bold text-lg">{surah.name}</h3>
+            <p className="text-sm text-gray-600 dark:text-gray-300">{surah.englishName}</p>
           </div>
         </div>
-        <div className="mt-4 text-center" style={{ fontFamily: fontFamily, fontSize: `${fontSize}px` }}>
-          {surah.number !== 1 && surah.number !== 9 ? 'بِسْمِ اللَّهِ الرَّحْمَنِ الرَّحِيمِ' : ''}
+        <div className="text-gray-500 dark:text-gray-400 text-sm">
+          {surah.revelationType === 'Meccan' ? 'مكية' : 'مدنية'}
         </div>
-        <div className="mt-2 text-sm text-gray-600 dark:text-gray-300 flex justify-between">
-          <span>عدد الآيات: {surah.numberOfAyahs}</span>
-          <span>الصفحة: {/* صفحة غير متاحة حاليًا */}</span>
-        </div>
-      </a>
-    </Link>
+      </div>
+      <div className="mt-4 text-center" style={{ fontFamily: fontFamily, fontSize: `${fontSize}px` }}>
+        {surah.number !== 1 && surah.number !== 9 ? 'بِسْمِ اللَّهِ الرَّحْمَنِ الرَّحِيمِ' : ''}
+      </div>
+      <div className="mt-2 text-sm text-gray-600 dark:text-gray-300 flex justify-between">
+        <span>عدد الآيات: {surah.numberOfAyahs || '-'}</span>
+        <span>الصفحة: {(surah as any).page || surah.number}</span>
+      </div>
+    </div>
   );
 }

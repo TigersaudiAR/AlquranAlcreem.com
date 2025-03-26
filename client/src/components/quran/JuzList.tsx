@@ -119,42 +119,42 @@ function JuzCard({ juzNumber, juzInfo, fontFamily, fontSize }: JuzCardProps) {
   const firstSurah = juzInfo[0];
   
   return (
-    <Link href={`/quran/juz/${juzNumber}`}>
-      <a className="block bg-gray-50 dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 rounded-lg p-4 transition duration-150 ease-in-out">
-        <div className="flex justify-between items-center mb-2">
-          <div className="flex items-center">
-            <div className="bg-primary-600 text-white w-8 h-8 flex items-center justify-center rounded-full ml-2">
-              {juzNumber}
-            </div>
-            <div>
-              <h3 className="font-bold text-lg">الجزء {juzNumber}</h3>
-              {firstSurah && (
-                <p className="text-sm text-gray-600 dark:text-gray-300">
-                  يبدأ من سورة {firstSurah.surahName}
-                </p>
-              )}
-            </div>
+    <div 
+      onClick={() => window.location.href = `/quran/juz/${juzNumber}`}
+      className="block bg-gray-50 dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 rounded-lg p-4 transition duration-150 ease-in-out cursor-pointer">
+      <div className="flex justify-between items-center mb-2">
+        <div className="flex items-center">
+          <div className="bg-primary-600 text-white w-8 h-8 flex items-center justify-center rounded-full ml-2">
+            {juzNumber}
+          </div>
+          <div>
+            <h3 className="font-bold text-lg">الجزء {juzNumber}</h3>
+            {firstSurah && (
+              <p className="text-sm text-gray-600 dark:text-gray-300">
+                يبدأ من سورة {firstSurah.surahName}
+              </p>
+            )}
           </div>
         </div>
-        
-        <div className="mt-2 text-center" style={{ fontFamily: fontFamily, fontSize: `${fontSize}px` }}>
-          {firstSurah && (
-            <span>الجزء {juzNumber}</span>
-          )}
-        </div>
-        
-        <div className="mt-4 text-sm text-gray-600 dark:text-gray-300">
-          {juzInfo.length > 0 && (
-            <ul className="divide-y divide-gray-200 dark:divide-gray-600">
-              {juzInfo.map((info) => (
-                <li key={info.surahNumber} className="py-1">
-                  سورة {info.surahName}: من الآية {info.firstAyah} إلى الآية {info.lastAyah}
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
-      </a>
-    </Link>
+      </div>
+      
+      <div className="mt-2 text-center" style={{ fontFamily: fontFamily, fontSize: `${fontSize}px` }}>
+        {firstSurah && (
+          <span>الجزء {juzNumber}</span>
+        )}
+      </div>
+      
+      <div className="mt-4 text-sm text-gray-600 dark:text-gray-300">
+        {juzInfo.length > 0 && (
+          <ul className="divide-y divide-gray-200 dark:divide-gray-600">
+            {juzInfo.map((info) => (
+              <li key={info.surahNumber} className="py-1">
+                سورة {info.surahName}: من الآية {info.firstAyah} إلى الآية {info.lastAyah}
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+    </div>
   );
 }
