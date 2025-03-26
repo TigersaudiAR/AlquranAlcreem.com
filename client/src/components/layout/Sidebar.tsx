@@ -4,7 +4,7 @@ import { APP_CONFIG } from '../../lib/constants';
 
 const Sidebar = () => {
   const [location, setLocation] = useLocation();
-  const { toggleTheme, theme } = useTheme();
+  const { toggleTheme, theme, setTheme } = useTheme();
   
   const navItems = [
     { path: '/', icon: 'fas fa-home', label: 'الرئيسية' },
@@ -24,18 +24,37 @@ const Sidebar = () => {
     return false;
   };
   
+  const handleThemeToggle = () => {
+    const newTheme = theme === 'light' ? 'dark' : 'light';
+    console.log(`Changing theme from ${theme} to ${newTheme}`);
+    setTheme(newTheme);
+    
+    // إضافة تغيير وضع الألوان على مستوى HTML أيضًا للتأكد من التطبيق الصحيح
+    if (newTheme === 'dark') {
+      document.documentElement.classList.add('dark');
+      document.documentElement.style.colorScheme = 'dark';
+    } else {
+      document.documentElement.classList.remove('dark');
+      document.documentElement.style.colorScheme = 'light';
+    }
+    
+    // حفظ الإعداد في التخزين المحلي
+    localStorage.setItem('quranAppTheme', newTheme);
+  };
+  
   return (
     <aside className="hidden md:flex flex-col w-64 bg-white dark:bg-gray-800 shadow-lg z-10">
       <div className="p-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
         <h1 className="text-xl font-bold text-primary">القرآن التعليمي</h1>
         <button 
-          className="rounded-full p-1 hover:bg-gray-200 dark:hover:bg-gray-700" 
-          onClick={toggleTheme}
+          className="rounded-full p-2 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300" 
+          onClick={handleThemeToggle}
+          aria-label={theme === 'dark' ? 'تفعيل الوضع الفاتح' : 'تفعيل الوضع الداكن'}
         >
           {theme === 'dark' ? (
-            <i className="fas fa-sun text-gray-300"></i>
+            <i className="fas fa-sun"></i>
           ) : (
-            <i className="fas fa-moon text-gray-600"></i>
+            <i className="fas fa-moon"></i>
           )}
         </button>
       </div>
@@ -53,7 +72,7 @@ const Sidebar = () => {
                   }}
                   className={`flex items-center p-3 rounded-lg ${
                     isActive(item.path) 
-                      ? 'bg-gray-200 dark:bg-gray-700 font-medium text-gray-800 dark:text-gray-200' 
+                      ? 'bg-primary bg-opacity-10 text-primary font-medium dark:bg-primary dark:bg-opacity-20 dark:text-primary-foreground' 
                       : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
                   }`}
                 >

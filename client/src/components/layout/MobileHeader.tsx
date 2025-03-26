@@ -5,7 +5,7 @@ import { useTheme } from '../../context/ThemeContext';
 const MobileHeader = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [location, setLocation] = useLocation();
-  const { toggleTheme, theme } = useTheme();
+  const { theme, setTheme } = useTheme();
   
   const navItems = [
     { path: '/', icon: 'fas fa-home', label: 'الرئيسية' },
@@ -34,6 +34,24 @@ const MobileHeader = () => {
     setIsMenuOpen(false);
   };
   
+  const handleThemeToggle = () => {
+    const newTheme = theme === 'light' ? 'dark' : 'light';
+    console.log(`Mobile: Changing theme from ${theme} to ${newTheme}`);
+    setTheme(newTheme);
+    
+    // إضافة تغيير وضع الألوان على مستوى HTML أيضًا للتأكد من التطبيق الصحيح
+    if (newTheme === 'dark') {
+      document.documentElement.classList.add('dark');
+      document.documentElement.style.colorScheme = 'dark';
+    } else {
+      document.documentElement.classList.remove('dark');
+      document.documentElement.style.colorScheme = 'light';
+    }
+    
+    // حفظ الإعداد في التخزين المحلي
+    localStorage.setItem('quranAppTheme', newTheme);
+  };
+  
   return (
     <>
       <div className="md:hidden fixed top-0 left-0 right-0 bg-white dark:bg-gray-800 shadow-md z-20 p-3 flex items-center justify-between">
@@ -42,13 +60,14 @@ const MobileHeader = () => {
         </button>
         <h1 className="text-lg font-bold text-primary">القرآن التعليمي</h1>
         <button 
-          className="rounded-full p-1 hover:bg-gray-200 dark:hover:bg-gray-700" 
-          onClick={toggleTheme}
+          className="rounded-full p-2 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300" 
+          onClick={handleThemeToggle}
+          aria-label={theme === 'dark' ? 'تفعيل الوضع الفاتح' : 'تفعيل الوضع الداكن'}
         >
           {theme === 'dark' ? (
-            <i className="fas fa-sun text-gray-300"></i>
+            <i className="fas fa-sun"></i>
           ) : (
-            <i className="fas fa-moon text-gray-600"></i>
+            <i className="fas fa-moon"></i>
           )}
         </button>
       </div>
@@ -64,6 +83,22 @@ const MobileHeader = () => {
               </button>
             </div>
             
+            <div className="p-3 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
+              <span className="text-gray-700 dark:text-gray-300">
+                {theme === 'dark' ? 'الوضع الداكن' : 'الوضع الفاتح'}
+              </span>
+              <button 
+                className="rounded-full p-2 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300" 
+                onClick={handleThemeToggle}
+              >
+                {theme === 'dark' ? (
+                  <i className="fas fa-sun"></i>
+                ) : (
+                  <i className="fas fa-moon"></i>
+                )}
+              </button>
+            </div>
+            
             <nav className="p-2">
               <ul>
                 {navItems.map((item) => (
@@ -76,7 +111,7 @@ const MobileHeader = () => {
                       }}
                       className={`flex items-center p-3 rounded-lg ${
                         isActive(item.path) 
-                          ? 'bg-gray-200 dark:bg-gray-700 font-medium text-gray-800 dark:text-gray-200' 
+                          ? 'bg-primary bg-opacity-10 text-primary font-medium dark:bg-primary dark:bg-opacity-20 dark:text-primary-foreground' 
                           : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
                       }`}
                     >

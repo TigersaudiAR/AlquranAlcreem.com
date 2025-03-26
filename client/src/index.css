@@ -13,8 +13,11 @@
   }
 
   .arabic-text {
-    font-family: 'Amiri', 'Scheherazade New', serif;
-    line-height: 1.8;
+    font-family: 'Amiri Quran', 'Amiri', 'Scheherazade New', serif;
+    line-height: 2.2;
+    letter-spacing: 0.3px;
+    text-align: justify;
+    text-align-last: center;
   }
   
   /* Custom scrollbar */
@@ -55,6 +58,66 @@
     border-color: #444;
   }
   
+  /* Quran text styling */
+  .quran-text {
+    text-align: justify;
+    text-align-last: center;
+    word-spacing: 0.3em;
+    line-height: 2.5;
+    position: relative;
+    direction: rtl;
+  }
+  
+  .ayah-container {
+    position: relative;
+    display: inline;
+    margin: 0 2px;
+  }
+  
+  .ayah-text {
+    color: inherit;
+  }
+  
+  /* Add special styling for the ending of pages */
+  .ayah-text:last-child {
+    margin-bottom: 1em;
+  }
+  
+  /* Add verse number styling */
+  .ayah-number {
+    font-size: 0.7em;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.5em;
+    height: 1.5em;
+    border-radius: 50%;
+    margin: 0 0.2em;
+    position: relative;
+    top: -0.5em;
+    color: var(--primary);
+    background-color: rgba(var(--primary-rgb), 0.1);
+  }
+  
+  /* Sura header styling */
+  .sura-header {
+    text-align: center;
+    margin: 1em 0;
+    padding: 1em;
+    background-image: url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyMCIgaGVpZ2h0PSIyMCI+CjxwYXRoIGQ9Ik0gMCwxMCBBIDEwLDEwIDAgMSAwIDIwLDEwIEEgMTAsMTAgMCAxIDAgMCwxMCBaIiBmaWxsPSJub25lIiBzdHJva2U9InJnYmEoOTMsOTMsMjIyLDAuMykiIHN0cm9rZS13aWR0aD0iMSI+PC9wYXRoPgo8L3N2Zz4=');
+    background-repeat: no-repeat;
+    background-position: center;
+    background-size: 90% 90%;
+  }
+  
+  /* Bismillah styling */
+  .bismillah {
+    text-align: center;
+    margin: 0.5em 0 1em;
+    font-size: 1.2em;
+    color: rgba(var(--primary-rgb), 0.8);
+  }
+  
   /* Mushaf view frame */
   .mushaf-frame {
     background-color: #8B5A2B;
@@ -62,13 +125,41 @@
     background-size: 10px 10px;
     padding: 10px;
     border-radius: 8px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
   }
   
   .dark .mushaf-frame {
     background-color: #3D2914;
     background-image: linear-gradient(45deg, #3D2914 25%, #53381D 25%, #53381D 50%, #3D2914 50%, #3D2914 75%, #53381D 75%, #53381D 100%);
   }
-
+  
+  /* Page navigation */
+  .page-navigation {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 1em;
+    padding: 0.5em;
+  }
+  
+  .page-button {
+    padding: 0.5em 1em;
+    border-radius: 0.25em;
+    background-color: var(--primary);
+    color: white;
+    cursor: pointer;
+    border: none;
+    transition: background-color 0.2s;
+  }
+  
+  .page-button:hover {
+    background-color: rgba(var(--primary-rgb), 0.8);
+  }
+  
+  .page-button:disabled {
+    background-color: #ccc;
+    cursor: not-allowed;
+  }
+  
   /* Prayer time display animation */
   @keyframes prayerPulse {
     0% { transform: scale(1); }
