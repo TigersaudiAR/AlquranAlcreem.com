@@ -1,153 +1,111 @@
-import { useState, useEffect } from 'react';
-import { useLocation, useSearch } from 'wouter';
-import QuranNavigation from '../components/quran/QuranNavigation';
-import QuranReader from '../components/quran/QuranReader';
-import BookmarkAndShare from '../components/quran/BookmarkAndShare';
+import { useEffect, useState } from 'react';
 import SurahList from '../components/quran/SurahList';
 import JuzList from '../components/quran/JuzList';
-import { RECITERS, LANGUAGES } from '../lib/constants';
+import QuranNavigation from '../components/quran/QuranNavigation';
+import BookmarkAndShare from '../components/quran/BookmarkAndShare';
+import AudioPlayer from '../components/quran/AudioPlayer';
+import LoadingSpinner from '../components/common/LoadingSpinner';
+import ErrorDisplay from '../components/common/ErrorDisplay';
 import { useQuranData } from '../hooks/useQuranData';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
-const Quran = () => {
-  const [viewMode, setViewMode] = useState<'page' | 'surah' | 'juz'>('page');
-  const [pageNumber, setPageNumber] = useState(1);
-  const [surahNumber, setSurahNumber] = useState<number | undefined>(undefined);
-  const [juzNumber, setJuzNumber] = useState<number | undefined>(undefined);
-  const [reciterId, setReciterId] = useState(RECITERS[0].id);
-  const [translationId, setTranslationId] = useState(LANGUAGES[0].translation);
-  const [fontSize, setFontSize] = useState(3); // 1-7 scale
-  const { lastRead, updateLastRead } = useQuranData();
-  const search = useSearch();
-  
-  // Parse URL search params
+export default function Quran() {
+  const [viewMode, setViewMode] = useState<'surah' | 'juz'>('surah');
+  const { quranData, isLoading, error } = useQuranData();
+  const [fontFamily, setFontFamily] = useState<string>('UthmanicHafs');
+  const [fontSize, setFontSize] = useState<number>(24);
+
   useEffect(() => {
-    const params = new URLSearchParams(search);
-    const page = params.get('page');
-    const surah = params.get('surah');
-    const juz = params.get('juz');
-    const view = params.get('view') as 'page' | 'surah' | 'juz' | null;
-    
-    if (page) {
-      setPageNumber(parseInt(page));
-    } else if (lastRead) {
-      setPageNumber(lastRead.pageNumber);
-    }
-    
-    if (surah) {
-      setSurahNumber(parseInt(surah));
-    }
-    
-    if (juz) {
-      setJuzNumber(parseInt(juz));
-    }
-    
-    if (view && ['page', 'surah', 'juz'].includes(view)) {
-      setViewMode(view);
-    }
-  }, [search, lastRead]);
-  
-  const handlePageChange = (page: number) => {
-    setPageNumber(page);
-    
-    // Update URL
-    const params = new URLSearchParams(search);
-    params.set('page', page.toString());
-    
-    if (viewMode !== 'page') {
-      params.set('view', 'page');
-      setViewMode('page');
-    }
-    
-    window.history.pushState({}, '', `?${params.toString()}`);
-  };
-  
-  const handleSearch = (query: string) => {
-    if (!query) return;
-    
-    // In a real app, this would perform a search against the Quran API
-    console.log(`Searching for: ${query}`);
-    
-    // For now, just show a message
-    alert(`البحث عن: ${query}`);
-  };
-  
-  const handleSelectSurah = (selectedSurahNumber: number) => {
-    setSurahNumber(selectedSurahNumber);
-    setViewMode('surah');
-    
-    // Update URL
-    const params = new URLSearchParams(search);
-    params.set('surah', selectedSurahNumber.toString());
-    params.set('view', 'surah');
-    window.history.pushState({}, '', `?${params.toString()}`);
-  };
-  
-  const handleSelectJuz = (selectedJuzNumber: number) => {
-    setJuzNumber(selectedJuzNumber);
-    setViewMode('juz');
-    
-    // Update URL
-    const params = new URLSearchParams(search);
-    params.set('juz', selectedJuzNumber.toString());
-    params.set('view', 'juz');
-    window.history.pushState({}, '', `?${params.toString()}`);
-  };
-  
+    document.title = 'القرآن الكريم | مجمع الملك فهد لطباعة المصحف الشريف';
+  }, []);
+
+  if (isLoading) {
+    return <LoadingSpinner />;
+  }
+
+  if (error || !quranData) {
+    return <ErrorDisplay message="حدث خطأ أثناء تحميل بيانات القرآن" />;
+  }
+
   return (
-    <section className="p-4 md:p-6 max-w-7xl mx-auto">
-      <div className="mb-6">
-        <h2 className="text-2xl font-bold mb-4">القرآن الكريم</h2>
-        
-        <Tabs defaultValue="reader" className="mb-6">
-          <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="reader">القارئ</TabsTrigger>
-            <TabsTrigger value="surahs">السور</TabsTrigger>
-            <TabsTrigger value="juzs">الأجزاء</TabsTrigger>
-          </TabsList>
-          
-          <TabsContent value="reader">
-            <QuranNavigation 
-              viewMode={viewMode}
-              setViewMode={setViewMode}
-              reciter={reciterId}
-              setReciter={setReciterId}
-              translation={translationId}
-              setTranslation={setTranslationId}
-              fontSize={fontSize}
-              setFontSize={setFontSize}
-              onSearch={handleSearch}
-            />
-            
-            <QuranReader 
-              fontSize={fontSize}
-              pageNumber={pageNumber}
-              surahNumber={surahNumber}
-              juzNumber={juzNumber}
-              viewMode={viewMode}
-              reciter={reciterId}
-              translation={translationId}
-              onPageChange={handlePageChange}
-            />
-            
-            <BookmarkAndShare 
-              pageNumber={pageNumber}
-              surahNumber={surahNumber}
-              ayahNumber={1} // This would be set based on the current visible ayah
-            />
-          </TabsContent>
-          
-          <TabsContent value="surahs">
-            <SurahList onSelectSurah={handleSelectSurah} currentSurah={surahNumber} />
-          </TabsContent>
-          
-          <TabsContent value="juzs">
-            <JuzList onSelectJuz={handleSelectJuz} currentJuz={juzNumber} />
-          </TabsContent>
-        </Tabs>
+    <section className="container mx-auto px-4 py-6">
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md overflow-hidden">
+        <div className="p-4 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center">
+          <h1 className="text-2xl font-bold text-primary-600 dark:text-primary-400 font-amiri">
+            القرآن الكريم
+          </h1>
+          <div className="flex space-x-2 rtl:space-x-reverse">
+            <button
+              onClick={() => setViewMode('surah')}
+              className={`px-3 py-1 rounded ${
+                viewMode === 'surah'
+                  ? 'bg-primary-600 text-white'
+                  : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300'
+              }`}
+            >
+              السور
+            </button>
+            <button
+              onClick={() => setViewMode('juz')}
+              className={`px-3 py-1 rounded ${
+                viewMode === 'juz'
+                  ? 'bg-primary-600 text-white'
+                  : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300'
+              }`}
+            >
+              الأجزاء
+            </button>
+          </div>
+        </div>
+
+        <div className="p-4 border-b border-gray-200 dark:border-gray-700 flex flex-wrap items-center justify-between gap-2">
+          <QuranNavigation />
+
+          <div className="flex items-center gap-4">
+            <div className="flex items-center">
+              <label htmlFor="font-size" className="ml-2 text-sm">حجم الخط:</label>
+              <select
+                id="font-size"
+                value={fontSize}
+                onChange={(e) => setFontSize(Number(e.target.value))}
+                className="border border-gray-300 dark:border-gray-600 rounded p-1 text-sm"
+              >
+                {[18, 20, 22, 24, 26, 28, 30, 32].map(size => (
+                  <option key={size} value={size}>{size}</option>
+                ))}
+              </select>
+            </div>
+
+            <div className="flex items-center">
+              <label htmlFor="font-family" className="ml-2 text-sm">نوع الخط:</label>
+              <select
+                id="font-family"
+                value={fontFamily}
+                onChange={(e) => setFontFamily(e.target.value)}
+                className="border border-gray-300 dark:border-gray-600 rounded p-1 text-sm"
+              >
+                <option value="UthmanicHafs">خط الرسم العثماني (حفص)</option>
+                <option value="UthmanTN1B">عثمان طه</option>
+                <option value="Amiri Quran">أميري قرآن</option>
+                <option value="Scheherazade New">شهرزاد</option>
+              </select>
+            </div>
+
+            <BookmarkAndShare />
+          </div>
+        </div>
+
+        <div className="p-4">
+          {viewMode === 'surah' ? (
+            <SurahList quranData={quranData} fontFamily={fontFamily} fontSize={fontSize} />
+          ) : (
+            <JuzList quranData={quranData} fontFamily={fontFamily} fontSize={fontSize} />
+          )}
+        </div>
+
+        <div className="p-4 border-t border-gray-200 dark:border-gray-700">
+          <AudioPlayer />
+        </div>
       </div>
     </section>
   );
-};
-
-export default Quran;
+}
