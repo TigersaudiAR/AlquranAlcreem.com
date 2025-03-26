@@ -70,7 +70,13 @@ function SurahCard({ surah, fontFamily, fontSize }: SurahCardProps) {
           {surah.revelationType === 'Meccan' ? 'مكية' : 'مدنية'}
         </div>
       </div>
-      <div className="mt-4 text-center" style={{ fontFamily: fontFamily, fontSize: `${fontSize}px` }}>
+      <div className="mt-4 text-center" style={{ 
+        fontFamily: 'HafsSmart, Hafs, UthmanicHafs, serif', 
+        fontSize: `${fontSize}px`,
+        color: '#705C3B',
+        letterSpacing: '0.02em',
+        lineHeight: '1.8'
+      }}>
         {surah.number !== 1 && surah.number !== 9 ? 'بِسْمِ اللَّهِ الرَّحْمَنِ الرَّحِيمِ' : ''}
       </div>
       <div className="mt-2 text-sm text-gray-600 dark:text-gray-300 flex justify-between">

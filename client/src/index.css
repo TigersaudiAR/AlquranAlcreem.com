@@ -5,9 +5,18 @@
 /* تعريف خط حفص سمارت من مجمع الملك فهد */
 @font-face {
   font-family: 'HafsSmart';
-  src: url('/fonts/kfgqpc_hafs_smart_font/HafsSmart_08.ttf') format('truetype');
+  src: url('@assets/kfgqpc_hafs_smart_4/KFGQPC_Hafs_Smart_Regular.ttf') format('truetype');
   font-weight: normal;
   font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'HafsSmart';
+  src: url('@assets/kfgqpc_hafs_smart_4/KFGQPC_Hafs_Smart_Bold.ttf') format('truetype');
+  font-weight: bold;
+  font-style: normal;
+  font-display: swap;
 }
 
 /* نمط عام للنص العربي */

@@ -138,9 +138,15 @@ function JuzCard({ juzNumber, juzInfo, fontFamily, fontSize }: JuzCardProps) {
         </div>
       </div>
       
-      <div className="mt-2 text-center" style={{ fontFamily: fontFamily, fontSize: `${fontSize}px` }}>
+      <div className="mt-2 text-center" style={{ 
+        fontFamily: 'HafsSmart, Hafs, UthmanicHafs, serif', 
+        fontSize: `${fontSize}px`,
+        color: '#705C3B',
+        letterSpacing: '0.02em',
+        lineHeight: '1.8'
+      }}>
         {firstSurah && (
-          <span className="arabic-text">الجزء {juzNumber}</span>
+          <span>الجزء {juzNumber}</span>
         )}
       </div>
       
