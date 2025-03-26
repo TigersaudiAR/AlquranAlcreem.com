@@ -1,0 +1,87 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply font-sans antialiased bg-background text-foreground;
+    font-family: 'Tajawal', sans-serif;
+  }
+
+  .arabic-text {
+    font-family: 'Amiri', 'Scheherazade New', serif;
+    line-height: 1.8;
+  }
+  
+  /* Custom scrollbar */
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  
+  ::-webkit-scrollbar-track {
+    background: #f1f1f1;
+  }
+  
+  ::-webkit-scrollbar-thumb {
+    background: #5D5CDE;
+    border-radius: 4px;
+  }
+  
+  .dark ::-webkit-scrollbar-track {
+    background: #2d2d2d;
+  }
+  
+  .dark ::-webkit-scrollbar-thumb {
+    background: #5D5CDE;
+  }
+  
+  /* Quran pages styling */
+  .quran-page {
+    background-color: #FAF6E9;
+    background-image: url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI1IiBoZWlnaHQ9IjUiPgo8cmVjdCB3aWR0aD0iNSIgaGVpZ2h0PSI1IiBmaWxsPSIjZmFmNmU5Ij48L3JlY3Q+CjxyZWN0IHdpZHRoPSIxIiBoZWlnaHQ9IjEiIGZpbGw9IiNlZmVhZDQiPjwvcmVjdD4KPC9zdmc+');
+    border: 1px solid #E6DFC8;
+    border-radius: 5px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  }
+  
+  .dark .quran-page {
+    background-color: #2D2D2D;
+    background-image: url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI1IiBoZWlnaHQ9IjUiPgo8cmVjdCB3aWR0aD0iNSIgaGVpZ2h0PSI1IiBmaWxsPSIjMmQyZDJkIj48L3JlY3Q+CjxyZWN0IHdpZHRoPSIxIiBoZWlnaHQ9IjEiIGZpbGw9IiMzYTNhM2EiPjwvcmVjdD4KPC9zdmc+');
+    border-color: #444;
+  }
+  
+  /* Mushaf view frame */
+  .mushaf-frame {
+    background-color: #8B5A2B;
+    background-image: linear-gradient(45deg, #8B5A2B 25%, #A67C52 25%, #A67C52 50%, #8B5A2B 50%, #8B5A2B 75%, #A67C52 75%, #A67C52 100%);
+    background-size: 10px 10px;
+    padding: 10px;
+    border-radius: 8px;
+  }
+  
+  .dark .mushaf-frame {
+    background-color: #3D2914;
+    background-image: linear-gradient(45deg, #3D2914 25%, #53381D 25%, #53381D 50%, #3D2914 50%, #3D2914 75%, #53381D 75%, #53381D 100%);
+  }
+
+  /* Prayer time display animation */
+  @keyframes prayerPulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.05); }
+    100% { transform: scale(1); }
+  }
+  
+  .prayer-active {
+    animation: prayerPulse 2s infinite;
+  }
+  
+  /* Memorization progress */
+  .memorization-progress {
+    transition: width 0.5s ease-in-out;
+  }
+}
