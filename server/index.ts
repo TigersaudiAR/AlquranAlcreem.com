@@ -2,7 +2,11 @@ import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 
+/**
+ * إعداد سيرفر Express وتسجيل الطرق الأساسية
+ */
 const app = express();
+// تفعيل استخدام JSON و URL-encoded لتسهيل قراءة بيانات الطلبات
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 

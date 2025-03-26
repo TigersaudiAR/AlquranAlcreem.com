@@ -151,3 +151,107 @@ export function useQuranData() {
     removeBookmark,
   };
 }
+import { useState, useEffect } from 'react';
+import { QuranData, Surah, Ayah } from '@/types/quran';
+
+export function useQuranData() {
+  const [quranData, setQuranData] = useState<QuranData | null>(null);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchQuranData = async () => {
+      try {
+        setLoading(true);
+        
+        // استخدام نقطة النهاية الجديدة للحصول على السور الفريدة بدون تكرار
+        const surahsResponse = await fetch('/api/quran/unique-surahs');
+        
+        if (!surahsResponse.ok) {
+          throw new Error(`HTTP error! status: ${surahsResponse.status}`);
+        }
+        
+        const surahsData = await surahsResponse.json();
+        
+        if (!surahsData || !surahsData.data) {
+          throw new Error('Invalid response format for surahs');
+        }
+        
+        // تنسيق البيانات للتوافق مع واجهة QuranData
+        const formattedData: QuranData = {
+          surahs: surahsData.data.map((surah: any): Surah => ({
+            number: surah.number,
+            name: surah.name,
+            englishName: surah.englishName,
+            englishNameTranslation: surah.englishNameTranslation,
+            numberOfAyahs: surah.numberOfAyahs,
+            revelationType: surah.revelationType,
+            ayahs: [] // سيتم ملء هذا الحقل عند استدعاء السورة المحددة
+          })),
+          edition: {
+            identifier: 'quran-data',
+            language: 'ar',
+            name: 'القرآن الكريم',
+            englishName: 'The Holy Quran',
+            format: 'text',
+            type: 'quran'
+          }
+        };
+        
+        setQuranData(formattedData);
+      } catch (err) {
+        console.error("Error fetching Quran data:", err);
+        setError('فشل في تحميل بيانات القرآن. الرجاء المحاولة مرة أخرى.');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchQuranData();
+  }, []);
+
+  // دالة لجلب آيات سورة محددة
+  const fetchSurahAyahs = async (surahNumber: number) => {
+    try {
+      if (!quranData) {
+        throw new Error('Quran data not loaded yet');
+      }
+      
+      const response = await fetch(`/api/quran/surah/${surahNumber}`);
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      
+      if (!data || !data.data || !data.data.ayahs) {
+        throw new Error('Invalid response format for ayahs');
+      }
+      
+      // تحديث السورة المحددة بآياتها
+      const updatedSurahs = quranData.surahs.map(surah => {
+        if (surah.number === surahNumber) {
+          return {
+            ...surah,
+            ayahs: data.data.ayahs
+          };
+        }
+        return surah;
+      });
+      
+      setQuranData({
+        ...quranData,
+        surahs: updatedSurahs
+      });
+      
+      return data.data.ayahs;
+    } catch (err) {
+      console.error("Error fetching surah ayahs:", err);
+      setError('فشل في تحميل آيات السورة. الرجاء المحاولة مرة أخرى.');
+      return [];
+    }
+  };
+
+  return { quranData, loading, error, fetchSurahAyahs };
+}

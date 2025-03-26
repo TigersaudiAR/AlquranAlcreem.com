@@ -77,6 +77,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  // Get unique surahs without duplication
+  app.get(`${API_PREFIX}/quran/unique-surahs`, async (req, res) => {
+    try {
+      const response = await fetch('https://api.alquran.cloud/v1/surah');
+      const data = await response.json();
+      
+      if (data && data.data && Array.isArray(data.data)) {
+        // إزالة التكرار من السور باستخدام رقم السورة كمعرف فريد
+        const uniqueSurahs = Array.from(
+          new Map(data.data.map(surah => [surah.number, surah])).values()
+        );
+        
+        res.status(200).json({ 
+          code: 200, 
+          status: 'OK', 
+          data: uniqueSurahs 
+        });
+      } else {
+        throw new Error('Invalid API response format');
+      }
+    } catch (error) {
+      res.status(500).json({ message: 'Failed to get unique surahs', error: (error as Error).message });
+    }
+  });
+  
   // Proxy for Prayer API to avoid CORS issues
   app.get(`${API_PREFIX}/prayer/:endpoint(**)`, async (req, res) => {
     try {
