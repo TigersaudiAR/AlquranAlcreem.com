@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
+import { useRoute, useLocation } from 'wouter';
 import SurahList from '../components/quran/SurahList';
 import JuzList from '../components/quran/JuzList';
+import QuranReader from '../components/quran/QuranReader';
 import QuranNavigation from '../components/quran/QuranNavigation';
 import BookmarkAndShare from '../components/quran/BookmarkAndShare';
 import AudioPlayer from '../components/quran/AudioPlayer';
@@ -9,14 +11,40 @@ import ErrorDisplay from '../components/common/ErrorDisplay';
 import { useQuranData } from '../hooks/useQuranData';
 
 export default function Quran() {
-  const [viewMode, setViewMode] = useState<'surah' | 'juz'>('surah');
+  const [viewMode, setViewMode] = useState<'surah' | 'juz' | 'page'>('surah');
   const { quranData, isLoading, error } = useQuranData();
   const [fontFamily, setFontFamily] = useState<string>('UthmanicHafs');
   const [fontSize, setFontSize] = useState<number>(24);
+  
+  // Get route parameters
+  const [, params] = useRoute('/quran/surah/:number');
+  const [, juzParams] = useRoute('/quran/juz/:number');
+  const [, pageParams] = useRoute('/quran/page/:number');
+  const [, navigate] = useLocation();
+  
+  // State for current viewing parameters
+  const [currentSurah, setCurrentSurah] = useState<number | null>(null);
+  const [currentJuz, setCurrentJuz] = useState<number | null>(null);
+  const [currentPage, setCurrentPage] = useState<number | null>(null);
 
   useEffect(() => {
     document.title = 'القرآن الكريم | مجمع الملك فهد لطباعة المصحف الشريف';
-  }, []);
+    
+    // Check for route parameters and set the appropriate view mode
+    if (params && params.number) {
+      const surahNum = parseInt(params.number);
+      setCurrentSurah(surahNum);
+      setViewMode('page');
+    } else if (juzParams && juzParams.number) {
+      const juzNum = parseInt(juzParams.number);
+      setCurrentJuz(juzNum);
+      setViewMode('page');
+    } else if (pageParams && pageParams.number) {
+      const pageNum = parseInt(pageParams.number);
+      setCurrentPage(pageNum);
+      setViewMode('page');
+    }
+  }, [params, juzParams, pageParams]);
 
   if (isLoading) {
     return <LoadingSpinner />;
@@ -35,7 +63,13 @@ export default function Quran() {
           </h1>
           <div className="flex space-x-2 rtl:space-x-reverse">
             <button
-              onClick={() => setViewMode('surah')}
+              onClick={() => {
+                setViewMode('surah');
+                setCurrentSurah(null);
+                setCurrentJuz(null);
+                setCurrentPage(null);
+                navigate('/quran');
+              }}
               className={`px-3 py-1 rounded ${
                 viewMode === 'surah'
                   ? 'bg-primary-600 text-white'
@@ -45,7 +79,13 @@ export default function Quran() {
               السور
             </button>
             <button
-              onClick={() => setViewMode('juz')}
+              onClick={() => {
+                setViewMode('juz');
+                setCurrentSurah(null);
+                setCurrentJuz(null);
+                setCurrentPage(null);
+                navigate('/quran');
+              }}
               className={`px-3 py-1 rounded ${
                 viewMode === 'juz'
                   ? 'bg-primary-600 text-white'
@@ -54,6 +94,14 @@ export default function Quran() {
             >
               الأجزاء
             </button>
+            {viewMode === 'page' && (
+              <button
+                onClick={() => navigate('/quran')}
+                className="px-3 py-1 rounded bg-primary-600 text-white"
+              >
+                العودة للفهرس
+              </button>
+            )}
           </div>
         </div>
 
@@ -97,8 +145,22 @@ export default function Quran() {
         <div className="p-4">
           {viewMode === 'surah' ? (
             <SurahList quranData={quranData} fontFamily={fontFamily} fontSize={fontSize} />
-          ) : (
+          ) : viewMode === 'juz' ? (
             <JuzList quranData={quranData} fontFamily={fontFamily} fontSize={fontSize} />
+          ) : (
+            <QuranReader 
+              fontSize={fontSize}
+              pageNumber={currentPage || 1}
+              surahNumber={currentSurah || undefined}
+              juzNumber={currentJuz || undefined}
+              viewMode="page"
+              reciter="ar.alafasy"
+              translation="en.sahih"
+              onPageChange={(page) => {
+                setCurrentPage(page);
+                navigate(`/quran/page/${page}`);
+              }}
+            />
           )}
         </div>
 

@@ -171,11 +171,11 @@ const QuranReader = ({
   };
   
   if (isLoading) {
-    return <LoadingSpinner text="جار تحميل القرآن الكريم..." />;
+    return <LoadingSpinner />;
   }
   
   if (error) {
-    return <ErrorDisplay error={error} onRetry={() => onPageChange(pageNumber)} />;
+    return <ErrorDisplay message={error || "حدث خطأ أثناء تحميل البيانات"} />;
   }
   
   // تجميع الآيات حسب السورة

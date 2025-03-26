@@ -17,6 +17,9 @@ function App() {
       <Switch>
         <Route path="/" component={Dashboard} />
         <Route path="/quran" component={Quran} />
+        <Route path="/quran/surah/:number" component={Quran} />
+        <Route path="/quran/juz/:number" component={Quran} />
+        <Route path="/quran/page/:number" component={Quran} />
         <Route path="/prayer" component={Prayer} />
         <Route path="/memorization" component={Memorization} />
         <Route path="/tafsir" component={Tafsir} />
