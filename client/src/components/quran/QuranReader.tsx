@@ -280,36 +280,73 @@ const QuranReader = ({
                     </div>
                     
                     {/* البسملة - بداية كل سورة عدا التوبة */}
-                    {surah.surahInfo.number !== 9 && (
-                      <div className="bismillah">
-                        <p style={{fontWeight: 500}}>بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ</p>
+                    {surah.surahInfo.number !== 9 && surah.ayahs[0].number === 1 && (
+                      <div className="bismillah text-center py-5">
+                        <p style={{fontWeight: 600, fontSize: '1.3em', lineHeight: '2.2'}}>﴿ بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ ﴾</p>
                       </div>
                     )}
                   </div>
                 )}
                 
                 {/* الآيات */}
-                <div className="ayahs-container" style={{fontFamily: 'Hafs, UthmanicHafs, Amiri Quran, serif', lineHeight: '2.5'}}>
+                <div className="ayahs-container p-2 text-justify" style={{
+                  fontFamily: 'Hafs, UthmanicHafs, Amiri Quran, serif', 
+                  lineHeight: '2.7',
+                  direction: 'rtl',
+                  textAlign: 'justify'
+                }}>
                   {surah.ayahs.map((ayah, index) => (
-                    <span key={`${ayah.surah.number}-${ayah.number}`} className="ayah-text">
+                    <span 
+                      key={`${ayah.surah.number}-${ayah.number}`} 
+                      className="ayah-text inline-block"
+                      style={{
+                        wordSpacing: '0.1em',
+                        letterSpacing: '-0.01em'
+                      }}
+                    >
                       {/* نص الآية */}
-                      {ayah.text}
+                      {ayah.text} 
                       
                       {/* رقم الآية - تنسيق مصحف الملك فهد */}
-                      <span className="ayah-number">
+                      <span 
+                        className="ayah-number inline-block mx-[1px] align-baseline" 
+                        style={{
+                          color: '#863d00',
+                          fontFamily: 'Amiri Quran, Hafs, serif',
+                          fontSize: '0.95em',
+                          fontWeight: 500
+                        }}
+                      >
                         ﴿{getArabicNumber(ayah.number)}﴾
                       </span>
+                      {' '}
                       
                       {/* علامات الحزب والجزء */}
                       {ayah.hizbQuarter && ayah.hizbQuarter % 4 === 0 && (
-                        <span className="hizb-marker" title={`حزب ${Math.ceil(ayah.hizbQuarter / 4)}`}>
+                        <span 
+                          className="hizb-marker inline-block mx-1 align-middle"
+                          title={`حزب ${Math.ceil(ayah.hizbQuarter / 4)}`}
+                          style={{
+                            color: '#04a',
+                            fontSize: '1.2em',
+                            fontWeight: 'bold'
+                          }}
+                        >
                           ۞
                         </span>
                       )}
                       
                       {/* علامة السجدة إذا وجدت */}
                       {ayah.sajda && (
-                        <span className="sajdah-marker" title="سجدة">
+                        <span 
+                          className="sajdah-marker inline-block mx-1 align-middle" 
+                          title="سجدة"
+                          style={{
+                            color: '#a40',
+                            fontSize: '1.2em',
+                            fontWeight: 'bold'
+                          }}
+                        >
                           ۩
                         </span>
                       )}
