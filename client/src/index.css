@@ -2,6 +2,14 @@
 @tailwind components;
 @tailwind utilities;
 
+@font-face {
+  font-family: 'UthmanicHafs';
+  src: url('/fonts/UthmanicHafs1Ver18.woff2') format('woff2');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
 @layer base {
   * {
     @apply border-border;
@@ -13,14 +21,12 @@
   }
 
   .arabic-text {
-    font-family: 'Amiri Quran', 'Amiri', 'Scheherazade New', serif;
+    font-family: 'UthmanicHafs', 'Amiri Quran', 'Amiri', serif;
     line-height: 2.2;
     letter-spacing: 0.3px;
-    text-align: justify;
-    text-align-last: center;
   }
   
-  /* Custom scrollbar */
+  /* Scrollbar styling */
   ::-webkit-scrollbar {
     width: 8px;
     height: 8px;
@@ -42,123 +48,186 @@
   .dark ::-webkit-scrollbar-thumb {
     background: #5D5CDE;
   }
+
+  /* ==== King Fahd Mushaf Styling - Begin ==== */
   
-  /* Quran pages styling */
-  .quran-page {
-    background-color: #FAF6E9;
-    background-image: url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI1IiBoZWlnaHQ9IjUiPgo8cmVjdCB3aWR0aD0iNSIgaGVpZ2h0PSI1IiBmaWxsPSIjZmFmNmU5Ij48L3JlY3Q+CjxyZWN0IHdpZHRoPSIxIiBoZWlnaHQ9IjEiIGZpbGw9IiNlZmVhZDQiPjwvcmVjdD4KPC9zdmc+');
-    border: 1px solid #E6DFC8;
-    border-radius: 5px;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  /* Main Mushaf container */
+  .kingfahd-mushaf {
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
+    border-radius: 10px;
   }
   
-  .dark .quran-page {
+  /* Madina Mushaf style */
+  .madina-mushaf {
+    background-color: #FBF8EF;
+    background-image: url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI1IiBoZWlnaHQ9IjUiPgo8cmVjdCB3aWR0aD0iNSIgaGVpZ2h0PSI1IiBmaWxsPSIjZmJmOGVmIj48L3JlY3Q+CjxyZWN0IHdpZHRoPSIxIiBoZWlnaHQ9IjEiIGZpbGw9IiNmNWYwZTIiPjwvcmVjdD4KPC9zdmc+');
+    border: 1px solid #E6DFC8;
+    font-family: 'UthmanicHafs', 'Amiri Quran', serif;
+    direction: rtl;
+    padding: 1.5rem;
+    position: relative;
+    color: #333;
+  }
+  
+  .dark .madina-mushaf {
+    background-color: #1E1E1E;
+    background-image: url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI1IiBoZWlnaHQ9IjUiPgo8cmVjdCB3aWR0aD0iNSIgaGVpZ2h0PSI1IiBmaWxsPSIjMWUxZTFlIj48L3JlY3Q+CjxyZWN0IHdpZHRoPSIxIiBoZWlnaHQ9IjEiIGZpbGw9IiMyNjI2MjYiPjwvcmVjdD4KPC9zdmc+');
+    border-color: #444;
+    color: #E0E0E0;
+  }
+  
+  /* Page number badge */
+  .page-number-badge {
+    background-color: #F2ECE0;
+    color: #8A6D3B;
+    border: 1px solid #E3D7BC;
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+  }
+  
+  .dark .page-number-badge {
+    background-color: #3A3A3A;
+    color: #D3B15E;
+    border-color: #555;
+  }
+  
+  /* Surah header styling */
+  .surah-header {
+    margin-bottom: 2rem;
+  }
+  
+  .surah-title-ornament {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    position: relative;
+    margin-bottom: 1.5rem;
+  }
+  
+  .surah-title-ornament::before,
+  .surah-title-ornament::after {
+    content: '';
+    height: 1px;
+    flex-grow: 1;
+    background-image: linear-gradient(to right, transparent, #D9CAA8, transparent);
+    margin: 0 15px;
+  }
+  
+  .dark .surah-title-ornament::before,
+  .dark .surah-title-ornament::after {
+    background-image: linear-gradient(to right, transparent, #6A5E40, transparent);
+  }
+  
+  .surah-title {
+    position: relative;
+    padding: 10px 20px;
+    border-radius: 8px;
+    background-color: #F8F3E6;
+    border: 1px solid #E3D7BC;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    z-index: 1;
+    white-space: nowrap;
+  }
+  
+  .dark .surah-title {
     background-color: #2D2D2D;
-    background-image: url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI1IiBoZWlnaHQ9IjUiPgo8cmVjdCB3aWR0aD0iNSIgaGVpZ2h0PSI1IiBmaWxsPSIjMmQyZDJkIj48L3JlY3Q+CjxyZWN0IHdpZHRoPSIxIiBoZWlnaHQ9IjEiIGZpbGw9IiMzYTNhM2EiPjwvcmVjdD4KPC9zdmc+');
     border-color: #444;
   }
   
-  /* Quran text styling */
-  .quran-text {
-    text-align: justify;
-    text-align-last: center;
-    word-spacing: 0.3em;
-    line-height: 2.5;
-    position: relative;
-    direction: rtl;
-  }
-  
-  .ayah-container {
-    position: relative;
-    display: inline;
-    margin: 0 2px;
-  }
-  
-  .ayah-text {
-    color: inherit;
-  }
-  
-  /* Add special styling for the ending of pages */
-  .ayah-text:last-child {
-    margin-bottom: 1em;
-  }
-  
-  /* Add verse number styling */
-  .ayah-number {
-    font-size: 0.7em;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 1.5em;
-    height: 1.5em;
-    border-radius: 50%;
-    margin: 0 0.2em;
-    position: relative;
-    top: -0.5em;
-    color: var(--primary);
-    background-color: rgba(var(--primary-rgb), 0.1);
-  }
-  
-  /* Sura header styling */
-  .sura-header {
+  .surah-title h2 {
+    font-size: 1.5rem;
+    font-weight: bold;
+    color: #8A6D3B;
+    margin: 0;
     text-align: center;
-    margin: 1em 0;
-    padding: 1em;
-    background-image: url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyMCIgaGVpZ2h0PSIyMCI+CjxwYXRoIGQ9Ik0gMCwxMCBBIDEwLDEwIDAgMSAwIDIwLDEwIEEgMTAsMTAgMCAxIDAgMCwxMCBaIiBmaWxsPSJub25lIiBzdHJva2U9InJnYmEoOTMsOTMsMjIyLDAuMykiIHN0cm9rZS13aWR0aD0iMSI+PC9wYXRoPgo8L3N2Zz4=');
-    background-repeat: no-repeat;
-    background-position: center;
-    background-size: 90% 90%;
+  }
+  
+  .dark .surah-title h2 {
+    color: #D3B15E;
   }
   
   /* Bismillah styling */
   .bismillah {
     text-align: center;
-    margin: 0.5em 0 1em;
+    margin: 1.5rem 0;
+  }
+  
+  .bismillah p {
+    font-size: 1.5rem;
+    color: #705C3B;
+    margin: 0;
+    font-weight: normal;
+    line-height: 1.5;
+  }
+  
+  .dark .bismillah p {
+    color: #A89062;
+  }
+  
+  /* Ayahs container */
+  .ayahs-container {
+    text-align: right;
+    line-height: 2.5;
+    word-spacing: 0.2em;
+    margin-bottom: 1rem;
+    text-align: justify;
+    text-align-last: center;
+  }
+  
+  /* Ayah text */
+  .ayah-text {
+    position: relative;
+    margin: 0 1px;
+    font-size: inherit;
+    color: inherit;
+  }
+  
+  /* Ayah number */
+  .ayah-number {
+    font-size: 0.6em;
+    display: inline-flex;
+    position: relative;
+    top: -0.5em;
+    margin: 0 0.1em;
+    color: #8A6D3B;
+    font-weight: normal;
+  }
+  
+  .dark .ayah-number {
+    color: #D3B15E;
+  }
+  
+  /* Hizb and Juz markers */
+  .hizb-marker, .sajdah-marker {
+    display: inline-block;
+    margin: 0 0.2em;
     font-size: 1.2em;
-    color: rgba(var(--primary-rgb), 0.8);
+    color: #8A6D3B;
+    position: relative;
+    top: 0.1em;
   }
   
-  /* Mushaf view frame */
-  .mushaf-frame {
-    background-color: #8B5A2B;
-    background-image: linear-gradient(45deg, #8B5A2B 25%, #A67C52 25%, #A67C52 50%, #8B5A2B 50%, #8B5A2B 75%, #A67C52 75%, #A67C52 100%);
-    background-size: 10px 10px;
-    padding: 10px;
-    border-radius: 8px;
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+  .dark .hizb-marker, 
+  .dark .sajdah-marker {
+    color: #D3B15E;
   }
   
-  .dark .mushaf-frame {
-    background-color: #3D2914;
-    background-image: linear-gradient(45deg, #3D2914 25%, #53381D 25%, #53381D 50%, #3D2914 50%, #3D2914 75%, #53381D 75%, #53381D 100%);
+  /* Translation section */
+  .translation-section {
+    line-height: 1.6;
+    direction: rtl;
+    text-align: right;
   }
   
-  /* Page navigation */
-  .page-navigation {
-    display: flex;
-    justify-content: space-between;
-    margin-top: 1em;
-    padding: 0.5em;
-  }
+  /* ==== King Fahd Mushaf Styling - End ==== */
   
-  .page-button {
-    padding: 0.5em 1em;
-    border-radius: 0.25em;
-    background-color: var(--primary);
-    color: white;
-    cursor: pointer;
-    border: none;
-    transition: background-color 0.2s;
-  }
-  
-  .page-button:hover {
-    background-color: rgba(var(--primary-rgb), 0.8);
-  }
-  
-  .page-button:disabled {
-    background-color: #ccc;
-    cursor: not-allowed;
-  }
+  /* Original styles for other components */
   
   /* Prayer time display animation */
   @keyframes prayerPulse {

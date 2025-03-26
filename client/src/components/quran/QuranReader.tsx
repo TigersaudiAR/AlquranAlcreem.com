@@ -29,6 +29,7 @@ interface AyahData {
   juz: number;
   page: number;
   sajda?: boolean;
+  hizbQuarter?: number;
 }
 
 const QuranReader = ({
@@ -52,15 +53,15 @@ const QuranReader = ({
   
   // تعيين حجم خط مناسب بناء على قيمة fontSize
   const fontSizeMap = {
-    1: 'text-sm leading-loose',
-    2: 'text-base leading-loose',
-    3: 'text-lg leading-loose',
-    4: 'text-xl leading-loose',
-    5: 'text-2xl leading-loose',
-    6: 'text-3xl leading-10',
-    7: 'text-4xl leading-10',
+    1: 'text-sm',
+    2: 'text-base',
+    3: 'text-lg', 
+    4: 'text-xl',
+    5: 'text-2xl',
+    6: 'text-3xl',
+    7: 'text-4xl',
   };
-  const fontSizeClass = fontSizeMap[fontSize as keyof typeof fontSizeMap] || 'text-lg leading-loose';
+  const fontSizeClass = fontSizeMap[fontSize as keyof typeof fontSizeMap] || 'text-lg';
   
   useEffect(() => {
     const fetchQuranData = async () => {
@@ -132,6 +133,7 @@ const QuranReader = ({
               juz: ayah.juz,
               page: ayah.page,
               sajda: ayah.sajda || false,
+              hizbQuarter: ayah.hizbQuarter || null,
             };
           });
         }
@@ -195,99 +197,137 @@ const QuranReader = ({
   // معلومات عن السورة الحالية (للعرض في رأس الصفحة)
   const currentSurahInfo = currentSurah ? SURAH_NAMES.find(s => s.number === currentSurah) : null;
   
+  // مجموعة متنوعة من الألوان للزخارف (ألوان الخط الإسلامي المصحفي)
+  const decorColors = [
+    'rgba(66, 133, 91, 0.7)',  // أخضر
+    'rgba(153, 68, 68, 0.7)',  // أحمر
+    'rgba(75, 92, 165, 0.7)',  // أزرق
+    'rgba(191, 146, 42, 0.7)', // ذهبي
+  ];
+  
   return (
     <>
-      <div className="mushaf-frame mb-4">
-        <div ref={quranContainerRef} className="quran-page p-5 rounded-lg bg-quranBg dark:bg-quranDark arabic-text overflow-y-auto max-h-[70vh]">
-          {/* رأس الصفحة */}
-          <div className="flex justify-between items-center mb-4 border-b border-gray-300 dark:border-gray-700 pb-2 sticky top-0 bg-quranBg dark:bg-quranDark z-10">
-            <div className="text-sm text-gray-600 dark:text-gray-400">
-              الصفحة {pageNumber} من {pagesTotal}
+      <div className="kingfahd-mushaf mb-4 select-none">
+        {/* شريط العنوان والتنقل بين الصفحات */}
+        <div className="p-3 bg-white dark:bg-gray-800 border-b border-amber-200 dark:border-amber-900 shadow-sm mb-4 rounded-t-lg">
+          <div className="flex justify-between items-center">
+            <button 
+              className="py-1 px-3 bg-amber-500 text-white hover:bg-amber-600 disabled:opacity-50 disabled:cursor-not-allowed rounded-md flex items-center text-sm"
+              onClick={() => handlePageTurn('prev')}
+              disabled={pageNumber <= 1}
+            >
+              <i className="fas fa-chevron-right ml-1"></i>
+              <span>السابقة</span>
+            </button>
+            
+            <div className="text-center flex flex-col">
+              <span className="text-base font-bold text-gray-700 dark:text-gray-200">
+                {currentSurahInfo?.name || Object.values(ayahsBySurah).map(surah => surah.surahInfo.name).join(' - ')}
+              </span>
+              <div className="flex items-center justify-center gap-2 text-xs text-gray-500 dark:text-gray-400">
+                <span>الصفحة {pageNumber} من {pagesTotal}</span>
+                <span className="mx-2">|</span>
+                <span>{ayahs.length > 0 ? `الجزء ${ayahs[0].juz}` : ''}</span>
+              </div>
             </div>
-            <div className="text-lg font-bold text-center">
-              {currentSurahInfo?.name || Object.values(ayahsBySurah).map(surah => surah.surahInfo.name).join(' - ')}
-            </div>
-            <div className="text-sm text-gray-600 dark:text-gray-400">
-              {ayahs.length > 0 ? `الجزء ${ayahs[0].juz}` : ''}
+            
+            <button 
+              className="py-1 px-3 bg-amber-500 text-white hover:bg-amber-600 disabled:opacity-50 disabled:cursor-not-allowed rounded-md flex items-center text-sm"
+              onClick={() => handlePageTurn('next')}
+              disabled={pageNumber >= pagesTotal}
+            >
+              <span>التالية</span>
+              <i className="fas fa-chevron-left mr-1"></i>
+            </button>
+          </div>
+        </div>
+        
+        {/* صفحة المصحف */}
+        <div 
+          ref={quranContainerRef} 
+          className={`${fontSizeClass} madina-mushaf overflow-y-auto max-h-[70vh] p-5 rounded-b-lg`}
+        >
+          {/* شريط رقم الصفحة */}
+          <div className="page-header flex justify-center items-center mt-2 mb-6">
+            <div className="page-number-badge">
+              <span>{pageNumber}</span>
             </div>
           </div>
           
-          {/* عرض السور وآياتها */}
-          {Object.values(ayahsBySurah).map((surah) => (
-            <div key={surah.surahInfo.number} className="mb-6">
-              {/* عرض رأس السورة */}
-              <div className="border-double border-b-4 border-primary/30 dark:border-primary/40 text-center py-3 mb-6">
-                <h2 className="text-2xl font-bold mb-1">{surah.surahInfo.name}</h2>
-                <p className="text-gray-600 dark:text-gray-400">{surah.surahInfo.englishName}</p>
-              </div>
-              
-              {/* عرض البسملة إذا كانت ليست سورة الفاتحة أو سورة التوبة */}
-              {surah.surahInfo.number !== 1 && surah.surahInfo.number !== 9 && (
-                <div className="text-center mb-6">
-                  <span className="text-xl">بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ</span>
-                </div>
-              )}
-              
-              {/* الآيات */}
-              <div className={`text-right ${fontSizeClass}`}>
-                <p className="mb-6 quran-text">
-                  {surah.ayahs.map((ayah) => (
-                    <span key={`${ayah.surah.number}-${ayah.number}`} className="ayah-container">
-                      <span className="ayah-text">{ayah.text}</span>
-                      <span className="inline-flex justify-center items-center w-6 h-6 rounded-full bg-primary bg-opacity-20 text-primary text-xs ms-1">
-                        {ayah.number}
+          {/* محتوى المصحف - السور والآيات */}
+          <div className="quran-content">
+            {Object.values(ayahsBySurah).map((surah) => (
+              <div key={surah.surahInfo.number} className="surah-container mb-8">
+                {/* رأس السورة وعنوانها إذا كانت بداية سورة */}
+                {surah.ayahs[0].number === 1 && (
+                  <div className="surah-header mb-6">
+                    <div className="surah-title-ornament">
+                      <div className="surah-title">
+                        <h2>{surah.surahInfo.name}</h2>
+                      </div>
+                    </div>
+                    
+                    {/* البسملة - بداية كل سورة عدا التوبة */}
+                    {surah.surahInfo.number !== 9 && (
+                      <div className="bismillah">
+                        <p>بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ</p>
+                      </div>
+                    )}
+                  </div>
+                )}
+                
+                {/* الآيات */}
+                <div className="ayahs-container">
+                  {surah.ayahs.map((ayah, index) => (
+                    <span key={`${ayah.surah.number}-${ayah.number}`} className="ayah-text">
+                      {/* نص الآية */}
+                      {ayah.text}
+                      
+                      {/* رقم الآية - تنسيق مصحف الملك فهد */}
+                      <span className="ayah-number">
+                        {getArabicNumber(ayah.number)}
                       </span>
+                      
+                      {/* علامات الحزب والجزء */}
+                      {ayah.hizbQuarter && ayah.hizbQuarter % 4 === 0 && (
+                        <span className="hizb-marker" title={`حزب ${Math.ceil(ayah.hizbQuarter / 4)}`}>
+                          ۞
+                        </span>
+                      )}
+                      
+                      {/* علامة السجدة إذا وجدت */}
                       {ayah.sajda && (
-                        <span className="inline-flex justify-center items-center px-2 py-1 bg-amber-100 dark:bg-amber-900 text-amber-800 dark:text-amber-200 text-xs rounded-md mx-1">
-                          سجدة
+                        <span className="sajdah-marker" title="سجدة">
+                          ۩
                         </span>
                       )}
                     </span>
                   ))}
-                </p>
-                
-                {/* الترجمة إذا كانت متاحة */}
-                {surah.ayahs.some(ayah => ayah.translation) && (
-                  <div className="mt-4 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
-                    <h3 className="text-base font-semibold mb-2">الترجمة:</h3>
-                    {surah.ayahs.map((ayah) => (
-                      ayah.translation && (
-                        <div key={`trans-${ayah.surah.number}-${ayah.number}`} className="mb-2 text-sm">
-                          <span className="font-semibold ml-1">{ayah.number}.</span>
-                          <span className="text-gray-700 dark:text-gray-300">{ayah.translation}</span>
-                        </div>
-                      )
-                    ))}
-                  </div>
-                )}
+                </div>
               </div>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
       </div>
       
-      {/* التنقل بين الصفحات */}
-      <div className="flex justify-between items-center mb-6">
-        <button 
-          className="py-2 px-4 bg-primary text-white rounded-lg hover:bg-opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
-          onClick={() => handlePageTurn('prev')}
-          disabled={pageNumber <= 1}
-        >
-          الصفحة السابقة
-        </button>
-        
-        <div className="text-center">
-          <span className="text-gray-700 dark:text-gray-300">الصفحة {pageNumber} من {pagesTotal}</span>
+      {/* القسم السفلي - الترجمة إذا كانت متاحة */}
+      {Object.values(ayahsBySurah).some(s => s.ayahs.some(a => a.translation)) && (
+        <div className="translation-section bg-white dark:bg-gray-800 p-4 rounded-lg mb-6 border border-gray-200 dark:border-gray-700">
+          <h3 className="text-base font-semibold mb-2 text-gray-700 dark:text-gray-300 border-b pb-1">الترجمة:</h3>
+          {Object.values(ayahsBySurah).map(surah => (
+            <div key={`trans-${surah.surahInfo.number}`}>
+              {surah.ayahs.map((ayah) => (
+                ayah.translation && (
+                  <div key={`trans-${ayah.surah.number}-${ayah.number}`} className="mb-2 text-sm">
+                    <span className="font-semibold ml-1 text-amber-600 dark:text-amber-400">{ayah.number} -</span>
+                    <span className="text-gray-700 dark:text-gray-300">{ayah.translation}</span>
+                  </div>
+                )
+              ))}
+            </div>
+          ))}
         </div>
-        
-        <button 
-          className="py-2 px-4 bg-primary text-white rounded-lg hover:bg-opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
-          onClick={() => handlePageTurn('next')}
-          disabled={pageNumber >= pagesTotal}
-        >
-          الصفحة التالية
-        </button>
-      </div>
+      )}
       
       {/* ضوابط الصوت */}
       <AudioPlayer 
@@ -301,5 +341,13 @@ const QuranReader = ({
     </>
   );
 };
+
+// دالة لتحويل الأرقام الإنجليزية إلى أرقام عربية
+function getArabicNumber(num: number): string {
+  const arabicDigits = ['٠', '١', '٢', '٣', '٤', '٥', '٦', '٧', '٨', '٩'];
+  return num.toString().split('').map(digit => {
+    return arabicDigits[parseInt(digit)];
+  }).join('');
+}
 
 export default QuranReader;

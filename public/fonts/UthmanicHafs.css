@@ -1,0 +1,10 @@
+@font-face {
+  font-family: 'UthmanicHafs';
+  src: local('Amiri Quran'),
+       local('Scheherazade New'),
+       local('Amiri'),
+       local('Noto Naskh Arabic'),
+       local('Traditional Arabic');
+  font-weight: normal;
+  font-style: normal;
+}
