@@ -246,7 +246,7 @@ const QuranReader = ({
         <div 
           ref={quranContainerRef} 
           className={`${fontSizeClass} madina-mushaf overflow-y-auto max-h-[70vh] p-5 rounded-b-lg`}
-          style={{fontFamily: 'Hafs, UthmanicHafs, Amiri Quran, serif'}}
+          style={{fontFamily: 'HafsSmart, Hafs, UthmanicHafs, Amiri Quran, serif'}}
         >
           {/* شريط رقم الصفحة */}
           <div className="page-header flex justify-center items-center mt-2 mb-6">
@@ -282,7 +282,14 @@ const QuranReader = ({
                     {/* البسملة - بداية كل سورة عدا التوبة */}
                     {surah.surahInfo.number !== 9 && surah.ayahs[0].number === 1 && (
                       <div className="bismillah text-center py-5">
-                        <p style={{fontWeight: 600, fontSize: '1.3em', lineHeight: '2.2'}}>﴿ بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ ﴾</p>
+                        <p style={{
+                          fontWeight: 600, 
+                          fontSize: '1.4em', 
+                          lineHeight: '2.2', 
+                          fontFamily: 'HafsSmart, Hafs, UthmanicHafs, serif',
+                          color: '#705C3B',
+                          letterSpacing: '0.02em'
+                        }}>﴿ بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ ﴾</p>
                       </div>
                     )}
                   </div>
@@ -290,7 +297,7 @@ const QuranReader = ({
                 
                 {/* الآيات */}
                 <div className="ayahs-container p-2 text-justify" style={{
-                  fontFamily: 'Hafs, UthmanicHafs, Amiri Quran, serif', 
+                  fontFamily: 'HafsSmart, Hafs, UthmanicHafs, Amiri Quran, serif', 
                   lineHeight: '2.7',
                   direction: 'rtl',
                   textAlign: 'justify'
@@ -301,7 +308,8 @@ const QuranReader = ({
                       className="ayah-text inline-block"
                       style={{
                         wordSpacing: '0.1em',
-                        letterSpacing: '-0.01em'
+                        letterSpacing: '-0.01em',
+                        fontFamily: 'HafsSmart, Hafs, UthmanicHafs, serif'
                       }}
                     >
                       {/* نص الآية */}
@@ -312,7 +320,7 @@ const QuranReader = ({
                         className="ayah-number inline-block mx-[1px] align-baseline" 
                         style={{
                           color: '#863d00',
-                          fontFamily: 'Amiri Quran, Hafs, serif',
+                          fontFamily: 'HafsSmart, Amiri Quran, Hafs, serif',
                           fontSize: '0.95em',
                           fontWeight: 500
                         }}

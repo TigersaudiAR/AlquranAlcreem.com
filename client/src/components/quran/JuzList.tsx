@@ -1,6 +1,5 @@
-
 import { useState } from 'react';
-import { Link } from 'wouter';
+import { useLocation } from 'wouter';
 import { QuranData, Juz, JuzAyah } from '@/types/quran';
 
 interface JuzListProps {
@@ -141,7 +140,7 @@ function JuzCard({ juzNumber, juzInfo, fontFamily, fontSize }: JuzCardProps) {
       
       <div className="mt-2 text-center" style={{ fontFamily: fontFamily, fontSize: `${fontSize}px` }}>
         {firstSurah && (
-          <span>الجزء {juzNumber}</span>
+          <span className="arabic-text">الجزء {juzNumber}</span>
         )}
       </div>
       
