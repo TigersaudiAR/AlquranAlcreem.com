@@ -35,7 +35,7 @@
   }
 
   .arabic-text {
-    font-family: 'UthmanicHafs', 'Amiri Quran', 'Amiri', serif;
+    font-family: 'Hafs', 'UthmanicHafs', 'Amiri Quran', 'Amiri', serif;
     line-height: 2.2;
     letter-spacing: 0.3px;
   }
@@ -71,16 +71,20 @@
     border-radius: 10px;
   }
   
-  /* Madina Mushaf style */
+  /* Madina Mushaf style - based on King Fahd Quran Complex */
   .madina-mushaf {
     background-color: #FBF8EF;
     background-image: url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI1IiBoZWlnaHQ9IjUiPgo8cmVjdCB3aWR0aD0iNSIgaGVpZ2h0PSI1IiBmaWxsPSIjZmJmOGVmIj48L3JlY3Q+CjxyZWN0IHdpZHRoPSIxIiBoZWlnaHQ9IjEiIGZpbGw9IiNmNWYwZTIiPjwvcmVjdD4KPC9zdmc+');
     border: 1px solid #E6DFC8;
-    font-family: 'UthmanicHafs', 'Amiri Quran', serif;
+    font-family: 'Hafs', 'UthmanicHafs', 'Amiri Quran', serif;
     direction: rtl;
     padding: 1.5rem;
     position: relative;
     color: #333;
+    line-height: 2.5;
+    letter-spacing: -0.1px;
+    text-align: justify;
+    text-align-last: center;
   }
   
   .dark .madina-mushaf {
@@ -111,9 +115,15 @@
     border-color: #555;
   }
   
-  /* Surah header styling */
+  /* Surah header styling - King Fahd Quran Complex style */
   .surah-header {
-    margin-bottom: 2rem;
+    margin-bottom: 2.5rem;
+  }
+  
+  .surah-decoration {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 1rem;
   }
   
   .surah-title-ornament {
@@ -160,28 +170,55 @@
     color: #8A6D3B;
     margin: 0;
     text-align: center;
+    font-family: 'Scheherazade New', 'Traditional Arabic', serif;
   }
   
   .dark .surah-title h2 {
     color: #D3B15E;
   }
   
-  /* Bismillah styling */
+  /* Bismillah styling - based on King Fahd Quran Complex */
   .bismillah {
     text-align: center;
-    margin: 1.5rem 0;
+    margin: 1.5rem 0 2rem;
+    position: relative;
+  }
+  
+  .bismillah::before, 
+  .bismillah::after {
+    content: '';
+    position: absolute;
+    width: 25%;
+    height: 1px;
+    background-image: linear-gradient(to right, transparent, #D9CAA8);
+    bottom: -0.8rem;
+  }
+  
+  .bismillah::before {
+    left: 0;
+  }
+  
+  .bismillah::after {
+    right: 0;
+    transform: scaleX(-1);
   }
   
   .bismillah p {
-    font-size: 1.5rem;
+    font-size: 1.8rem;
     color: #705C3B;
     margin: 0;
     font-weight: normal;
     line-height: 1.5;
+    font-family: 'Hafs', 'UthmanicHafs', serif;
   }
   
   .dark .bismillah p {
     color: #A89062;
+  }
+  
+  .dark .bismillah::before,
+  .dark .bismillah::after {
+    background-image: linear-gradient(to right, transparent, #6A5E40);
   }
   
   /* Ayahs container */
@@ -202,15 +239,17 @@
     color: inherit;
   }
   
-  /* Ayah number */
+  /* Ayah number - styled like King Fahd Quran Complex */
   .ayah-number {
-    font-size: 0.6em;
+    font-size: 0.65em;
     display: inline-flex;
     position: relative;
-    top: -0.5em;
+    top: -0.2em;
     margin: 0 0.1em;
-    color: #8A6D3B;
+    color: #705C3B;
     font-weight: normal;
+    font-family: 'Traditional Arabic', 'Hafs', serif;
+    line-height: normal;
   }
   
   .dark .ayah-number {
