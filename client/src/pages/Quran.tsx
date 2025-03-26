@@ -3,8 +3,11 @@ import { useLocation, useSearch } from 'wouter';
 import QuranNavigation from '../components/quran/QuranNavigation';
 import QuranReader from '../components/quran/QuranReader';
 import BookmarkAndShare from '../components/quran/BookmarkAndShare';
+import SurahList from '../components/quran/SurahList';
+import JuzList from '../components/quran/JuzList';
 import { RECITERS, LANGUAGES } from '../lib/constants';
 import { useQuranData } from '../hooks/useQuranData';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 const Quran = () => {
   const [viewMode, setViewMode] = useState<'page' | 'surah' | 'juz'>('page');
@@ -69,39 +72,79 @@ const Quran = () => {
     alert(`البحث عن: ${query}`);
   };
   
+  const handleSelectSurah = (selectedSurahNumber: number) => {
+    setSurahNumber(selectedSurahNumber);
+    setViewMode('surah');
+    
+    // Update URL
+    const params = new URLSearchParams(search);
+    params.set('surah', selectedSurahNumber.toString());
+    params.set('view', 'surah');
+    window.history.pushState({}, '', `?${params.toString()}`);
+  };
+  
+  const handleSelectJuz = (selectedJuzNumber: number) => {
+    setJuzNumber(selectedJuzNumber);
+    setViewMode('juz');
+    
+    // Update URL
+    const params = new URLSearchParams(search);
+    params.set('juz', selectedJuzNumber.toString());
+    params.set('view', 'juz');
+    window.history.pushState({}, '', `?${params.toString()}`);
+  };
+  
   return (
     <section className="p-4 md:p-6 max-w-7xl mx-auto">
       <div className="mb-6">
         <h2 className="text-2xl font-bold mb-4">القرآن الكريم</h2>
         
-        <QuranNavigation 
-          viewMode={viewMode}
-          setViewMode={setViewMode}
-          reciter={reciterId}
-          setReciter={setReciterId}
-          translation={translationId}
-          setTranslation={setTranslationId}
-          fontSize={fontSize}
-          setFontSize={setFontSize}
-          onSearch={handleSearch}
-        />
-        
-        <QuranReader 
-          fontSize={fontSize}
-          pageNumber={pageNumber}
-          surahNumber={surahNumber}
-          juzNumber={juzNumber}
-          viewMode={viewMode}
-          reciter={reciterId}
-          translation={translationId}
-          onPageChange={handlePageChange}
-        />
-        
-        <BookmarkAndShare 
-          pageNumber={pageNumber}
-          surahNumber={surahNumber}
-          ayahNumber={1} // This would be set based on the current visible ayah
-        />
+        <Tabs defaultValue="reader" className="mb-6">
+          <TabsList className="grid w-full grid-cols-3">
+            <TabsTrigger value="reader">القارئ</TabsTrigger>
+            <TabsTrigger value="surahs">السور</TabsTrigger>
+            <TabsTrigger value="juzs">الأجزاء</TabsTrigger>
+          </TabsList>
+          
+          <TabsContent value="reader">
+            <QuranNavigation 
+              viewMode={viewMode}
+              setViewMode={setViewMode}
+              reciter={reciterId}
+              setReciter={setReciterId}
+              translation={translationId}
+              setTranslation={setTranslationId}
+              fontSize={fontSize}
+              setFontSize={setFontSize}
+              onSearch={handleSearch}
+            />
+            
+            <QuranReader 
+              fontSize={fontSize}
+              pageNumber={pageNumber}
+              surahNumber={surahNumber}
+              juzNumber={juzNumber}
+              viewMode={viewMode}
+              reciter={reciterId}
+              translation={translationId}
+              onPageChange={handlePageChange}
+            />
+            
+            <BookmarkAndShare 
+              pageNumber={pageNumber}
+              surahNumber={surahNumber}
+              ayahNumber={1} // This would be set based on the current visible ayah
+            />
+          </TabsContent>
+          
+          <TabsContent value="surahs">
+            <SurahList onSelectSurah={handleSelectSurah} currentSurah={surahNumber} />
+          </TabsContent>
+          
+          <TabsContent value="juzs">
+            <JuzList onSelectJuz={handleSelectJuz} currentJuz={juzNumber} />
+          </TabsContent>
+        </Tabs>
       </div>
     </section>
   );
