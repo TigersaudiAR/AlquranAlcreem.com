@@ -1,7 +1,7 @@
 
 import { useState } from 'react';
 import { Link } from 'wouter';
-import { QuranData, Surah } from '../../types/quran';
+import { QuranData, Surah } from '@/types/quran';
 
 interface SurahListProps {
   quranData: QuranData;
@@ -68,7 +68,7 @@ function SurahCard({ surah, fontFamily, fontSize }: SurahCardProps) {
         </div>
         <div className="mt-2 text-sm text-gray-600 dark:text-gray-300 flex justify-between">
           <span>عدد الآيات: {surah.numberOfAyahs}</span>
-          <span>الصفحة: {surah.pages[0]}</span>
+          <span>الصفحة: {/* صفحة غير متاحة حاليًا */}</span>
         </div>
       </a>
     </Link>
