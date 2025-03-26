@@ -245,20 +245,17 @@ const QuranReader = ({
         {/* صفحة المصحف - تنسيق مصحف الملك فهد (مع دعم الوضع المظلم) */}
         <div 
           ref={quranContainerRef} 
-          className={`${fontSizeClass} madina-mushaf overflow-y-auto max-h-[70vh] p-5 rounded-b-lg dark:border dark:border-gray-700`}
+          className={`${fontSizeClass} madina-mushaf overflow-y-auto max-h-[70vh] p-5 rounded-b-lg dark:bg-gray-900 dark:border-gray-700 dark:text-amber-50`}
           style={{
+            position: 'relative',
             fontFamily: 'HafsSmart, Hafs, UthmanicHafs, Amiri Quran, serif',
-            backgroundColor: '#F8F3E6',
-            background: 'linear-gradient(to bottom, #FBF8EF, #F8F3E6)',
-            borderColor: '#E6DFC8',
-            boxShadow: 'inset 0 0 10px rgba(0, 0, 0, 0.05)',
+            backgroundColor: '#FEFAEE',
+            backgroundImage: "url('/assets/mushaf/mushaf-background.svg')",
+            backgroundSize: 'cover',
+            borderRadius: '15px',
+            border: '1px solid #E6DFC8',
+            boxShadow: '0 4px 12px rgba(0, 0, 0, 0.08)',
             color: '#3A3A3A'
-          }}
-          data-theme-dark={{
-            background: 'linear-gradient(to bottom, #1a1a1a, #222)',
-            borderColor: '#444',
-            boxShadow: 'inset 0 0 10px rgba(0, 0, 0, 0.2)',
-            color: '#e0e0e0'
           }}
         >
           {/* شريط رقم الصفحة */}
@@ -297,7 +294,7 @@ const QuranReader = ({
                             padding: '5px 0',
                             textShadow: '1px 1px 1px rgba(255,255,255,0.7)'
                           }}>
-                            سُورَةُ {surah.surahInfo.name}
+                            {surah.surahInfo.name}
                           </div>
                         </div>
                       </div>
