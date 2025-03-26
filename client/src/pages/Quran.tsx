@@ -3,6 +3,7 @@ import { useRoute, useLocation } from 'wouter';
 import SurahList from '../components/quran/SurahList';
 import JuzList from '../components/quran/JuzList';
 import QuranReader from '../components/quran/QuranReader';
+import KingFahdMushaf from '../components/quran/KingFahdMushaf';
 import QuranNavigation from '../components/quran/QuranNavigation';
 import BookmarkAndShare from '../components/quran/BookmarkAndShare';
 import AudioPlayer from '../components/quran/AudioPlayer';
@@ -12,6 +13,7 @@ import { useQuranData } from '../hooks/useQuranData';
 
 export default function Quran() {
   const [viewMode, setViewMode] = useState<'surah' | 'juz' | 'page'>('surah');
+  const [displayMode, setDisplayMode] = useState<'text' | 'image'>('image'); // إضافة وضع العرض: نص أو صورة
   const { quranData, isLoading, error } = useQuranData();
   const [fontFamily, setFontFamily] = useState<string>('UthmanicHafs');
   const [fontSize, setFontSize] = useState<number>(24);
@@ -109,34 +111,64 @@ export default function Quran() {
           <QuranNavigation />
 
           <div className="flex items-center gap-4">
-            <div className="flex items-center">
-              <label htmlFor="font-size" className="ml-2 text-sm">حجم الخط:</label>
-              <select
-                id="font-size"
-                value={fontSize}
-                onChange={(e) => setFontSize(Number(e.target.value))}
-                className="border border-gray-300 dark:border-gray-600 rounded p-1 text-sm"
-              >
-                {[18, 20, 22, 24, 26, 28, 30, 32].map(size => (
-                  <option key={size} value={size}>{size}</option>
-                ))}
-              </select>
-            </div>
+            {viewMode === 'page' && (
+              <div className="flex items-center gap-2 ml-4">
+                <span className="ml-2 text-sm font-bold">وضع العرض:</span>
+                <button
+                  onClick={() => setDisplayMode('image')}
+                  className={`px-3 py-1 rounded text-sm ${
+                    displayMode === 'image'
+                      ? 'bg-amber-600 text-white'
+                      : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300'
+                  }`}
+                >
+                  مصحف المدينة
+                </button>
+                <button
+                  onClick={() => setDisplayMode('text')}
+                  className={`px-3 py-1 rounded text-sm ${
+                    displayMode === 'text'
+                      ? 'bg-amber-600 text-white'
+                      : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300'
+                  }`}
+                >
+                  نص
+                </button>
+              </div>
+            )}
+            
+            {(viewMode !== 'page' || displayMode === 'text') && (
+              <>
+                <div className="flex items-center">
+                  <label htmlFor="font-size" className="ml-2 text-sm">حجم الخط:</label>
+                  <select
+                    id="font-size"
+                    value={fontSize}
+                    onChange={(e) => setFontSize(Number(e.target.value))}
+                    className="border border-gray-300 dark:border-gray-600 rounded p-1 text-sm"
+                  >
+                    {[18, 20, 22, 24, 26, 28, 30, 32].map(size => (
+                      <option key={size} value={size}>{size}</option>
+                    ))}
+                  </select>
+                </div>
 
-            <div className="flex items-center">
-              <label htmlFor="font-family" className="ml-2 text-sm">نوع الخط:</label>
-              <select
-                id="font-family"
-                value={fontFamily}
-                onChange={(e) => setFontFamily(e.target.value)}
-                className="border border-gray-300 dark:border-gray-600 rounded p-1 text-sm"
-              >
-                <option value="UthmanicHafs">خط الرسم العثماني (حفص)</option>
-                <option value="UthmanTN1B">عثمان طه</option>
-                <option value="Amiri Quran">أميري قرآن</option>
-                <option value="Scheherazade New">شهرزاد</option>
-              </select>
-            </div>
+                <div className="flex items-center">
+                  <label htmlFor="font-family" className="ml-2 text-sm">نوع الخط:</label>
+                  <select
+                    id="font-family"
+                    value={fontFamily}
+                    onChange={(e) => setFontFamily(e.target.value)}
+                    className="border border-gray-300 dark:border-gray-600 rounded p-1 text-sm"
+                  >
+                    <option value="UthmanicHafs">خط الرسم العثماني (حفص)</option>
+                    <option value="UthmanTN1B">عثمان طه</option>
+                    <option value="Amiri Quran">أميري قرآن</option>
+                    <option value="Scheherazade New">شهرزاد</option>
+                  </select>
+                </div>
+              </>
+            )}
 
             <BookmarkAndShare />
           </div>
@@ -147,6 +179,14 @@ export default function Quran() {
             <SurahList quranData={quranData} fontFamily={fontFamily} fontSize={fontSize} />
           ) : viewMode === 'juz' ? (
             <JuzList quranData={quranData} fontFamily={fontFamily} fontSize={fontSize} />
+          ) : displayMode === 'image' ? (
+            <KingFahdMushaf
+              pageNumber={currentPage || 1}
+              onPageChange={(page) => {
+                setCurrentPage(page);
+                navigate(`/quran/page/${page}`);
+              }}
+            />
           ) : (
             <QuranReader 
               fontSize={fontSize}
