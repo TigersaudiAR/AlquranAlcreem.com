@@ -242,11 +242,24 @@ const QuranReader = ({
           </div>
         </div>
         
-        {/* صفحة المصحف */}
+        {/* صفحة المصحف - تنسيق مصحف الملك فهد (مع دعم الوضع المظلم) */}
         <div 
           ref={quranContainerRef} 
-          className={`${fontSizeClass} madina-mushaf overflow-y-auto max-h-[70vh] p-5 rounded-b-lg`}
-          style={{fontFamily: 'HafsSmart, Hafs, UthmanicHafs, Amiri Quran, serif'}}
+          className={`${fontSizeClass} madina-mushaf overflow-y-auto max-h-[70vh] p-5 rounded-b-lg dark:border dark:border-gray-700`}
+          style={{
+            fontFamily: 'HafsSmart, Hafs, UthmanicHafs, Amiri Quran, serif',
+            backgroundColor: '#F8F3E6',
+            background: 'linear-gradient(to bottom, #FBF8EF, #F8F3E6)',
+            borderColor: '#E6DFC8',
+            boxShadow: 'inset 0 0 10px rgba(0, 0, 0, 0.05)',
+            color: '#3A3A3A'
+          }}
+          data-theme-dark={{
+            background: 'linear-gradient(to bottom, #1a1a1a, #222)',
+            borderColor: '#444',
+            boxShadow: 'inset 0 0 10px rgba(0, 0, 0, 0.2)',
+            color: '#e0e0e0'
+          }}
         >
           {/* شريط رقم الصفحة */}
           <div className="page-header flex justify-center items-center mt-2 mb-6">
@@ -259,57 +272,81 @@ const QuranReader = ({
           <div className="quran-content">
             {Object.values(ayahsBySurah).map((surah) => (
               <div key={surah.surahInfo.number} className="surah-container mb-8">
-                {/* رأس السورة وعنوانها إذا كانت بداية سورة */}
+                {/* رأس السورة وعنوانها إذا كانت بداية سورة - تنسيق مصحف الملك فهد */}
                 {surah.ayahs[0].number === 1 && (
                   <div className="surah-header mb-6">
-                    <div className="surah-decoration">
-                      <img 
-                        src="https://qurancomplex.gov.sa/wp-content/themes/mazajitv2/webfonts/hafs/hafs-othmani-surah.png" 
-                        alt="زخرفة عنوان السورة" 
-                        className="mx-auto h-16 mb-3"
-                        onError={(e) => {
-                          (e.target as HTMLImageElement).style.display = 'none';
-                        }}
-                      />
-                    </div>
-                    
-                    <div className="surah-title-ornament">
-                      <div className="surah-title">
-                        <h2>{surah.surahInfo.name}</h2>
+                    <div className="surah-decoration relative">
+                      <div className="ornament-container relative text-center py-3 my-2">
+                        <div className="surah-ornament" style={{
+                          background: 'linear-gradient(135deg, #f6edd1 0%, #f0e2b6 100%)',
+                          border: '2px solid #d4c896',
+                          borderRadius: '15px',
+                          padding: '10px 15px 5px',
+                          position: 'relative',
+                          margin: '0 auto',
+                          width: '85%',
+                          boxShadow: '0 3px 5px rgba(0,0,0,0.05)'
+                        }}>
+                          <div className="surah-title" style={{
+                            fontFamily: 'HafsSmart, Hafs, UthmanicHafs, serif',
+                            fontSize: '1.7em',
+                            fontWeight: 'bold',
+                            color: '#6a442c',
+                            textAlign: 'center',
+                            margin: '0',
+                            padding: '5px 0',
+                            textShadow: '1px 1px 1px rgba(255,255,255,0.7)'
+                          }}>
+                            سُورَةُ {surah.surahInfo.name}
+                          </div>
+                        </div>
                       </div>
                     </div>
                     
-                    {/* البسملة - بداية كل سورة عدا التوبة */}
+                    {/* البسملة - بداية كل سورة عدا التوبة - تنسيق مصحف الملك فهد */}
                     {surah.surahInfo.number !== 9 && surah.ayahs[0].number === 1 && (
-                      <div className="bismillah text-center py-5">
+                      <div className="bismillah text-center mt-3 py-4 relative">
+                        <div className="bismillah-line before-line absolute w-40 h-px bg-amber-700 opacity-30 top-1/2 right-0"></div>
+                        <div className="bismillah-line after-line absolute w-40 h-px bg-amber-700 opacity-30 top-1/2 left-0"></div>
+                        
                         <p style={{
                           fontWeight: 600, 
-                          fontSize: '1.4em', 
+                          fontSize: '1.45em', 
                           lineHeight: '2.2', 
                           fontFamily: 'HafsSmart, Hafs, UthmanicHafs, serif',
                           color: '#705C3B',
-                          letterSpacing: '0.02em'
-                        }}>﴿ بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ ﴾</p>
+                          letterSpacing: '0.02em',
+                          display: 'inline-block',
+                          padding: '0 15px',
+                          position: 'relative'
+                        }}>
+                          ﴿ بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ ﴾
+                        </p>
                       </div>
                     )}
                   </div>
                 )}
                 
-                {/* الآيات */}
-                <div className="ayahs-container p-2 text-justify" style={{
+                {/* الآيات - تطبيق محاذاة المصحف الشريف */}
+                <div className="ayahs-container p-2 madina-mushaf" style={{
                   fontFamily: 'HafsSmart, Hafs, UthmanicHafs, Amiri Quran, serif', 
                   lineHeight: '2.7',
                   direction: 'rtl',
-                  textAlign: 'justify'
+                  textAlign: 'justify',
+                  textAlignLast: 'center',
+                  textJustify: 'inter-word',
+                  wordSpacing: '0.1em',
+                  fontSize: '1.2em'
                 }}>
                   {surah.ayahs.map((ayah, index) => (
                     <span 
                       key={`${ayah.surah.number}-${ayah.number}`} 
                       className="ayah-text inline-block"
                       style={{
-                        wordSpacing: '0.1em',
-                        letterSpacing: '-0.01em',
-                        fontFamily: 'HafsSmart, Hafs, UthmanicHafs, serif'
+                        wordSpacing: '0.12em',
+                        letterSpacing: '-0.015em',
+                        fontFamily: 'HafsSmart, Hafs, UthmanicHafs, serif',
+                        padding: '0 1px'
                       }}
                     >
                       {/* نص الآية */}
@@ -317,12 +354,15 @@ const QuranReader = ({
                       
                       {/* رقم الآية - تنسيق مصحف الملك فهد */}
                       <span 
-                        className="ayah-number inline-block mx-[1px] align-baseline" 
+                        className="ayah-number inline-flex mx-[1px] align-middle" 
                         style={{
                           color: '#863d00',
                           fontFamily: 'HafsSmart, Amiri Quran, Hafs, serif',
-                          fontSize: '0.95em',
-                          fontWeight: 500
+                          fontSize: '0.85em',
+                          fontWeight: 500,
+                          position: 'relative',
+                          top: '-0.15em',
+                          margin: '0 0.05em'
                         }}
                       >
                         ﴿{getArabicNumber(ayah.number)}﴾
