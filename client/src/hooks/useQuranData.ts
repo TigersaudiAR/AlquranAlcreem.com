@@ -1,21 +1,69 @@
 import { useState, useCallback, useEffect } from 'react';
+import { getSurahs } from '../lib/quran-api';
+import { QuranData, LastRead, Juz, Surah } from '../types/quran';
+import { SURAH_NAMES } from '../lib/constants';
 
-interface LastRead {
-  surahName: string;
-  surahNumber: number;
-  ayahNumber: number;
-  pageNumber: number;
-  text: string;
-  timestamp: string;
-  description?: string;
-}
+// بيانات ثابتة للأجزاء للاستخدام في حالة فشل الاتصال بالـ API
+const staticJuzData: Juz[] = Array.from({ length: 30 }, (_, i) => ({
+  number: i + 1,
+  ayahs: []
+}));
+
+// بيانات ثابتة للسور
+const staticSurahData: Surah[] = SURAH_NAMES.map((name, index) => ({
+  number: index + 1,
+  name: name,
+  englishName: `Surah ${index + 1}`,
+  englishNameTranslation: '',
+  numberOfAyahs: 0,
+  revelationType: ''
+}));
 
 export function useQuranData() {
   const [lastRead, setLastRead] = useState<LastRead | null>(null);
   const [bookmarks, setBookmarks] = useState<any[]>([]);
+  const [quranData, setQuranData] = useState<QuranData | null>(null);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
   
-  // استرداد آخر قراءة من التخزين المحلي عند تهيئة الهوك
+  // جلب بيانات القرآن الكريم من API
   useEffect(() => {
+    const fetchQuranData = async () => {
+      try {
+        setIsLoading(true);
+        setError(null);
+        
+        // جلب قائمة السور من API
+        const surahsResponse = await getSurahs();
+        
+        // تكوين بيانات القرآن
+        setQuranData({
+          surahs: surahsResponse?.surahs?.list || staticSurahData,
+          juzs: staticJuzData,
+          pages: [], 
+          editions: []
+        });
+        
+        setIsLoading(false);
+      } catch (error) {
+        console.error('Error fetching Quran data:', error);
+        
+        // استخدام البيانات الثابتة في حالة الفشل
+        setQuranData({
+          surahs: staticSurahData,
+          juzs: staticJuzData,
+          pages: [],
+          editions: []
+        });
+        
+        setError('تعذر الاتصال بالخادم. نستخدم البيانات المخزنة محلياً.');
+        setIsLoading(false);
+      }
+    };
+
+    fetchQuranData();
+    
+    // استرداد آخر قراءة من التخزين المحلي عند تهيئة الهوك
     const savedLastRead = getLastReadFromStorage();
     if (savedLastRead) {
       setLastRead(savedLastRead);
@@ -93,6 +141,9 @@ export function useQuranData() {
   }, []);
   
   return {
+    quranData,
+    isLoading,
+    error,
     lastRead,
     updateLastRead,
     bookmarks,
