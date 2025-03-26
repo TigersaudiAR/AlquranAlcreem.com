@@ -9,14 +9,14 @@ const staticJuzData: Juz[] = Array.from({ length: 30 }, (_, i) => ({
   ayahs: []
 }));
 
-// بيانات ثابتة للسور
-const staticSurahData: Surah[] = SURAH_NAMES.map((name, index) => ({
-  number: index + 1,
-  name: name,
-  englishName: `Surah ${index + 1}`,
-  englishNameTranslation: '',
-  numberOfAyahs: 0,
-  revelationType: ''
+// بيانات ثابتة للسور - تحويل من مصفوفة SURAH_NAMES إلى التنسيق المطلوب للنوع Surah
+const staticSurahData: Surah[] = SURAH_NAMES.map(surah => ({
+  number: surah.number,
+  name: String(surah.name), // التأكد من أن name هو نص (string)
+  englishName: String(surah.englishName),
+  englishNameTranslation: String(surah.englishName),
+  numberOfAyahs: 0, // عدد آيات السورة الافتراضي
+  revelationType: 'Meccan' // نوع النزول الافتراضي
 }));
 
 export function useQuranData() {
