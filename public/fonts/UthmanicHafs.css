@@ -8,12 +8,3 @@
   font-weight: normal;
   font-style: normal;
 }
-@font-face {
-  font-family: UthmanicHafs;
-  src: url("/fonts/UthmanicHafs1_Ver17.ttf") format("truetype");
-}
-
-@font-face {
-  font-family: UthmanTN1B;
-  src: url("/fonts/UthmanTN1B.ttf") format("truetype");
-}

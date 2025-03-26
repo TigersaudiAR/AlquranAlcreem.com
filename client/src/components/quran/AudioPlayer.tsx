@@ -1,201 +1,101 @@
+import React, { useRef, useEffect } from 'react';
+import { Play, Pause, Square } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Slider } from '@/components/ui/slider';
 
-import { useState, useRef, useEffect } from 'react';
+interface AudioPlayerProps {
+  isPlaying: boolean;
+  progress: number;
+  duration: number;
+  onPlay: () => void;
+  onPause: () => void;
+  onStop: () => void;
+}
 
-export default function AudioPlayer() {
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [currentTime, setCurrentTime] = useState(0);
-  const [duration, setDuration] = useState(0);
-  const [volume, setVolume] = useState(1);
-  const [showVolumeControl, setShowVolumeControl] = useState(false);
-  const [reciter, setReciter] = useState('mishari_rashid_alafasy');
-  const [surah, setSurah] = useState(1);
+const AudioPlayer = ({
+  isPlaying,
+  progress,
+  duration,
+  onPlay,
+  onPause,
+  onStop
+}: AudioPlayerProps) => {
+  const playerRef = useRef<HTMLDivElement>(null);
   
-  const audioRef = useRef<HTMLAudioElement>(null);
-  
-  const reciters = [
-    { id: 'mishari_rashid_alafasy', name: 'مشاري راشد العفاسي' },
-    { id: 'abdul_basit_abdus_samad', name: 'عبد الباسط عبد الصمد' },
-    { id: 'mahmoud_khalil_al_husary', name: 'محمود خليل الحصري' },
-    { id: 'muhammad_siddiq_al_minshawi', name: 'محمد صديق المنشاوي' },
-    { id: 'abu_bakr_al_shatri', name: 'أبو بكر الشاطري' }
-  ];
-  
-  const handleTimeUpdate = () => {
-    if (audioRef.current) {
-      setCurrentTime(audioRef.current.currentTime);
-    }
+  // تنسيق الوقت من ثوانٍ إلى mm:ss
+  const formatTime = (seconds: number): string => {
+    const mins = Math.floor(seconds / 60);
+    const secs = Math.floor(seconds % 60);
+    return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
   };
   
-  const handleLoadedMetadata = () => {
-    if (audioRef.current) {
-      setDuration(audioRef.current.duration);
-    }
-  };
-  
-  const handlePlayPause = () => {
-    if (audioRef.current) {
-      if (isPlaying) {
-        audioRef.current.pause();
-      } else {
-        audioRef.current.play();
-      }
-      setIsPlaying(!isPlaying);
-    }
-  };
-  
-  const handleSeek = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const time = parseFloat(e.target.value);
-    setCurrentTime(time);
-    if (audioRef.current) {
-      audioRef.current.currentTime = time;
-    }
-  };
-  
-  const handleVolumeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = parseFloat(e.target.value);
-    setVolume(value);
-    if (audioRef.current) {
-      audioRef.current.volume = value;
-    }
-  };
-  
-  const handleReciterChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    setReciter(e.target.value);
-  };
-  
-  const handleSurahChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    setSurah(parseInt(e.target.value));
-  };
-  
+  // معالجة النقر خارج مشغل الصوت
   useEffect(() => {
-    // عند تغيير السورة أو القارئ
-    if (audioRef.current) {
-      const audioSrc = `https://server.mp3quran.net//${reciter}/${surah.toString().padStart(3, '0')}.mp3`;
-      audioRef.current.src = audioSrc;
-      audioRef.current.load();
-      if (isPlaying) {
-        audioRef.current.play();
+    const handleClickOutside = (event: MouseEvent) => {
+      if (playerRef.current && !playerRef.current.contains(event.target as Node)) {
+        // يمكن إضافة منطق هنا إذا كنت ترغب في القيام بشيء عند النقر خارج المشغل
+        // مثل إغلاق مؤثرات أو قوائم
       }
-    }
-  }, [reciter, surah]);
+    };
+    
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
   
-  const formatTime = (time: number) => {
-    const minutes = Math.floor(time / 60);
-    const seconds = Math.floor(time % 60);
-    return `${minutes}:${seconds.toString().padStart(2, '0')}`;
-  };
-
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-lg p-4 shadow">
-      <audio
-        ref={audioRef}
-        onTimeUpdate={handleTimeUpdate}
-        onLoadedMetadata={handleLoadedMetadata}
-        onEnded={() => setIsPlaying(false)}
-      />
-      
-      <div className="flex flex-wrap items-center justify-between gap-4 mb-4">
-        <div className="flex items-center gap-2">
-          <button
-            onClick={handlePlayPause}
-            className="w-10 h-10 rounded-full bg-primary-600 text-white flex items-center justify-center"
-          >
-            <i className={`fas ${isPlaying ? 'fa-pause' : 'fa-play'}`}></i>
-          </button>
+    <div 
+      ref={playerRef}
+      className="fixed bottom-0 left-0 right-0 bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-800 shadow-md p-3 z-50"
+    >
+      <div className="flex items-center justify-between max-w-7xl mx-auto">
+        <div className="flex gap-2">
+          {isPlaying ? (
+            <Button 
+              className="bg-amber-600 hover:bg-amber-700 text-white"
+              size="sm"
+              onClick={onPause}
+            >
+              <Pause size={16} />
+            </Button>
+          ) : (
+            <Button 
+              className="bg-amber-600 hover:bg-amber-700 text-white"
+              size="sm"
+              onClick={onPlay}
+            >
+              <Play size={16} />
+            </Button>
+          )}
           
-          <div className="text-sm">
-            <span>{formatTime(currentTime)}</span>
-            <span> / </span>
-            <span>{formatTime(duration)}</span>
-          </div>
+          <Button 
+            className="bg-gray-600 hover:bg-gray-700 text-white"
+            size="sm"
+            onClick={onStop}
+          >
+            <Square size={16} />
+          </Button>
         </div>
         
-        <div className="flex-grow mx-4">
-          <input
-            type="range"
-            min="0"
-            max={duration || 0}
-            value={currentTime}
-            onChange={handleSeek}
-            className="w-full accent-primary-600"
+        <div className="flex-1 mx-4">
+          <Slider
+            defaultValue={[0]}
+            value={[progress]} 
+            max={duration || 100}
+            step={0.1}
+            disabled // لتلاوة القرآن، نجعل شريط التقدم معروضًا فقط ولا يمكن التفاعل معه
           />
         </div>
         
-        <div className="relative">
-          <button
-            onClick={() => setShowVolumeControl(!showVolumeControl)}
-            className="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700"
-          >
-            <i className={`fas ${volume === 0 ? 'fa-volume-mute' : volume < 0.5 ? 'fa-volume-down' : 'fa-volume-up'} text-gray-600 dark:text-gray-300`}></i>
-          </button>
-          
-          {showVolumeControl && (
-            <div className="absolute left-0 bottom-full mb-2 bg-white dark:bg-gray-800 p-2 rounded-md shadow-lg z-10">
-              <input
-                type="range"
-                min="0"
-                max="1"
-                step="0.01"
-                value={volume}
-                onChange={handleVolumeChange}
-                className="w-24 accent-primary-600"
-              />
-            </div>
-          )}
-        </div>
-      </div>
-      
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div>
-          <label htmlFor="reciter" className="block mb-1 text-sm text-gray-600 dark:text-gray-300">القارئ:</label>
-          <select
-            id="reciter"
-            value={reciter}
-            onChange={handleReciterChange}
-            className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md"
-          >
-            {reciters.map(r => (
-              <option key={r.id} value={r.id}>{r.name}</option>
-            ))}
-          </select>
-        </div>
-        
-        <div>
-          <label htmlFor="surah" className="block mb-1 text-sm text-gray-600 dark:text-gray-300">السورة:</label>
-          <select
-            id="surah"
-            value={surah}
-            onChange={handleSurahChange}
-            className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md"
-          >
-            {Array.from({ length: 114 }, (_, i) => i + 1).map(num => (
-              <option key={num} value={num}>
-                {num}. {getSurahName(num)}
-              </option>
-            ))}
-          </select>
+        <div className="text-sm">
+          <span className="text-gray-700 dark:text-gray-300">
+            {formatTime(progress)} / {formatTime(duration || 0)}
+          </span>
         </div>
       </div>
     </div>
   );
-}
+};
 
-// أسماء السور
-function getSurahName(number: number): string {
-  const names = [
-    'الفاتحة', 'البقرة', 'آل عمران', 'النساء', 'المائدة', 'الأنعام', 'الأعراف', 'الأنفال', 'التوبة', 'يونس',
-    'هود', 'يوسف', 'الرعد', 'إبراهيم', 'الحجر', 'النحل', 'الإسراء', 'الكهف', 'مريم', 'طه',
-    'الأنبياء', 'الحج', 'المؤمنون', 'النور', 'الفرقان', 'الشعراء', 'النمل', 'القصص', 'العنكبوت', 'الروم',
-    'لقمان', 'السجدة', 'الأحزاب', 'سبأ', 'فاطر', 'يس', 'الصافات', 'ص', 'الزمر', 'غافر',
-    'فصلت', 'الشورى', 'الزخرف', 'الدخان', 'الجاثية', 'الأحقاف', 'محمد', 'الفتح', 'الحجرات', 'ق',
-    'الذاريات', 'الطور', 'النجم', 'القمر', 'الرحمن', 'الواقعة', 'الحديد', 'المجادلة', 'الحشر', 'الممتحنة',
-    'الصف', 'الجمعة', 'المنافقون', 'التغابن', 'الطلاق', 'التحريم', 'الملك', 'القلم', 'الحاقة', 'المعارج',
-    'نوح', 'الجن', 'المزمل', 'المدثر', 'القيامة', 'الإنسان', 'المرسلات', 'النبأ', 'النازعات', 'عبس',
-    'التكوير', 'الانفطار', 'المطففين', 'الانشقاق', 'البروج', 'الطارق', 'الأعلى', 'الغاشية', 'الفجر', 'البلد',
-    'الشمس', 'الليل', 'الضحى', 'الشرح', 'التين', 'العلق', 'القدر', 'البينة', 'الزلزلة', 'العاديات',
-    'القارعة', 'التكاثر', 'العصر', 'الهمزة', 'الفيل', 'قريش', 'الماعون', 'الكوثر', 'الكافرون', 'النصر',
-    'المسد', 'الإخلاص', 'الفلق', 'الناس'
-  ];
-  
-  return names[number - 1] || '';
-}
+export default AudioPlayer;
