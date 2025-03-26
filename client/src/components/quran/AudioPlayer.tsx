@@ -1,10 +1,32 @@
 
 import { useState, useRef, useEffect } from 'react';
 
-export default function AudioPlayer() {
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [currentTime, setCurrentTime] = useState(0);
-  const [duration, setDuration] = useState(0);
+interface AudioPlayerProps {
+  isPlaying?: boolean;
+  progress?: number;
+  duration?: number;
+  onPlay?: () => void;
+  onPause?: () => void;
+  onStop?: () => void;
+}
+
+export default function AudioPlayer({
+  isPlaying: externalIsPlaying,
+  progress: externalProgress,
+  duration: externalDuration,
+  onPlay,
+  onPause,
+  onStop
+}: AudioPlayerProps = {}) {
+  // استخدام القيم الداخلية أو الخارجية حسب توفرها
+  const [internalIsPlaying, setInternalIsPlaying] = useState(false);
+  const [internalCurrentTime, setInternalCurrentTime] = useState(0);
+  const [internalDuration, setInternalDuration] = useState(0);
+  
+  // استخدام Props إذا كانت متوفرة، أو القيم الداخلية إذا لم تكن
+  const isPlaying = externalIsPlaying !== undefined ? externalIsPlaying : internalIsPlaying;
+  const currentTime = externalProgress !== undefined ? externalProgress : internalCurrentTime;
+  const duration = externalDuration !== undefined ? externalDuration : internalDuration;
   const [volume, setVolume] = useState(1);
   const [showVolumeControl, setShowVolumeControl] = useState(false);
   const [reciter, setReciter] = useState('mishari_rashid_alafasy');
@@ -22,13 +44,13 @@ export default function AudioPlayer() {
   
   const handleTimeUpdate = () => {
     if (audioRef.current) {
-      setCurrentTime(audioRef.current.currentTime);
+      setInternalCurrentTime(audioRef.current.currentTime);
     }
   };
   
   const handleLoadedMetadata = () => {
     if (audioRef.current) {
-      setDuration(audioRef.current.duration);
+      setInternalDuration(audioRef.current.duration);
     }
   };
   
@@ -36,16 +58,19 @@ export default function AudioPlayer() {
     if (audioRef.current) {
       if (isPlaying) {
         audioRef.current.pause();
+        setInternalIsPlaying(false);
+        if (onPause) onPause();
       } else {
         audioRef.current.play();
+        setInternalIsPlaying(true);
+        if (onPlay) onPlay();
       }
-      setIsPlaying(!isPlaying);
     }
   };
   
   const handleSeek = (e: React.ChangeEvent<HTMLInputElement>) => {
     const time = parseFloat(e.target.value);
-    setCurrentTime(time);
+    setInternalCurrentTime(time);
     if (audioRef.current) {
       audioRef.current.currentTime = time;
     }
@@ -91,7 +116,10 @@ export default function AudioPlayer() {
         ref={audioRef}
         onTimeUpdate={handleTimeUpdate}
         onLoadedMetadata={handleLoadedMetadata}
-        onEnded={() => setIsPlaying(false)}
+        onEnded={() => {
+          setInternalIsPlaying(false);
+          if (onStop) onStop();
+        }}
       />
       
       <div className="flex flex-wrap items-center justify-between gap-4 mb-4">

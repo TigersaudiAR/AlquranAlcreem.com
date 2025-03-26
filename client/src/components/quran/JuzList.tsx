@@ -116,11 +116,12 @@ interface JuzCardProps {
 }
 
 function JuzCard({ juzNumber, juzInfo, fontFamily, fontSize }: JuzCardProps) {
+  const [, navigate] = useLocation();
   const firstSurah = juzInfo[0];
   
   return (
     <div 
-      onClick={() => window.location.href = `/quran/juz/${juzNumber}`}
+      onClick={() => navigate(`/quran/juz/${juzNumber}`)}
       className="block bg-gray-50 dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 rounded-lg p-4 transition duration-150 ease-in-out cursor-pointer">
       <div className="flex justify-between items-center mb-2">
         <div className="flex items-center">

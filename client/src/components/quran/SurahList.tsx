@@ -1,6 +1,5 @@
-
 import { useState } from 'react';
-import { Link } from 'wouter';
+import { useLocation } from 'wouter';
 import { QuranData, Surah } from '@/types/quran';
 
 interface SurahListProps {
@@ -46,10 +45,17 @@ interface SurahCardProps {
 }
 
 function SurahCard({ surah, fontFamily, fontSize }: SurahCardProps) {
+  const [, navigate] = useLocation();
+  
+  // تحديد الصفحة إذا كانت متوفرة، وإلا استخدام رقم السورة للتنقل
+  const pageNumber = (surah as any).page;
+  const targetUrl = pageNumber ? `/quran/page/${pageNumber}` : `/quran/surah/${surah.number}`;
+
   return (
     <div 
-      onClick={() => window.location.href = `/quran/surah/${surah.number}`}
-      className="block bg-gray-50 dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 rounded-lg p-4 transition duration-150 ease-in-out cursor-pointer">
+      className="block bg-gray-50 dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 rounded-lg p-4 transition duration-150 ease-in-out cursor-pointer" 
+      onClick={() => navigate(targetUrl)}
+    >
       <div className="flex justify-between items-center mb-2">
         <div className="flex items-center">
           <div className="bg-primary-600 text-white w-8 h-8 flex items-center justify-center rounded-full ml-2">
