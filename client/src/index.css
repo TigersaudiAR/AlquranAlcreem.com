@@ -5,7 +5,7 @@
 /* تعريف خط حفص سمارت من مجمع الملك فهد */
 @font-face {
   font-family: 'HafsSmart';
-  src: url('@assets/kfgqpc_hafs_smart_4/KFGQPC_Hafs_Smart_Regular.ttf') format('truetype');
+  src: url('/assets/kfgqpc_hafs_smart_font/HafsSmart_08.ttf') format('truetype');
   font-weight: normal;
   font-style: normal;
   font-display: swap;
@@ -13,7 +13,7 @@
 
 @font-face {
   font-family: 'HafsSmart';
-  src: url('@assets/kfgqpc_hafs_smart_4/KFGQPC_Hafs_Smart_Bold.ttf') format('truetype');
+  src: url('/assets/kfgqpc_hafs_smart_font/HafsSmart_08.ttf') format('truetype');
   font-weight: bold;
   font-style: normal;
   font-display: swap;
@@ -139,7 +139,7 @@
     background-color: #FBF8EF;
     background-image: url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI1IiBoZWlnaHQ9IjUiPgo8cmVjdCB3aWR0aD0iNSIgaGVpZ2h0PSI1IiBmaWxsPSIjZmJmOGVmIj48L3JlY3Q+CjxyZWN0IHdpZHRoPSIxIiBoZWlnaHQ9IjEiIGZpbGw9IiNmNWYwZTIiPjwvcmVjdD4KPC9zdmc+');
     border: 1px solid #E6DFC8;
-    font-family: 'Hafs', 'UthmanicHafs', 'Amiri Quran', serif;
+    font-family: 'HafsSmart', 'Hafs', 'UthmanicHafs', 'Amiri Quran', serif;
     direction: rtl;
     padding: 1.5rem;
     position: relative;
@@ -272,7 +272,7 @@
     margin: 0;
     font-weight: normal;
     line-height: 1.5;
-    font-family: 'Hafs', 'UthmanicHafs', serif;
+    font-family: 'HafsSmart', 'Hafs', 'UthmanicHafs', serif;
   }
   
   .dark .bismillah p {
