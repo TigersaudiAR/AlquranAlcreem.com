@@ -212,32 +212,42 @@ const QuranReader = ({
         <div className="p-3 bg-white dark:bg-gray-800 border-b border-amber-200 dark:border-amber-900 shadow-sm mb-4 rounded-t-lg">
           <div className="flex justify-between items-center">
             <button 
-              className="py-1 px-3 bg-amber-500 text-white hover:bg-amber-600 disabled:opacity-50 disabled:cursor-not-allowed rounded-md flex items-center text-sm"
+              className="py-2 px-4 bg-gradient-to-b from-amber-400 to-amber-500 text-white hover:from-amber-500 hover:to-amber-600 disabled:opacity-50 disabled:cursor-not-allowed rounded-md flex items-center text-sm shadow-sm"
               onClick={() => handlePageTurn('prev')}
               disabled={pageNumber <= 1}
+              style={{
+                transition: 'all 0.2s ease',
+                fontWeight: 'bold'
+              }}
             >
-              <i className="fas fa-chevron-right ml-1"></i>
+              <span className="ml-1">›</span>
               <span>السابقة</span>
             </button>
             
             <div className="text-center flex flex-col">
-              <span className="text-base font-bold text-gray-700 dark:text-gray-200">
+              <span className="text-lg font-bold text-amber-700 dark:text-amber-300 mb-1" style={{
+                fontFamily: 'HafsSmart, Hafs, UthmanicHafs, serif',
+              }}>
                 {currentSurahInfo?.name || Object.values(ayahsBySurah).map(surah => surah.surahInfo.name).join(' - ')}
               </span>
-              <div className="flex items-center justify-center gap-2 text-xs text-gray-500 dark:text-gray-400">
-                <span>الصفحة {pageNumber} من {pagesTotal}</span>
+              <div className="flex items-center justify-center gap-2 text-xs text-gray-600 dark:text-gray-400">
+                <span>الصفحة {getArabicNumber(pageNumber)} من {getArabicNumber(pagesTotal)}</span>
                 <span className="mx-2">|</span>
-                <span>{ayahs.length > 0 ? `الجزء ${ayahs[0].juz}` : ''}</span>
+                <span>{ayahs.length > 0 ? `الجزء ${getArabicNumber(ayahs[0].juz)}` : ''}</span>
               </div>
             </div>
             
             <button 
-              className="py-1 px-3 bg-amber-500 text-white hover:bg-amber-600 disabled:opacity-50 disabled:cursor-not-allowed rounded-md flex items-center text-sm"
+              className="py-2 px-4 bg-gradient-to-b from-amber-400 to-amber-500 text-white hover:from-amber-500 hover:to-amber-600 disabled:opacity-50 disabled:cursor-not-allowed rounded-md flex items-center text-sm shadow-sm"
               onClick={() => handlePageTurn('next')}
               disabled={pageNumber >= pagesTotal}
+              style={{
+                transition: 'all 0.2s ease',
+                fontWeight: 'bold'
+              }}
             >
               <span>التالية</span>
-              <i className="fas fa-chevron-left mr-1"></i>
+              <span className="mr-1">‹</span>
             </button>
           </div>
         </div>
@@ -260,8 +270,21 @@ const QuranReader = ({
         >
           {/* شريط رقم الصفحة */}
           <div className="page-header flex justify-center items-center mt-2 mb-6">
-            <div className="page-number-badge">
-              <span>{pageNumber}</span>
+            <div className="page-number-badge" style={{
+              background: 'linear-gradient(135deg, #f0e2b6 0%, #dac896 100%)',
+              border: '1px solid #d4c896',
+              borderRadius: '50%',
+              width: '40px',
+              height: '40px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontSize: '1.1em',
+              fontWeight: 'bold',
+              color: '#705C3B',
+              boxShadow: '0 2px 4px rgba(0,0,0,0.05)'
+            }}>
+              <span>{getArabicNumber(pageNumber)}</span>
             </div>
           </div>
           
@@ -281,12 +304,12 @@ const QuranReader = ({
                           padding: '10px 15px 5px',
                           position: 'relative',
                           margin: '0 auto',
-                          width: '85%',
+                          width: '100%',
                           boxShadow: '0 3px 5px rgba(0,0,0,0.05)'
                         }}>
                           <div className="surah-title" style={{
                             fontFamily: 'HafsSmart, Hafs, UthmanicHafs, serif',
-                            fontSize: '1.7em',
+                            fontSize: '2.2em',
                             fontWeight: 'bold',
                             color: '#6a442c',
                             textAlign: 'center',
@@ -302,20 +325,21 @@ const QuranReader = ({
                     
                     {/* البسملة - بداية كل سورة عدا التوبة - تنسيق مصحف الملك فهد */}
                     {surah.surahInfo.number !== 9 && surah.ayahs[0].number === 1 && (
-                      <div className="bismillah text-center mt-3 py-4 relative">
-                        <div className="bismillah-line before-line absolute w-40 h-px bg-amber-700 opacity-30 top-1/2 right-0"></div>
-                        <div className="bismillah-line after-line absolute w-40 h-px bg-amber-700 opacity-30 top-1/2 left-0"></div>
+                      <div className="bismillah text-center mt-6 mb-8 py-4 relative">
+                        <div className="bismillah-line before-line absolute w-1/3 h-px bg-amber-700 opacity-20 top-1/2 right-5"></div>
+                        <div className="bismillah-line after-line absolute w-1/3 h-px bg-amber-700 opacity-20 top-1/2 left-5"></div>
                         
                         <p style={{
                           fontWeight: 600, 
-                          fontSize: '1.45em', 
-                          lineHeight: '2.2', 
+                          fontSize: '1.8em', 
+                          lineHeight: '1.5', 
                           fontFamily: 'HafsSmart, Hafs, UthmanicHafs, serif',
                           color: '#705C3B',
-                          letterSpacing: '0.02em',
+                          letterSpacing: '0.01em',
                           display: 'inline-block',
-                          padding: '0 15px',
-                          position: 'relative'
+                          padding: '0 20px',
+                          position: 'relative',
+                          whiteSpace: 'nowrap'
                         }}>
                           ﴿ بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ ﴾
                         </p>
@@ -325,23 +349,23 @@ const QuranReader = ({
                 )}
                 
                 {/* الآيات - تطبيق محاذاة المصحف الشريف */}
-                <div className="ayahs-container p-2 madina-mushaf" style={{
+                <div className="ayahs-container p-4 madina-mushaf" style={{
                   fontFamily: 'HafsSmart, Hafs, UthmanicHafs, Amiri Quran, serif', 
                   lineHeight: '2.7',
                   direction: 'rtl',
                   textAlign: 'justify',
                   textAlignLast: 'center',
                   textJustify: 'inter-word',
-                  wordSpacing: '0.1em',
-                  fontSize: '1.2em'
+                  wordSpacing: '0.08em',
+                  fontSize: '1.35em'
                 }}>
                   {surah.ayahs.map((ayah, index) => (
                     <span 
                       key={`${ayah.surah.number}-${ayah.number}`} 
                       className="ayah-text inline-block"
                       style={{
-                        wordSpacing: '0.12em',
-                        letterSpacing: '-0.015em',
+                        wordSpacing: '0.1em',
+                        letterSpacing: '-0.01em',
                         fontFamily: 'HafsSmart, Hafs, UthmanicHafs, serif',
                         padding: '0 1px'
                       }}
@@ -355,11 +379,12 @@ const QuranReader = ({
                         style={{
                           color: '#863d00',
                           fontFamily: 'HafsSmart, Amiri Quran, Hafs, serif',
-                          fontSize: '0.85em',
+                          fontSize: '0.9em',
                           fontWeight: 500,
                           position: 'relative',
                           top: '-0.15em',
-                          margin: '0 0.05em'
+                          margin: '0 0.07em',
+                          textShadow: '0px 0px 1px rgba(134, 61, 0, 0.2)'
                         }}
                       >
                         ﴿{getArabicNumber(ayah.number)}﴾
