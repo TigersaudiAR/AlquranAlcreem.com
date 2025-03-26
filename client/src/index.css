@@ -2,9 +2,23 @@
 @tailwind components;
 @tailwind utilities;
 
+/* خطوط مصحف المدينة المنورة لعرض القرآن الكريم */
+@font-face {
+  font-family: 'Hafs';
+  src: url('https://qurancomplex.gov.sa/wp-content/themes/mazajitv2/webfonts/hafs/hafs-main.woff2') format('woff2'),
+       url('https://qurancomplex.gov.sa/wp-content/themes/mazajitv2/webfonts/hafs/hafs-main.woff') format('woff');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
 @font-face {
   font-family: 'UthmanicHafs';
-  src: url('/fonts/UthmanicHafs1Ver18.woff2') format('woff2');
+  /* استخدام الخطوط المتوفرة محليًا كخطوط بديلة في حالة عدم توفر الخط الرئيسي */
+  src: local('Hafs'),
+       local('Amiri Quran'),
+       local('Scheherazade New'),
+       local('Amiri');
   font-weight: normal;
   font-style: normal;
   font-display: swap;

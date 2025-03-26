@@ -246,6 +246,7 @@ const QuranReader = ({
         <div 
           ref={quranContainerRef} 
           className={`${fontSizeClass} madina-mushaf overflow-y-auto max-h-[70vh] p-5 rounded-b-lg`}
+          style={{fontFamily: 'Hafs, UthmanicHafs, Amiri Quran, serif'}}
         >
           {/* شريط رقم الصفحة */}
           <div className="page-header flex justify-center items-center mt-2 mb-6">
@@ -261,6 +262,17 @@ const QuranReader = ({
                 {/* رأس السورة وعنوانها إذا كانت بداية سورة */}
                 {surah.ayahs[0].number === 1 && (
                   <div className="surah-header mb-6">
+                    <div className="surah-decoration">
+                      <img 
+                        src="https://qurancomplex.gov.sa/wp-content/themes/mazajitv2/webfonts/hafs/hafs-othmani-surah.png" 
+                        alt="زخرفة عنوان السورة" 
+                        className="mx-auto h-16 mb-3"
+                        onError={(e) => {
+                          (e.target as HTMLImageElement).style.display = 'none';
+                        }}
+                      />
+                    </div>
+                    
                     <div className="surah-title-ornament">
                       <div className="surah-title">
                         <h2>{surah.surahInfo.name}</h2>
@@ -270,14 +282,14 @@ const QuranReader = ({
                     {/* البسملة - بداية كل سورة عدا التوبة */}
                     {surah.surahInfo.number !== 9 && (
                       <div className="bismillah">
-                        <p>بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ</p>
+                        <p style={{fontWeight: 500}}>بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ</p>
                       </div>
                     )}
                   </div>
                 )}
                 
                 {/* الآيات */}
-                <div className="ayahs-container">
+                <div className="ayahs-container" style={{fontFamily: 'Hafs, UthmanicHafs, Amiri Quran, serif', lineHeight: '2.5'}}>
                   {surah.ayahs.map((ayah, index) => (
                     <span key={`${ayah.surah.number}-${ayah.number}`} className="ayah-text">
                       {/* نص الآية */}
@@ -285,7 +297,7 @@ const QuranReader = ({
                       
                       {/* رقم الآية - تنسيق مصحف الملك فهد */}
                       <span className="ayah-number">
-                        {getArabicNumber(ayah.number)}
+                        ﴿{getArabicNumber(ayah.number)}﴾
                       </span>
                       
                       {/* علامات الحزب والجزء */}
