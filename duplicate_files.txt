@@ -1,0 +1,7 @@
+extracted/quranforall-V5/quran/api/quran/includes/quran-uthmani/114.php
+extracted/quranforall-V5/quran/api/quran/includes/quran-uthmani/113.php
+extracted/quranforall-V5/quran/api/quran/includes/quran-uthmani/108.php
+extracted/quranforall-V5/quran/api/quran/includes/quran-uthmani/112.php
+extracted/quranforall-V5/quran/api/quran/includes/quran-uthmani/102.php
+extracted/quranforall-V5/quran/api/quran/includes/quran-uthmani/103.php
+extracted/quranforall-V5/quran/api/books/images/flags/index.php
