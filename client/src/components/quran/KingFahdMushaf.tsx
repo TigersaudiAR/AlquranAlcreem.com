@@ -8,13 +8,14 @@ import { ZoomIn, ZoomOut, Bookmark, SkipBack, SkipForward, Info, ChevronRight, C
 interface KingFahdMushafProps {
   pageNumber: number;
   onPageChange: (page: number) => void;
+  hideControls?: boolean;
 }
 
 /**
  * مكون عرض المصحف الشريف من مطبعة الملك فهد للطباعة
  * يعرض صفحات المصحف كما هي دون أي تعديل أو إعادة كتابة
  */
-export default function KingFahdMushaf({ pageNumber, onPageChange }: KingFahdMushafProps) {
+export default function KingFahdMushaf({ pageNumber, onPageChange, hideControls = false }: KingFahdMushafProps) {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [zoomLevel, setZoomLevel] = useState(1);
@@ -106,7 +107,7 @@ export default function KingFahdMushaf({ pageNumber, onPageChange }: KingFahdMus
     // إظهار حالة التحميل لمدة قصيرة عند تغيير الصفحة
     const timer = setTimeout(() => {
       setIsLoading(false);
-    }, 400);
+    }, 300);
     
     return () => clearTimeout(timer);
   }, [pageNumber]);
@@ -142,17 +143,6 @@ export default function KingFahdMushaf({ pageNumber, onPageChange }: KingFahdMus
     }
   };
   
-  // القفز 10 صفحات للأمام أو للخلف
-  const handleJumpForward = () => {
-    const newPage = Math.min(pageNumber + 10, totalPages);
-    onPageChange(newPage);
-  };
-  
-  const handleJumpBackward = () => {
-    const newPage = Math.max(pageNumber - 10, 1);
-    onPageChange(newPage);
-  };
-  
   // التكبير والتصغير
   const handleZoomIn = () => {
     if (zoomLevel < 2) {
@@ -164,12 +154,6 @@ export default function KingFahdMushaf({ pageNumber, onPageChange }: KingFahdMus
     if (zoomLevel > 0.6) {
       setZoomLevel(prevZoom => prevZoom - 0.1);
     }
-  };
-  
-  // إضافة إلى المفضلة
-  const handleAddBookmark = () => {
-    // سيتم تنفيذ ذلك في مرحلة لاحقة
-    alert(`تمت إضافة الصفحة ${pageNumber} إلى المفضلة`);
   };
   
   // استجابة للضغط على مفاتيح الأسهم
@@ -192,6 +176,55 @@ export default function KingFahdMushaf({ pageNumber, onPageChange }: KingFahdMus
     return <ErrorDisplay message={error} />;
   }
   
+  // عرض نمط واجهة كاملة (نمط آية/سورة) إذا كان hideControls = true
+  if (hideControls) {
+    return (
+      <div 
+        className="king-fahd-mushaf-container h-full w-full flex flex-col items-center justify-center"
+        style={{
+          backgroundImage: 'url(/assets/mushaf/mushaf-background.svg)',
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+          backgroundRepeat: 'no-repeat'
+        }}
+      >
+        {/* عرض صفحة المصحف الشريف بدون أي إضافات - نمط تطبيق آية/سورة */}
+        <div 
+          className="h-full w-full flex items-center justify-center"
+          {...swipeHandlers}
+        >
+          {isLoading ? (
+            <div className="flex justify-center items-center">
+              <LoadingSpinner />
+            </div>
+          ) : (
+            <div 
+              className="h-full w-full flex items-center justify-center overflow-auto select-none"
+              style={{ 
+                transform: `scale(${zoomLevel})`,
+                transformOrigin: 'center center',
+                transition: 'transform 0.2s ease-in-out'
+              }}
+            >
+              <img 
+                ref={imgRef}
+                src={getImageUrl(pageNumber)} 
+                alt={`صفحة ${pageNumber} من المصحف الشريف`}
+                className="max-h-full max-w-full object-contain"
+                style={{ 
+                  userSelect: 'none',
+                }}
+                onError={() => setError("تعذر تحميل صفحة المصحف. يرجى التحقق من اتصالك بالإنترنت والمحاولة مرة أخرى.")}
+                draggable={false}
+              />
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+  
+  // نمط العرض العادي مع أدوات التحكم
   return (
     <div className="king-fahd-mushaf-container flex flex-col items-center relative">
       {/* شريط المعلومات في الأعلى */}
@@ -278,7 +311,7 @@ export default function KingFahdMushaf({ pageNumber, onPageChange }: KingFahdMus
           
           <div className="flex items-center gap-1">
             <button
-              onClick={handleJumpBackward}
+              onClick={() => onPageChange(Math.max(pageNumber - 10, 1))}
               className="p-2 rounded-full bg-white dark:bg-gray-800 hover:bg-amber-100 dark:hover:bg-gray-700 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-gray-700"
               aria-label="عشر صفحات للخلف"
               disabled={pageNumber <= 10}
@@ -325,7 +358,7 @@ export default function KingFahdMushaf({ pageNumber, onPageChange }: KingFahdMus
               <ChevronLeft className="h-4 w-4 mr-1" />
             </button>
             <button
-              onClick={handleJumpForward}
+              onClick={() => onPageChange(Math.min(pageNumber + 10, totalPages))}
               className="p-2 rounded-full bg-white dark:bg-gray-800 hover:bg-amber-100 dark:hover:bg-gray-700 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-gray-700"
               aria-label="عشر صفحات للأمام"
               disabled={pageNumber >= totalPages - 10}
@@ -335,7 +368,7 @@ export default function KingFahdMushaf({ pageNumber, onPageChange }: KingFahdMus
           </div>
           
           <button
-            onClick={handleAddBookmark}
+            onClick={() => alert(`تمت إضافة الصفحة ${pageNumber} إلى المفضلة`)}
             className="p-2 rounded-full bg-white dark:bg-gray-800 hover:bg-amber-100 dark:hover:bg-gray-700 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-gray-700"
             aria-label="إضافة للمفضلة"
           >
