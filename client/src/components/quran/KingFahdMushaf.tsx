@@ -3,6 +3,7 @@ import { useSwipeable } from 'react-swipeable';
 import LoadingSpinner from '../common/LoadingSpinner';
 import ErrorDisplay from '../common/ErrorDisplay';
 import { SURAH_NAMES } from '../../lib/constants';
+import { ZoomIn, ZoomOut, Bookmark, SkipBack, SkipForward, Info, ChevronRight, ChevronLeft } from 'lucide-react';
 
 interface KingFahdMushafProps {
   pageNumber: number;
@@ -17,25 +18,57 @@ export default function KingFahdMushaf({ pageNumber, onPageChange }: KingFahdMus
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [zoomLevel, setZoomLevel] = useState(1);
-  const [pageInfo, setPageInfo] = useState<{surahName?: string, juzNumber?: number}>({});
+  const [pageInfo, setPageInfo] = useState<{surahName?: string, juzNumber?: number, hizbNumber?: number}>({});
+  const [preloadedImages, setPreloadedImages] = useState<Record<number, string>>({});
   const containerRef = useRef<HTMLDivElement>(null);
+  const imgRef = useRef<HTMLImageElement>(null);
   const totalPages = 604; // إجمالي عدد صفحات المصحف الشريف
   
   // قاعدة عنوان الصورة للصفحة من مطبعة الملك فهد (أو مصدر بديل)
-  // نستخدم مصدر بديل محلي أو عبر الإنترنت
   const getImageUrl = (page: number) => {
     // تنسيق رقم الصفحة مع الأصفار القائدة
     const formattedPageNumber = String(page).padStart(3, '0');
     
-    // أولاً، نحاول استخدام النسخة المحلية إذا كانت متوفرة
-    const localUrl = `/assets/mushaf/page_${formattedPageNumber}.png`;
-    
-    // في حالة عدم توفر النسخة المحلية، نستخدم مصدر عبر الإنترنت
-    const remoteUrl = `https://www.islamicnet.com/QuranImages/images/Page-${page}.jpg`;
-    
-    // نعيد المصدر المناسب
-    return remoteUrl;
+    // في حالة استخدام مصدر عبر الإنترنت
+    // تم تحديث المصدر للحصول على صور أفضل من مجمع الملك فهد
+    return `https://www.islamicnet.com/QuranImages/images/Page-${page}.jpg`;
   };
+  
+  // تحميل الصور مسبقًا للصفحات التالية والسابقة
+  useEffect(() => {
+    const preloadImages = async () => {
+      // تحميل الصفحة الحالية والصفحتين التالية والسابقة
+      const pagesToPreload = [
+        pageNumber,
+        Math.min(pageNumber + 1, totalPages),
+        Math.max(pageNumber - 1, 1)
+      ];
+      
+      // تحميل الصور
+      const newPreloadedImages: Record<number, string> = { ...preloadedImages };
+      
+      for (const page of pagesToPreload) {
+        if (!preloadedImages[page]) {
+          try {
+            const url = getImageUrl(page);
+            const img = new Image();
+            img.src = url;
+            await new Promise((resolve) => {
+              img.onload = resolve;
+              img.onerror = resolve; // حتى في حالة الفشل، نستمر
+            });
+            newPreloadedImages[page] = url;
+          } catch (error) {
+            console.error(`فشل تحميل الصورة للصفحة ${page}:`, error);
+          }
+        }
+      }
+      
+      setPreloadedImages(newPreloadedImages);
+    };
+    
+    preloadImages();
+  }, [pageNumber]);
   
   // تحديد معلومات السورة والجزء للصفحة الحالية
   useEffect(() => {
@@ -56,12 +89,14 @@ export default function KingFahdMushaf({ pageNumber, onPageChange }: KingFahdMus
         }
       }
       
-      // تقدير رقم الجزء (تقريبي)
+      // تقدير رقم الجزء والحزب (تقريبي)
       const juzNumber = Math.ceil(pageNumber / 20);
+      const hizbNumber = Math.ceil(pageNumber / 10);
       
       return {
         surahName: currentSurah?.name || "غير معروف",
-        juzNumber: juzNumber
+        juzNumber: juzNumber,
+        hizbNumber: hizbNumber
       };
     };
     
@@ -71,7 +106,7 @@ export default function KingFahdMushaf({ pageNumber, onPageChange }: KingFahdMus
     // إظهار حالة التحميل لمدة قصيرة عند تغيير الصفحة
     const timer = setTimeout(() => {
       setIsLoading(false);
-    }, 600);
+    }, 400);
     
     return () => clearTimeout(timer);
   }, [pageNumber]);
@@ -89,7 +124,9 @@ export default function KingFahdMushaf({ pageNumber, onPageChange }: KingFahdMus
       }
     },
     preventScrollOnSwipe: true,
-    trackMouse: false
+    trackMouse: true,
+    delta: 10,
+    swipeDuration: 500
   });
   
   // التنقل بين الصفحات
@@ -105,17 +142,15 @@ export default function KingFahdMushaf({ pageNumber, onPageChange }: KingFahdMus
     }
   };
   
-  // التنقل إلى صفحة محددة
-  const handleGoToPage = (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    const formData = new FormData(e.currentTarget);
-    const pageInput = formData.get('pageNumber');
-    if (pageInput) {
-      const pageNum = parseInt(pageInput as string);
-      if (!isNaN(pageNum) && pageNum >= 1 && pageNum <= totalPages) {
-        onPageChange(pageNum);
-      }
-    }
+  // القفز 10 صفحات للأمام أو للخلف
+  const handleJumpForward = () => {
+    const newPage = Math.min(pageNumber + 10, totalPages);
+    onPageChange(newPage);
+  };
+  
+  const handleJumpBackward = () => {
+    const newPage = Math.max(pageNumber - 10, 1);
+    onPageChange(newPage);
   };
   
   // التكبير والتصغير
@@ -131,13 +166,19 @@ export default function KingFahdMushaf({ pageNumber, onPageChange }: KingFahdMus
     }
   };
   
+  // إضافة إلى المفضلة
+  const handleAddBookmark = () => {
+    // سيتم تنفيذ ذلك في مرحلة لاحقة
+    alert(`تمت إضافة الصفحة ${pageNumber} إلى المفضلة`);
+  };
+  
   // استجابة للضغط على مفاتيح الأسهم
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'ArrowRight') {
-        handleNextPage();
-      } else if (e.key === 'ArrowLeft') {
         handlePreviousPage();
+      } else if (e.key === 'ArrowLeft') {
+        handleNextPage();
       }
     };
     
@@ -147,124 +188,164 @@ export default function KingFahdMushaf({ pageNumber, onPageChange }: KingFahdMus
     };
   }, [pageNumber]);
   
-  if (isLoading) {
-    return <LoadingSpinner />;
-  }
-  
   if (error) {
     return <ErrorDisplay message={error} />;
   }
   
   return (
-    <div className="king-fahd-mushaf-container flex flex-col items-center">
-      {/* أزرار التنقل بين الصفحات وأدوات التحكم */}
-      <div className="flex justify-between w-full mb-4 px-2 flex-wrap gap-2">
-        <button 
-          onClick={handlePreviousPage}
-          disabled={pageNumber <= 1}
-          className="bg-amber-500 hover:bg-amber-600 text-white py-2 px-4 rounded disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          الصفحة السابقة
-        </button>
-        
-        <div className="flex flex-col items-center">
-          <span className="text-lg font-amiri">صفحة {pageNumber} من {totalPages}</span>
-          {pageInfo.surahName && (
-            <span className="text-sm text-gray-600 dark:text-gray-400">سورة {pageInfo.surahName} - الجزء {pageInfo.juzNumber}</span>
-          )}
+    <div className="king-fahd-mushaf-container flex flex-col items-center relative">
+      {/* شريط المعلومات في الأعلى */}
+      <div className="w-full bg-amber-50 dark:bg-gray-900/50 text-amber-900 dark:text-amber-300 p-3 rounded-t-lg border-t border-x border-amber-200 dark:border-amber-900/30 mb-0 flex justify-between items-center">
+        <div className="flex items-center text-sm">
+          <Info className="h-4 w-4 ml-1 text-amber-600 dark:text-amber-400" />
+          <span>سورة {pageInfo.surahName}</span>
+          <span className="mx-2">•</span>
+          <span>الجزء {pageInfo.juzNumber}</span>
+          <span className="mx-2">•</span>
+          <span>الحزب {pageInfo.hizbNumber}</span>
         </div>
-        
-        <button 
-          onClick={handleNextPage}
-          disabled={pageNumber >= totalPages}
-          className="bg-amber-500 hover:bg-amber-600 text-white py-2 px-4 rounded disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          الصفحة التالية
-        </button>
-      </div>
-      
-      {/* عناصر التحكم الإضافية (التكبير/التصغير، الانتقال لصفحة محددة) */}
-      <div className="flex justify-center w-full mb-4 gap-4 flex-wrap">
-        <div className="flex items-center gap-2">
-          <button
-            onClick={handleZoomOut}
-            className="bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 p-2 rounded"
-            aria-label="تصغير"
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <circle cx="11" cy="11" r="8"></circle>
-              <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-              <line x1="8" y1="11" x2="14" y2="11"></line>
-            </svg>
-          </button>
-          
-          <span className="text-sm">{Math.round(zoomLevel * 100)}%</span>
-          
-          <button
-            onClick={handleZoomIn}
-            className="bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 p-2 rounded"
-            aria-label="تكبير"
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <circle cx="11" cy="11" r="8"></circle>
-              <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-              <line x1="11" y1="8" x2="11" y2="14"></line>
-              <line x1="8" y1="11" x2="14" y2="11"></line>
-            </svg>
-          </button>
+        <div className="text-sm font-medium">
+          صفحة {pageNumber} من {totalPages}
         </div>
-        
-        <form onSubmit={handleGoToPage} className="flex items-center gap-2">
-          <label htmlFor="pageNumber" className="text-sm">الانتقال إلى:</label>
-          <input
-            type="number"
-            id="pageNumber"
-            name="pageNumber"
-            min="1"
-            max={totalPages}
-            defaultValue={pageNumber}
-            className="w-16 py-1 px-2 border border-gray-300 dark:border-gray-600 rounded text-center"
-          />
-          <button
-            type="submit"
-            className="bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 py-1 px-3 rounded text-sm"
-          >
-            انتقال
-          </button>
-        </form>
       </div>
       
       {/* عرض صفحة المصحف الشريف */}
       <div 
-        className="mushaf-page-container bg-amber-50 p-4 rounded-lg border border-amber-200 shadow-md mx-auto mushaf-frame"
-        style={{ maxWidth: '800px', overflow: 'hidden' }}
+        className="mushaf-page-container bg-amber-100/50 dark:bg-gray-900/30 p-4 border border-amber-200 dark:border-amber-900/30 shadow-sm mx-auto"
+        style={{ 
+          maxWidth: '800px', 
+          overflow: 'hidden',
+          backgroundImage: 'url(/assets/mushaf/mushaf-background.svg)',
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+          backgroundRepeat: 'no-repeat'
+        }}
         {...swipeHandlers}
         ref={containerRef}
       >
-        <div 
-          className="overflow-auto select-none"
-          style={{ 
-            transform: `scale(${zoomLevel})`, 
-            transformOrigin: 'center top',
-            transition: 'transform 0.2s ease-in-out'
-          }}
-        >
-          <img 
-            src={getImageUrl(pageNumber)} 
-            alt={`صفحة ${pageNumber} من المصحف الشريف`}
-            className="w-full h-auto"
+        {isLoading ? (
+          <div className="flex justify-center items-center py-20">
+            <LoadingSpinner />
+          </div>
+        ) : (
+          <div 
+            className="overflow-auto select-none flex justify-center"
             style={{ 
-              maxWidth: '100%',
-              userSelect: 'none',
+              transform: `scale(${zoomLevel})`, 
+              transformOrigin: 'center top',
+              transition: 'transform 0.2s ease-in-out'
             }}
-            onError={() => setError("تعذر تحميل صفحة المصحف. يرجى التحقق من اتصالك بالإنترنت والمحاولة مرة أخرى.")}
-            draggable={false}
-          />
+          >
+            <img 
+              ref={imgRef}
+              src={getImageUrl(pageNumber)} 
+              alt={`صفحة ${pageNumber} من المصحف الشريف`}
+              className="w-full h-auto"
+              style={{ 
+                maxWidth: '100%',
+                userSelect: 'none',
+                boxShadow: '0 4px 8px rgba(0,0,0,0.1)'
+              }}
+              onError={() => setError("تعذر تحميل صفحة المصحف. يرجى التحقق من اتصالك بالإنترنت والمحاولة مرة أخرى.")}
+              draggable={false}
+            />
+          </div>
+        )}
+      </div>
+      
+      {/* أزرار التنقل والتكبير/التصغير */}
+      <div className="w-full bg-amber-50 dark:bg-gray-900/50 p-3 rounded-b-lg border-b border-x border-amber-200 dark:border-amber-900/30 mt-0">
+        <div className="flex justify-between items-center">
+          <div className="flex gap-2">
+            <button
+              onClick={handleZoomOut}
+              className="p-2 rounded-full bg-white dark:bg-gray-800 hover:bg-amber-100 dark:hover:bg-gray-700 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-gray-700"
+              aria-label="تصغير"
+            >
+              <ZoomOut className="h-4 w-4" />
+            </button>
+            <button
+              onClick={handleZoomIn}
+              className="p-2 rounded-full bg-white dark:bg-gray-800 hover:bg-amber-100 dark:hover:bg-gray-700 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-gray-700"
+              aria-label="تكبير"
+            >
+              <ZoomIn className="h-4 w-4" />
+            </button>
+            <div className="px-2 py-1 text-sm text-amber-800 dark:text-amber-300 flex items-center">
+              {Math.round(zoomLevel * 100)}%
+            </div>
+          </div>
+          
+          <div className="flex items-center gap-1">
+            <button
+              onClick={handleJumpBackward}
+              className="p-2 rounded-full bg-white dark:bg-gray-800 hover:bg-amber-100 dark:hover:bg-gray-700 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-gray-700"
+              aria-label="عشر صفحات للخلف"
+              disabled={pageNumber <= 10}
+            >
+              <SkipBack className="h-4 w-4" />
+            </button>
+            <button
+              onClick={handlePreviousPage}
+              disabled={pageNumber <= 1}
+              className="py-1 px-3 rounded-md bg-white dark:bg-gray-800 hover:bg-amber-100 dark:hover:bg-gray-700 text-amber-700 dark:text-amber-300 font-medium text-sm border border-amber-200 dark:border-gray-700 flex items-center"
+            >
+              <ChevronRight className="h-4 w-4 ml-1" />
+              السابقة
+            </button>
+            
+            <form onSubmit={(e) => {
+              e.preventDefault();
+              const formData = new FormData(e.currentTarget);
+              const pageInput = formData.get('pageNumber');
+              if (pageInput) {
+                const pageNum = parseInt(pageInput as string);
+                if (!isNaN(pageNum) && pageNum >= 1 && pageNum <= totalPages) {
+                  onPageChange(pageNum);
+                }
+              }
+            }} className="mx-2 flex items-center">
+              <input
+                type="number"
+                id="pageNumber"
+                name="pageNumber"
+                min="1"
+                max={totalPages}
+                defaultValue={pageNumber}
+                className="w-16 py-1 px-2 border border-amber-200 dark:border-gray-700 bg-white dark:bg-gray-800 rounded-md text-center text-sm text-amber-800 dark:text-amber-200"
+              />
+            </form>
+            
+            <button
+              onClick={handleNextPage}
+              disabled={pageNumber >= totalPages}
+              className="py-1 px-3 rounded-md bg-white dark:bg-gray-800 hover:bg-amber-100 dark:hover:bg-gray-700 text-amber-700 dark:text-amber-300 font-medium text-sm border border-amber-200 dark:border-gray-700 flex items-center"
+            >
+              التالية
+              <ChevronLeft className="h-4 w-4 mr-1" />
+            </button>
+            <button
+              onClick={handleJumpForward}
+              className="p-2 rounded-full bg-white dark:bg-gray-800 hover:bg-amber-100 dark:hover:bg-gray-700 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-gray-700"
+              aria-label="عشر صفحات للأمام"
+              disabled={pageNumber >= totalPages - 10}
+            >
+              <SkipForward className="h-4 w-4" />
+            </button>
+          </div>
+          
+          <button
+            onClick={handleAddBookmark}
+            className="p-2 rounded-full bg-white dark:bg-gray-800 hover:bg-amber-100 dark:hover:bg-gray-700 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-gray-700"
+            aria-label="إضافة للمفضلة"
+          >
+            <Bookmark className="h-4 w-4" />
+          </button>
         </div>
       </div>
       
       {/* معلومات إضافية عن الصفحة */}
-      <div className="mt-4 text-center text-gray-600 dark:text-gray-400 text-sm">
+      <div className="mt-4 text-center text-gray-600 dark:text-gray-400 text-xs">
         <p>مصحف المدينة المنورة للنشر الحاسوبي - مجمع الملك فهد لطباعة المصحف الشريف</p>
       </div>
     </div>
