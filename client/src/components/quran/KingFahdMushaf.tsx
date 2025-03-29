@@ -3,7 +3,7 @@ import { useSwipeable } from 'react-swipeable';
 import LoadingSpinner from '../common/LoadingSpinner';
 import ErrorDisplay from '../common/ErrorDisplay';
 import { SURAH_NAMES } from '../../lib/constants';
-import { ZoomIn, ZoomOut, Bookmark, SkipBack, SkipForward, Info, ChevronRight, ChevronLeft } from 'lucide-react';
+import { ZoomIn, ZoomOut, Bookmark, SkipBack, SkipForward, Info, ChevronRight, ChevronLeft, X } from 'lucide-react';
 
 interface KingFahdMushafProps {
   pageNumber: number;
@@ -21,18 +21,67 @@ export default function KingFahdMushaf({ pageNumber, onPageChange, hideControls 
   const [zoomLevel, setZoomLevel] = useState(1);
   const [pageInfo, setPageInfo] = useState<{surahName?: string, juzNumber?: number, hizbNumber?: number}>({});
   const [preloadedImages, setPreloadedImages] = useState<Record<number, string>>({});
+  // تتبع مصدر الصورة الحالي
+  const [currentImageSource, setCurrentImageSource] = useState(0);
+  // عدد محاولات لتحميل الصورة
+  const [loadAttempts, setLoadAttempts] = useState(0);
+  // حالة ظهور عناصر التحكم في وضع ملء الشاشة
+  const [showFullScreenControls, setShowFullScreenControls] = useState(false);
+  // وضع تحديد النص
+  const [textSelectionMode, setTextSelectionMode] = useState(false);
+  
   const containerRef = useRef<HTMLDivElement>(null);
   const imgRef = useRef<HTMLImageElement>(null);
   const totalPages = 604; // إجمالي عدد صفحات المصحف الشريف
   
   // قاعدة عنوان الصورة للصفحة من مطبعة الملك فهد (أو مصدر بديل)
-  const getImageUrl = (page: number) => {
+  const getImageUrl = (page: number, sourceIndex = currentImageSource) => {
     // تنسيق رقم الصفحة مع الأصفار القائدة
     const formattedPageNumber = String(page).padStart(3, '0');
     
-    // في حالة استخدام مصدر عبر الإنترنت
-    // تم تحديث المصدر للحصول على صور أفضل من مجمع الملك فهد
-    return `https://www.islamicnet.com/QuranImages/images/Page-${page}.jpg`;
+    // مصادر موثوقة لصور المصحف
+    const imageUrls = [
+      // مصدر 1: الزخرفة القرآنية - mp3quran.net
+      `https://www.mp3quran.net/api/quran_pages_arabic/${formattedPageNumber}.png`,
+      // مصدر 2: القرآن المجيد API 
+      `https://static.qurancdn.com/images/w/rq-color/pages/page_${formattedPageNumber}.png`,
+      // مصدر 3: قرآن فلاش
+      `https://www.quranflash.com/public/assets/pages-color/${formattedPageNumber}.png`
+    ];
+    
+    // استخدام المصدر المحدد حسب فهرس المصدر المرسل
+    return imageUrls[sourceIndex % imageUrls.length];
+  };
+  
+  // معالجة فشل تحميل الصورة بالانتقال للمصدر التالي
+  const handleImageError = () => {
+    if (loadAttempts < 2) { // لدينا 3 مصادر، نجرب مرتين للانتقال للمصدر التالي
+      const nextSource = (currentImageSource + 1) % 3;
+      console.log(`محاولة تحميل الصورة من المصدر البديل ${nextSource + 1}`);
+      setCurrentImageSource(nextSource);
+      setLoadAttempts(loadAttempts + 1);
+      
+      // تحميل الصورة من المصدر الجديد (إعادة الحصول على صورة جديدة)
+      if (imgRef.current) {
+        imgRef.current.src = getImageUrl(pageNumber, nextSource);
+      }
+    } else {
+      // إذا فشلت جميع المصادر، نظهر رسالة خطأ
+      setError("تعذر تحميل صفحة المصحف. يرجى التحقق من اتصالك بالإنترنت والمحاولة مرة أخرى أو استخدم زر تبديل المصدر.");
+    }
+  };
+  
+  // تغيير مصدر الصورة يدويًا
+  const switchImageSource = () => {
+    const nextSource = (currentImageSource + 1) % 3;
+    setCurrentImageSource(nextSource);
+    setLoadAttempts(0); // إعادة تعيين محاولات التحميل
+    setError(null); // إعادة تعيين رسائل الخطأ
+    
+    // تحميل الصورة من المصدر الجديد مباشرة
+    if (imgRef.current) {
+      imgRef.current.src = getImageUrl(pageNumber, nextSource);
+    }
   };
   
   // تحميل الصور مسبقًا للصفحات التالية والسابقة
@@ -74,6 +123,10 @@ export default function KingFahdMushaf({ pageNumber, onPageChange, hideControls 
   // تحديد معلومات السورة والجزء للصفحة الحالية
   useEffect(() => {
     setIsLoading(true);
+    // إعادة تعيين محاولات التحميل ومصدر الصورة عند تغيير الصفحة
+    setLoadAttempts(0);
+    setCurrentImageSource(0);
+    setError(null);
     
     // الحصول على معلومات السورة للصفحة الحالية
     const getSurahForPage = () => {
@@ -180,18 +233,22 @@ export default function KingFahdMushaf({ pageNumber, onPageChange, hideControls 
   if (hideControls) {
     return (
       <div 
-        className="king-fahd-mushaf-container h-full w-full flex flex-col items-center justify-center"
+        className="king-fahd-mushaf-container h-screen w-screen fixed top-0 left-0 flex flex-col items-center justify-center"
         style={{
           backgroundImage: 'url(/assets/mushaf/mushaf-background.svg)',
           backgroundSize: 'cover',
           backgroundPosition: 'center',
-          backgroundRepeat: 'no-repeat'
+          backgroundRepeat: 'no-repeat',
+          zIndex: 50
         }}
       >
         {/* عرض صفحة المصحف الشريف بدون أي إضافات - نمط تطبيق آية/سورة */}
         <div 
           className="h-full w-full flex items-center justify-center"
           {...swipeHandlers}
+          onDoubleClick={switchImageSource} // تبديل مصدر الصورة عند النقر المزدوج (تفيد في حالة نمط القراءة الكامل)
+          onMouseMove={() => setShowFullScreenControls(true)} // إظهار عناصر التحكم عند تحريك الماوس
+          onClick={() => setShowFullScreenControls(!showFullScreenControls)} // إظهار/إخفاء عناصر التحكم عند النقر
         >
           {isLoading ? (
             <div className="flex justify-center items-center">
@@ -199,22 +256,93 @@ export default function KingFahdMushaf({ pageNumber, onPageChange, hideControls 
             </div>
           ) : (
             <div 
-              className="h-full w-full flex items-center justify-center overflow-auto select-none"
+              className="h-full w-full flex flex-col items-center justify-center overflow-auto select-none"
               style={{ 
                 transform: `scale(${zoomLevel})`,
                 transformOrigin: 'center center',
                 transition: 'transform 0.2s ease-in-out'
               }}
             >
+              {/* أزرار التحكم في وضع ملء الشاشة - تظهر عند تحريك الماوس أو الضغط على الشاشة */}
+              <div 
+                className={`absolute left-0 top-0 w-full p-2 flex justify-between items-center bg-amber-50/80 dark:bg-gray-900/80 backdrop-blur-sm transition-opacity duration-300 ${showFullScreenControls ? 'opacity-100' : 'opacity-0'}`}
+                onMouseEnter={() => setShowFullScreenControls(true)}
+                onMouseLeave={() => setShowFullScreenControls(false)}
+              >
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => window.history.back()}
+                    className="p-2 rounded-full bg-white/90 dark:bg-gray-800/90 hover:bg-amber-100 dark:hover:bg-gray-700 text-amber-700 dark:text-amber-300 border border-amber-200/30 dark:border-gray-700/30"
+                    aria-label="العودة"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                  <div className="text-sm text-amber-800 dark:text-amber-200">
+                    صفحة {pageNumber} من {totalPages}
+                  </div>
+                </div>
+                
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => setTextSelectionMode(!textSelectionMode)}
+                    className={`p-2 rounded-full ${textSelectionMode ? 'bg-amber-200 dark:bg-amber-700' : 'bg-white/90 dark:bg-gray-800/90'} hover:bg-amber-100 dark:hover:bg-gray-700 text-amber-700 dark:text-amber-300 border border-amber-200/30 dark:border-gray-700/30`}
+                    aria-label={textSelectionMode ? "إيقاف تحديد النص" : "تفعيل تحديد النص"}
+                    title={textSelectionMode ? "إيقاف تحديد النص" : "تفعيل تحديد النص"}
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4">
+                      <path d="M8 3H7a2 2 0 0 0-2 2v5a2 2 0 0 0 2 2h1"></path>
+                      <path d="M12 19h4a2 2 0 0 0 2-2v-5a2 2 0 0 0-2-2h-4"></path>
+                      <path d="M12 19V5"></path>
+                      <path d="M12 12h4"></path>
+                    </svg>
+                  </button>
+                  <button
+                    onClick={handleZoomOut}
+                    className="p-2 rounded-full bg-white/90 dark:bg-gray-800/90 hover:bg-amber-100 dark:hover:bg-gray-700 text-amber-700 dark:text-amber-300 border border-amber-200/30 dark:border-gray-700/30"
+                    aria-label="تصغير"
+                  >
+                    <ZoomOut className="h-4 w-4" />
+                  </button>
+                  <div className="px-2 py-1 text-xs text-amber-800 dark:text-amber-300 bg-white/70 dark:bg-gray-800/70 rounded">
+                    {Math.round(zoomLevel * 100)}%
+                  </div>
+                  <button
+                    onClick={handleZoomIn}
+                    className="p-2 rounded-full bg-white/90 dark:bg-gray-800/90 hover:bg-amber-100 dark:hover:bg-gray-700 text-amber-700 dark:text-amber-300 border border-amber-200/30 dark:border-gray-700/30"
+                    aria-label="تكبير"
+                  >
+                    <ZoomIn className="h-4 w-4" />
+                  </button>
+                  <button
+                    onClick={switchImageSource}
+                    className="p-2 rounded-full bg-white/90 dark:bg-gray-800/90 hover:bg-amber-100 dark:hover:bg-gray-700 text-amber-700 dark:text-amber-300 border border-amber-200/30 dark:border-gray-700/30"
+                    aria-label="تبديل مصدر الصورة"
+                    title="تبديل مصدر الصورة"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4">
+                      <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"></path>
+                      <path d="M21 3v5h-5"></path>
+                      <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"></path>
+                      <path d="M3 21v-5h5"></path>
+                    </svg>
+                  </button>
+                </div>
+              </div>
+                
+              {/* مؤشر مصدر الصورة */}
+              <div className="absolute bottom-2 left-2 text-xs text-amber-700/70 dark:text-amber-300/70 font-cairo-light bg-amber-50/80 dark:bg-gray-900/80 px-1 py-0.5 rounded shadow-sm">
+                {currentImageSource === 0 ? 'المصحف المصور' : currentImageSource === 1 ? 'القرآن المجيد' : 'قرآن فلاش'}
+                <div className="text-[10px] opacity-80">نقرتين لتبديل المصدر</div>
+              </div>
               <img 
                 ref={imgRef}
                 src={getImageUrl(pageNumber)} 
                 alt={`صفحة ${pageNumber} من المصحف الشريف`}
                 className="max-h-full max-w-full object-contain"
                 style={{ 
-                  userSelect: 'none',
+                  userSelect: textSelectionMode ? 'text' : 'none',
                 }}
-                onError={() => setError("تعذر تحميل صفحة المصحف. يرجى التحقق من اتصالك بالإنترنت والمحاولة مرة أخرى.")}
+                onError={handleImageError}
                 draggable={false}
               />
             </div>
@@ -276,10 +404,10 @@ export default function KingFahdMushaf({ pageNumber, onPageChange, hideControls 
               className="w-full h-auto"
               style={{ 
                 maxWidth: '100%',
-                userSelect: 'none',
+                userSelect: textSelectionMode ? 'text' : 'none',
                 boxShadow: '0 4px 8px rgba(0,0,0,0.1)'
               }}
-              onError={() => setError("تعذر تحميل صفحة المصحف. يرجى التحقق من اتصالك بالإنترنت والمحاولة مرة أخرى.")}
+              onError={handleImageError}
               draggable={false}
             />
           </div>
@@ -307,6 +435,35 @@ export default function KingFahdMushaf({ pageNumber, onPageChange, hideControls 
             <div className="px-2 py-1 text-sm text-amber-800 dark:text-amber-300 flex items-center">
               {Math.round(zoomLevel * 100)}%
             </div>
+            {/* زر تفعيل تحديد النص */}
+            <button
+              onClick={() => setTextSelectionMode(!textSelectionMode)}
+              className={`p-2 rounded-full ${textSelectionMode ? 'bg-amber-200 dark:bg-amber-700' : 'bg-white dark:bg-gray-800'} hover:bg-amber-100 dark:hover:bg-gray-700 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-gray-700`}
+              aria-label={textSelectionMode ? "إيقاف تحديد النص" : "تفعيل تحديد النص"}
+              title={textSelectionMode ? "إيقاف تحديد النص" : "تفعيل تحديد النص"}
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4">
+                <path d="M8 3H7a2 2 0 0 0-2 2v5a2 2 0 0 0 2 2h1"></path>
+                <path d="M12 19h4a2 2 0 0 0 2-2v-5a2 2 0 0 0-2-2h-4"></path>
+                <path d="M12 19V5"></path>
+                <path d="M12 12h4"></path>
+              </svg>
+            </button>
+            
+            {/* زر تبديل مصدر الصورة */}
+            <button
+              onClick={switchImageSource}
+              title="تبديل مصدر الصورة في حالة وجود مشكلة"
+              className="p-2 rounded-full bg-white dark:bg-gray-800 hover:bg-amber-100 dark:hover:bg-gray-700 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-gray-700"
+              aria-label="تبديل مصدر الصورة"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4">
+                <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"></path>
+                <path d="M21 3v5h-5"></path>
+                <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"></path>
+                <path d="M3 21v-5h5"></path>
+              </svg>
+            </button>
           </div>
           
           <div className="flex items-center gap-1">
@@ -380,6 +537,11 @@ export default function KingFahdMushaf({ pageNumber, onPageChange, hideControls 
       {/* معلومات إضافية عن الصفحة */}
       <div className="mt-4 text-center text-gray-600 dark:text-gray-400 text-xs">
         <p>مصحف المدينة المنورة للنشر الحاسوبي - مجمع الملك فهد لطباعة المصحف الشريف</p>
+        <p className="mt-1 text-amber-500 dark:text-amber-400">
+          {currentImageSource === 0 ? 'مصدر الصور: المصحف المصور' : 
+           currentImageSource === 1 ? 'مصدر الصور: القرآن المجيد' : 
+           'مصدر الصور: قرآن فلاش'}
+        </p>
       </div>
     </div>
   );
