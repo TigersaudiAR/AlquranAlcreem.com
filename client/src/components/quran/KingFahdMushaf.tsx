@@ -1,9 +1,11 @@
-import { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useSwipeable } from 'react-swipeable';
 import LoadingSpinner from '../common/LoadingSpinner';
 import ErrorDisplay from '../common/ErrorDisplay';
+import SelectionMenu from './SelectionMenu';
 import { SURAH_NAMES } from '../../lib/constants';
 import { ZoomIn, ZoomOut, Bookmark, SkipBack, SkipForward, Info, ChevronRight, ChevronLeft, X } from 'lucide-react';
+import { copyQuranText, shareQuranPage } from '../../lib/quran-share';
 
 interface KingFahdMushafProps {
   pageNumber: number;
@@ -29,6 +31,12 @@ export default function KingFahdMushaf({ pageNumber, onPageChange, hideControls 
   const [showFullScreenControls, setShowFullScreenControls] = useState(false);
   // وضع تحديد النص
   const [textSelectionMode, setTextSelectionMode] = useState(false);
+  // حالة ووضع قائمة التحديد
+  const [selectionMenu, setSelectionMenu] = useState({
+    visible: false,
+    position: { x: 0, y: 0 },
+    selectedText: ''
+  });
   
   const containerRef = useRef<HTMLDivElement>(null);
   const imgRef = useRef<HTMLImageElement>(null);
@@ -209,6 +217,74 @@ export default function KingFahdMushaf({ pageNumber, onPageChange, hideControls 
     }
   };
   
+  // معالجة تحديد النص وإظهار القائمة المناسبة
+  const handleTextSelection = () => {
+    if (!textSelectionMode) return;
+    
+    const selection = window.getSelection();
+    if (!selection || selection.rangeCount === 0 || selection.toString().trim() === '') {
+      // إخفاء القائمة إذا لم يكن هناك نص محدد
+      setSelectionMenu(prev => ({ ...prev, visible: false }));
+      return;
+    }
+    
+    const selectedText = selection.toString().trim();
+    const range = selection.getRangeAt(0);
+    const rect = range.getBoundingClientRect();
+    
+    // الحصول على الموقع المناسب للقائمة (بجوار التحديد)
+    setSelectionMenu({
+      visible: true,
+      position: { 
+        x: rect.left + rect.width / 2,
+        y: rect.bottom + 10
+      },
+      selectedText
+    });
+  };
+  
+  // نسخ النص المحدد
+  const handleCopyText = async () => {
+    await copyQuranText(
+      selectionMenu.selectedText,
+      pageNumber,
+      pageInfo.surahName
+    );
+    // إظهار إشعار بنجاح النسخ
+    alert('تم نسخ النص بنجاح');
+    // إخفاء القائمة بعد النسخ
+    setSelectionMenu(prev => ({ ...prev, visible: false }));
+  };
+  
+  // مشاركة النص المحدد مع صفحة المصحف
+  const handleShareText = async () => {
+    await shareQuranPage(
+      pageNumber,
+      pageInfo.surahName,
+      selectionMenu.selectedText
+    );
+    // إظهار إشعار بنجاح المشاركة
+    alert('تم نسخ رابط المشاركة إلى الحافظة');
+    // إخفاء القائمة بعد المشاركة
+    setSelectionMenu(prev => ({ ...prev, visible: false }));
+  };
+  
+  // إضافة إشارة مرجعية للنص المحدد
+  const handleBookmarkText = () => {
+    // ستكون هذه الوظيفة مرتبطة بسياق التطبيق عند تنفيذ حفظ الإشارات المرجعية
+    alert(`تمت إضافة إشارة مرجعية للنص المحدد في صفحة ${pageNumber}`);
+    // إخفاء القائمة
+    setSelectionMenu(prev => ({ ...prev, visible: false }));
+  };
+  
+  // عرض التفسير للنص المحدد
+  const handleViewTafsir = () => {
+    // ستقوم بالانتقال إلى صفحة التفسير مع النص المحدد (يمكن تطويرها لاحقاً)
+    alert(`سيتم عرض تفسير النص المحدد قريباً`);
+    // إخفاء القائمة
+    setSelectionMenu(prev => ({ ...prev, visible: false }));
+  };
+  
   // استجابة للضغط على مفاتيح الأسهم
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -334,17 +410,31 @@ export default function KingFahdMushaf({ pageNumber, onPageChange, hideControls 
                 {currentImageSource === 0 ? 'المصحف المصور' : currentImageSource === 1 ? 'القرآن المجيد' : 'قرآن فلاش'}
                 <div className="text-[10px] opacity-80">نقرتين لتبديل المصدر</div>
               </div>
-              <img 
-                ref={imgRef}
-                src={getImageUrl(pageNumber)} 
-                alt={`صفحة ${pageNumber} من المصحف الشريف`}
-                className="max-h-full max-w-full object-contain"
-                style={{ 
-                  userSelect: textSelectionMode ? 'text' : 'none',
-                }}
-                onError={handleImageError}
-                draggable={false}
-              />
+              <div className="relative">
+                <img 
+                  ref={imgRef}
+                  src={getImageUrl(pageNumber)} 
+                  alt={`صفحة ${pageNumber} من المصحف الشريف`}
+                  className="max-h-full max-w-full object-contain"
+                  style={{ 
+                    userSelect: textSelectionMode ? 'text' : 'none',
+                  }}
+                  onError={handleImageError}
+                  draggable={false}
+                  onMouseUp={handleTextSelection}
+                  onTouchEnd={handleTextSelection}
+                />
+                
+                {/* قائمة النسخ والمشاركة عند تحديد النص - تظهر في وضع ملء الشاشة */}
+                <SelectionMenu
+                  visible={selectionMenu.visible && textSelectionMode}
+                  position={selectionMenu.position}
+                  onCopy={handleCopyText}
+                  onShare={handleShareText}
+                  onBookmark={handleBookmarkText}
+                  onView={handleViewTafsir}
+                />
+              </div>
             </div>
           )}
         </div>
@@ -397,19 +487,33 @@ export default function KingFahdMushaf({ pageNumber, onPageChange, hideControls 
               transition: 'transform 0.2s ease-in-out'
             }}
           >
-            <img 
-              ref={imgRef}
-              src={getImageUrl(pageNumber)} 
-              alt={`صفحة ${pageNumber} من المصحف الشريف`}
-              className="w-full h-auto"
-              style={{ 
-                maxWidth: '100%',
-                userSelect: textSelectionMode ? 'text' : 'none',
-                boxShadow: '0 4px 8px rgba(0,0,0,0.1)'
-              }}
-              onError={handleImageError}
-              draggable={false}
-            />
+            <div className="relative">
+              <img 
+                ref={imgRef}
+                src={getImageUrl(pageNumber)} 
+                alt={`صفحة ${pageNumber} من المصحف الشريف`}
+                className="w-full h-auto"
+                style={{ 
+                  maxWidth: '100%',
+                  userSelect: textSelectionMode ? 'text' : 'none',
+                  boxShadow: '0 4px 8px rgba(0,0,0,0.1)'
+                }}
+                onError={handleImageError}
+                draggable={false}
+                onMouseUp={handleTextSelection}
+                onTouchEnd={handleTextSelection}
+              />
+              
+              {/* قائمة النسخ والمشاركة عند تحديد النص - نمط العرض العادي */}
+              <SelectionMenu
+                visible={selectionMenu.visible && textSelectionMode}
+                position={selectionMenu.position}
+                onCopy={handleCopyText}
+                onShare={handleShareText}
+                onBookmark={handleBookmarkText}
+                onView={handleViewTafsir}
+              />
+            </div>
           </div>
         )}
       </div>
