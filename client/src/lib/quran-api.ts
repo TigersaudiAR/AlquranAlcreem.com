@@ -2,6 +2,8 @@
  * واجهة برمجية للوصول إلى بيانات القرآن الكريم والتفاسير
  */
 
+import { APP_CONFIG } from './constants';
+
 /**
  * Fetch a specific surah from the Quran API
  * @param surahNumber The surah number (1-114)
@@ -10,14 +12,13 @@
  */
 export async function getSurah(surahNumber: number, edition = 'quran-uthmani') {
   try {
-    const response = await fetch(`https://api.alquran.cloud/v1/surah/${surahNumber}/${edition}`);
+    const response = await fetch(`${APP_CONFIG.BASE_API_URL}/surah/${surahNumber}/${edition}`);
     if (!response.ok) {
-      throw new Error(`Failed to fetch surah ${surahNumber}`);
+      throw new Error(`Error fetching surah: ${response.statusText}`);
     }
-    const data = await response.json();
-    return data.data;
+    return await response.json();
   } catch (error) {
-    console.error('Error fetching surah:', error);
+    console.error('Error in getSurah:', error);
     throw error;
   }
 }
@@ -30,14 +31,13 @@ export async function getSurah(surahNumber: number, edition = 'quran-uthmani') {
  */
 export async function getPage(pageNumber: number, edition = 'quran-uthmani') {
   try {
-    const response = await fetch(`https://api.alquran.cloud/v1/page/${pageNumber}/${edition}`);
+    const response = await fetch(`${APP_CONFIG.BASE_API_URL}/page/${pageNumber}/${edition}`);
     if (!response.ok) {
-      throw new Error(`Failed to fetch page ${pageNumber}`);
+      throw new Error(`Error fetching page: ${response.statusText}`);
     }
-    const data = await response.json();
-    return data.data;
+    return await response.json();
   } catch (error) {
-    console.error('Error fetching page:', error);
+    console.error('Error in getPage:', error);
     throw error;
   }
 }
@@ -50,14 +50,13 @@ export async function getPage(pageNumber: number, edition = 'quran-uthmani') {
  */
 export async function getJuz(juzNumber: number, edition = 'quran-uthmani') {
   try {
-    const response = await fetch(`https://api.alquran.cloud/v1/juz/${juzNumber}/${edition}`);
+    const response = await fetch(`${APP_CONFIG.BASE_API_URL}/juz/${juzNumber}/${edition}`);
     if (!response.ok) {
-      throw new Error(`Failed to fetch juz ${juzNumber}`);
+      throw new Error(`Error fetching juz: ${response.statusText}`);
     }
-    const data = await response.json();
-    return data.data;
+    return await response.json();
   } catch (error) {
-    console.error('Error fetching juz:', error);
+    console.error('Error in getJuz:', error);
     throw error;
   }
 }
@@ -72,14 +71,15 @@ export async function getJuz(juzNumber: number, edition = 'quran-uthmani') {
  */
 export async function searchQuran(query: string, edition = 'quran-uthmani', page = 1, perPage = 20) {
   try {
-    const response = await fetch(`https://api.alquran.cloud/v1/search/${encodeURIComponent(query)}/${edition}/${page}/${perPage}`);
+    const response = await fetch(
+      `${APP_CONFIG.BASE_API_URL}/search/${query}/${edition}/${page}/${perPage}`
+    );
     if (!response.ok) {
-      throw new Error(`Failed to search for ${query}`);
+      throw new Error(`Error searching Quran: ${response.statusText}`);
     }
-    const data = await response.json();
-    return data.data;
+    return await response.json();
   } catch (error) {
-    console.error('Error searching Quran:', error);
+    console.error('Error in searchQuran:', error);
     throw error;
   }
 }
@@ -93,36 +93,25 @@ export async function searchQuran(query: string, edition = 'quran-uthmani', page
  */
 export async function getTafsir(surahNumber: number, ayahNumber: number, tafsirId = 'ar-tafsir-al-jalalayn') {
   try {
-    const response = await fetch(`https://api.quran-tafseer.com/tafseer/${tafsirId}/${surahNumber}/${ayahNumber}`);
-    
+    const response = await fetch(
+      `${APP_CONFIG.TAFSIR_API_URL}/translation/sura/${surahNumber}/ayah/${ayahNumber}/language/ar/${tafsirId}`
+    );
     if (!response.ok) {
-      throw new Error(`Failed to fetch tafsir for surah ${surahNumber}, ayah ${ayahNumber}`);
+      throw new Error(`Error fetching tafsir: ${response.statusText}`);
     }
-    
     const data = await response.json();
     
-    // Get the ayah text also
-    const ayahData = await getAyah(surahNumber, ayahNumber);
-    
     return {
       surahNumber,
       ayahNumber,
       tafsirId,
-      tafsirName: data.tafseer_name || 'تفسير',
-      tafsirText: data.text || 'لا يوجد تفسير متاح',
-      ayahText: ayahData?.text || null
+      tafsirName: data.result?.name || tafsirId,
+      tafsirText: data.result?.text || 'لا يوجد تفسير متاح',
+      ayahText: data.result?.arabic || ''
     };
   } catch (error) {
-    console.error('Error fetching tafsir:', error);
-    // كمعالجة للخطأ، نقوم بإرجاع بيانات تفسير بديلة مع رسالة الخطأ
-    return {
-      surahNumber,
-      ayahNumber,
-      tafsirId,
-      tafsirName: 'خطأ في التفسير',
-      tafsirText: 'تعذر الحصول على التفسير. يرجى التحقق من اتصالك بالإنترنت والمحاولة مرة أخرى.',
-      ayahText: null
-    };
+    console.error('Error in getTafsir:', error);
+    throw error;
   }
 }
 
@@ -134,15 +123,17 @@ export async function getTafsir(surahNumber: number, ayahNumber: number, tafsirI
  */
 export async function getAyah(surahNumber: number, ayahNumber: number) {
   try {
-    const response = await fetch(`https://api.alquran.cloud/v1/ayah/${surahNumber}:${ayahNumber}`);
+    const response = await fetch(
+      `${APP_CONFIG.BASE_API_URL}/ayah/${surahNumber}:${ayahNumber}/quran-uthmani`
+    );
     if (!response.ok) {
-      throw new Error(`Failed to fetch ayah ${surahNumber}:${ayahNumber}`);
+      throw new Error(`Error fetching ayah: ${response.statusText}`);
     }
     const data = await response.json();
-    return data.data;
+    return data.data.text;
   } catch (error) {
-    console.error('Error fetching ayah:', error);
-    return null;
+    console.error('Error in getAyah:', error);
+    throw error;
   }
 }
 
@@ -154,7 +145,7 @@ export async function getAyah(surahNumber: number, ayahNumber: number) {
  * @returns The audio URL
  */
 export function getAyahAudioUrl(surahNumber: number, ayahNumber: number, reciterId = 'ar.alafasy') {
-  return `https://verses.quran.com/${reciterId}/${surahNumber}/${ayahNumber}.mp3`;
+  return `https://cdn.islamic.network/quran/audio/128/${reciterId}/${surahNumber * 1000 + ayahNumber}.mp3`;
 }
 
 /**
@@ -165,14 +156,13 @@ export function getAyahAudioUrl(surahNumber: number, ayahNumber: number, reciter
  */
 export async function getTranslation(surahNumber: number, translationId = 'en.sahih') {
   try {
-    const response = await fetch(`https://api.alquran.cloud/v1/surah/${surahNumber}/${translationId}`);
+    const response = await fetch(`${APP_CONFIG.BASE_API_URL}/surah/${surahNumber}/${translationId}`);
     if (!response.ok) {
-      throw new Error(`Failed to fetch translation for surah ${surahNumber}`);
+      throw new Error(`Error fetching translation: ${response.statusText}`);
     }
-    const data = await response.json();
-    return data.data;
+    return await response.json();
   } catch (error) {
-    console.error('Error fetching translation:', error);
+    console.error('Error in getTranslation:', error);
     throw error;
   }
 }
@@ -183,14 +173,14 @@ export async function getTranslation(surahNumber: number, translationId = 'en.sa
  */
 export async function getSurahs() {
   try {
-    const response = await fetch('https://api.alquran.cloud/v1/surah');
+    const response = await fetch(`${APP_CONFIG.BASE_API_URL}/meta`);
     if (!response.ok) {
-      throw new Error('Failed to fetch surahs');
+      throw new Error(`Error fetching surah list: ${response.statusText}`);
     }
     const data = await response.json();
-    return data.data;
+    return data.data.surahs.references;
   } catch (error) {
-    console.error('Error fetching surahs:', error);
+    console.error('Error in getSurahs:', error);
     throw error;
   }
 }
@@ -201,14 +191,13 @@ export async function getSurahs() {
  */
 export async function getQuranMeta() {
   try {
-    const response = await fetch('https://api.alquran.cloud/v1/meta');
+    const response = await fetch(`${APP_CONFIG.BASE_API_URL}/meta`);
     if (!response.ok) {
-      throw new Error('Failed to fetch Quran metadata');
+      throw new Error(`Error fetching Quran metadata: ${response.statusText}`);
     }
-    const data = await response.json();
-    return data.data;
+    return await response.json();
   } catch (error) {
-    console.error('Error fetching Quran metadata:', error);
+    console.error('Error in getQuranMeta:', error);
     throw error;
   }
 }

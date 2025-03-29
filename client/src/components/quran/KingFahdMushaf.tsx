@@ -1,432 +1,384 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { SURAH_NAMES } from '../../lib/constants';
-import LoadingSpinner from '../common/LoadingSpinner';
-import ErrorDisplay from '../common/ErrorDisplay';
-import { useToast } from '../../hooks/use-toast';
+import React, { useEffect, useState, useRef } from 'react';
+import { getPage, getAyahAudioUrl } from '../../lib/quran-api';
 import { useApp } from '../../context/AppContext';
-import TafsirDialog from './TafsirDialog';
-import SelectionMenu from './SelectionMenu';
-import { useSelection } from '../../hooks/use-selection';
-import { copyQuranText, shareQuranPage } from '../../lib/quran-share';
+import HighlightedVerse from './HighlightedVerse';
+import { useToast } from '../../hooks/use-toast';
+import { useQuranAudio } from '../../hooks/useQuranAudio';
+import { motion, AnimatePresence } from 'framer-motion';
 
 interface KingFahdMushafProps {
-  pageNumber: number;
-  onPageChange: (page: number) => void;
-  hideControls?: boolean;
+  initialPage?: number;
+  showControls?: boolean;
+  onPageChange?: (page: number) => void;
 }
 
 /**
- * مكوّن عرض مصحف الملك فهد للطباعة
- * يعرض صفحات المصحف بالتصميم الرسمي مع إمكانية الانتقال بين الصفحات
+ * مكون عرض المصحف الشريف بتنسيق مصحف الملك فهد
+ * يقوم بعرض صفحات المصحف مع دعم التلاوة والتمييز
  */
 const KingFahdMushaf: React.FC<KingFahdMushafProps> = ({
-  pageNumber,
+  initialPage = 1,
+  showControls = true,
   onPageChange,
-  hideControls = false
 }) => {
-  const { toast } = useToast();
-  const { addBookmark, updateLastRead, settings } = useApp();
-  const [isLoading, setIsLoading] = useState(true);
+  const { settings, updateLastRead } = useApp();
+  const [currentPage, setCurrentPage] = useState(initialPage);
+  const [pageData, setPageData] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [imageUrl, setImageUrl] = useState<string>('');
-  const [imgWidth, setImgWidth] = useState(0);
-  const [imgHeight, setImgHeight] = useState(0);
-  const containerRef = useRef<HTMLDivElement>(null);
-  const imgRef = useRef<HTMLImageElement>(null);
-  const [currentZoom, setCurrentZoom] = useState(1);
-  const [isDragging, setIsDragging] = useState(false);
-  const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
-  const [scrollPosition, setScrollPosition] = useState({ x: 0, y: 0 });
+  const [activeVerse, setActiveVerse] = useState<{surah: number, verse: number} | null>(null);
+  const [translations, setTranslations] = useState<any>(null);
+  const [isControlsVisible, setIsControlsVisible] = useState(showControls);
+  const { toast } = useToast();
+  const pageRef = useRef<HTMLDivElement>(null);
+  const mouseMoveTimeout = useRef<number | null>(null);
   
-  // مكان العرض للتفسير والإشارات المرجعية
-  const [showTafsir, setShowTafsir] = useState(false);
-  const [currentAyah, setCurrentAyah] = useState<{
-    surahNumber: number;
-    ayahNumber: number;
-    ayahText: string;
-  } | null>(null);
-  
-  // قائمة تحديد النص
+  // استخدام خطاف التلاوة للتحكم في الصوت
   const { 
-    selectedText, 
-    selectionMenuVisible, 
-    selectionPosition, 
-    setSelectionMenuVisible 
-  } = useSelection();
-  
-  // تحميل صورة الصفحة المناسبة
+    play, 
+    pause, 
+    isPlaying, 
+    currentVerse,
+    setAudioSrc,
+    currentAudioElement,
+    playNextVerse
+  } = useQuranAudio(settings.reciter);
+
+  // جلب بيانات الصفحة عند تغيير رقم الصفحة
   useEffect(() => {
-    if (pageNumber < 1 || pageNumber > 604) {
-      setError('رقم الصفحة غير صالح. يجب أن يكون بين 1 و 604.');
-      setIsLoading(false);
-      return;
-    }
-    
-    setIsLoading(true);
-    
-    // محاولة تحميل الصفحة من المصادر المختلفة
-    const loadImage = async () => {
-      const sources = [
-        `/quran/hafs/${pageNumber.toString().padStart(3, '0')}.png`,
-        `https://quran-images.qurancomplex.gov.sa/hafs/${pageNumber.toString().padStart(3, '0')}.png`,
-        `https://www.islamicnet.com/islamic-library/assets/quran-images/page${pageNumber}.png`
-      ];
-      
-      let loaded = false;
-      
-      for (const src of sources) {
-        try {
-          const img = new Image();
-          img.src = src;
-          
-          await new Promise((resolve, reject) => {
-            img.onload = resolve;
-            img.onerror = reject;
+    const fetchPageData = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        
+        // جلب نص الصفحة من القرآن
+        const data = await getPage(currentPage);
+        setPageData(data);
+        
+        // جلب الترجمة إذا كانت مفعلة في الإعدادات
+        if (settings.showTranslation && settings.translation) {
+          // هنا يمكن إضافة استدعاء لجلب الترجمة وتخزينها في حالة translations
+          // لتبسيط المثال، نستخدم كائن فارغ
+          setTranslations({});
+        }
+        
+        // تحديث آخر موقع قراءة
+        if (settings.autoSaveLastRead) {
+          const firstAyah = data.data.ayahs[0];
+          updateLastRead({
+            surahNumber: firstAyah.surah.number,
+            ayahNumber: firstAyah.numberInSurah,
+            pageNumber: currentPage
           });
-          
-          setImageUrl(src);
-          setImgWidth(img.naturalWidth);
-          setImgHeight(img.naturalHeight);
-          loaded = true;
-          break;
-        } catch (err) {
-          console.error(`فشل تحميل الصورة من المصدر: ${src}`, err);
         }
+        
+      } catch (err) {
+        console.error("Error fetching page data:", err);
+        setError("حدث خطأ أثناء تحميل صفحة المصحف. الرجاء المحاولة مرة أخرى.");
+      } finally {
+        setLoading(false);
       }
-      
-      if (!loaded) {
-        setError('تعذر تحميل صفحة المصحف. يرجى التحقق من اتصالك بالإنترنت وحاول مرة أخرى.');
-      }
-      
-      setIsLoading(false);
     };
+
+    fetchPageData();
     
-    loadImage();
-    
-    // حفظ موضع القراءة الحالي إذا كان الخيار مفعلاً
-    if (settings.autoSaveLastRead) {
-      // البحث عن السورة المناسبة لهذه الصفحة
-      let surahNumber = 1;
-      for (let i = 0; i < SURAH_NAMES.length; i++) {
-        if (i === SURAH_NAMES.length - 1 || 
-            (SURAH_NAMES[i+1]?.page && SURAH_NAMES[i+1]?.page > pageNumber)) {
-          surahNumber = SURAH_NAMES[i].number;
-          break;
-        }
-      }
-      
-      updateLastRead({
-        surahNumber,
-        ayahNumber: 1, // لا يمكن تحديد رقم الآية بدقة هنا
-        pageNumber
-      });
+    // استدعاء دالة التغيير إذا كانت موجودة
+    if (onPageChange) {
+      onPageChange(currentPage);
     }
-  }, [pageNumber, settings.autoSaveLastRead, updateLastRead]);
-  
-  // ضبط الحجم والتكبير بناءً على حجم النافذة
+  }, [currentPage, settings.showTranslation, settings.translation, settings.autoSaveLastRead, updateLastRead, onPageChange]);
+
+  // التحكم في ظهور واختفاء عناصر التحكم عند تحريك الماوس
   useEffect(() => {
-    if (!containerRef.current || !imgRef.current || imgWidth === 0 || imgHeight === 0) return;
-    
-    const updateSize = () => {
-      const container = containerRef.current;
-      if (!container) return;
+    const handleMouseMove = () => {
+      setIsControlsVisible(true);
       
-      // حساب نسبة العرض المناسبة للشاشة
-      const containerWidth = container.clientWidth;
-      const containerHeight = container.clientHeight;
+      if (mouseMoveTimeout.current) {
+        window.clearTimeout(mouseMoveTimeout.current);
+      }
       
-      const widthRatio = containerWidth / imgWidth;
-      const heightRatio = containerHeight / imgHeight;
-      
-      // استخدام النسبة الأصغر للتأكد من ظهور الصورة كاملة
-      const ratio = Math.min(widthRatio, heightRatio) * 0.9;
-      
-      setCurrentZoom(ratio);
+      mouseMoveTimeout.current = window.setTimeout(() => {
+        setIsControlsVisible(false);
+      }, 3000);
     };
     
-    updateSize();
-    
-    const handleResize = () => {
-      updateSize();
-    };
-    
-    window.addEventListener('resize', handleResize);
+    window.addEventListener('mousemove', handleMouseMove);
     
     return () => {
-      window.removeEventListener('resize', handleResize);
+      window.removeEventListener('mousemove', handleMouseMove);
+      if (mouseMoveTimeout.current) {
+        window.clearTimeout(mouseMoveTimeout.current);
+      }
     };
-  }, [imgWidth, imgHeight]);
-  
-  // معالج التكبير والتصغير
-  const handleZoom = (zoomIn: boolean) => {
-    if (zoomIn) {
-      setCurrentZoom(prev => Math.min(prev * 1.2, 3));
+  }, []);
+
+  // الانتقال إلى الصفحة التالية
+  const goToNextPage = () => {
+    if (currentPage < 604) {
+      setCurrentPage(prev => prev + 1);
+      setActiveVerse(null);
     } else {
-      setCurrentZoom(prev => Math.max(prev * 0.8, 0.5));
-    }
-  };
-  
-  // معالجات السحب والتنقل
-  const handleMouseDown = (e: React.MouseEvent) => {
-    if (currentZoom > 1) {
-      setIsDragging(true);
-      setDragStart({
-        x: e.clientX,
-        y: e.clientY
+      toast({
+        title: "تنبيه",
+        description: "أنت في آخر صفحة من المصحف",
+        variant: "default"
       });
     }
   };
-  
-  const handleMouseMove = (e: React.MouseEvent) => {
-    if (isDragging && containerRef.current) {
-      const deltaX = e.clientX - dragStart.x;
-      const deltaY = e.clientY - dragStart.y;
+
+  // الانتقال إلى الصفحة السابقة
+  const goToPreviousPage = () => {
+    if (currentPage > 1) {
+      setCurrentPage(prev => prev - 1);
+      setActiveVerse(null);
+    } else {
+      toast({
+        title: "تنبيه",
+        description: "أنت في أول صفحة من المصحف",
+        variant: "default"
+      });
+    }
+  };
+
+  // تشغيل تلاوة الآية
+  const handleVersePlay = (surahNumber: number, verseNumber: number) => {
+    const audioUrl = getAyahAudioUrl(surahNumber, verseNumber, settings.reciter);
+    setAudioSrc(audioUrl, surahNumber, verseNumber);
+    setActiveVerse({ surah: surahNumber, verse: verseNumber });
+    play();
+    
+    // تتبع الآية التالية لتشغيلها بعد انتهاء الحالية
+    if (pageData && pageData.data.ayahs) {
+      const ayahs = pageData.data.ayahs;
+      const currentIndex = ayahs.findIndex(
+        (ayah: any) => ayah.surah.number === surahNumber && ayah.numberInSurah === verseNumber
+      );
       
-      containerRef.current.scrollLeft = scrollPosition.x - deltaX;
-      containerRef.current.scrollTop = scrollPosition.y - deltaY;
-    }
-  };
-  
-  const handleMouseUp = () => {
-    if (isDragging && containerRef.current) {
-      setScrollPosition({
-        x: containerRef.current.scrollLeft,
-        y: containerRef.current.scrollTop
-      });
-      setIsDragging(false);
-    }
-  };
-  
-  const handleWheel = (e: React.WheelEvent) => {
-    if (e.ctrlKey) {
-      e.preventDefault();
-      handleZoom(e.deltaY < 0);
-    }
-  };
-  
-  // الانتقال إلى الصفحة السابقة/التالية باستخدام لوحة المفاتيح
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'ArrowRight' || e.key === 'PageUp') {
-        if (pageNumber > 1) {
-          onPageChange(pageNumber - 1);
+      if (currentIndex < ayahs.length - 1) {
+        const nextAyah = ayahs[currentIndex + 1];
+        const nextAudioUrl = getAyahAudioUrl(
+          nextAyah.surah.number,
+          nextAyah.numberInSurah,
+          settings.reciter
+        );
+        
+        // إضافة معالج انتهاء الصوت الحالي
+        if (currentAudioElement) {
+          currentAudioElement.onended = () => {
+            if (settings.autoPlayAudio) {
+              playNextVerse();
+              setActiveVerse({ 
+                surah: nextAyah.surah.number, 
+                verse: nextAyah.numberInSurah 
+              });
+            }
+          };
         }
-      } else if (e.key === 'ArrowLeft' || e.key === 'PageDown') {
-        if (pageNumber < 604) {
-          onPageChange(pageNumber + 1);
+      } else if (settings.autoPlayAudio && currentPage < 604) {
+        // إذا كانت آخر آية في الصفحة، انتقل إلى الصفحة التالية
+        if (currentAudioElement) {
+          currentAudioElement.onended = () => {
+            goToNextPage();
+          };
         }
       }
-    };
+    }
+  };
+
+  // إيقاف التلاوة
+  const handlePausePlayback = () => {
+    pause();
+  };
+
+  // عند النقر على الآية
+  const handleVerseClick = (surahNumber: number, verseNumber: number) => {
+    setActiveVerse({ surah: surahNumber, verse: verseNumber });
     
-    window.addEventListener('keydown', handleKeyDown);
-    
-    return () => {
-      window.removeEventListener('keydown', handleKeyDown);
-    };
-  }, [pageNumber, onPageChange]);
-  
-  // معالج إظهار تفسير الآية
-  const handleShowTafsir = () => {
-    // في الواقع نحتاج إلى معرفة رقم السورة والآية من النص المحدد
-    // هنا نفترض أننا نحصل عليهما بطريقة ما
-    
-    // Determine the surah for this page
-    let surahNumber = 1;
-    for (let i = 0; i < SURAH_NAMES.length; i++) {
-      if (i === SURAH_NAMES.length - 1 || 
-          (SURAH_NAMES[i+1]?.page && SURAH_NAMES[i+1]?.page > pageNumber)) {
-        surahNumber = SURAH_NAMES[i].number;
-        break;
+    // تشغيل التلاوة تلقائيًا إذا كان الإعداد مفعلاً
+    if (settings.autoPlayAudio) {
+      handleVersePlay(surahNumber, verseNumber);
+    }
+  };
+
+  // تأثيرات الانتقال بين الصفحات
+  const pageVariants = {
+    initial: {
+      opacity: 0,
+      x: 50
+    },
+    animate: {
+      opacity: 1,
+      x: 0,
+      transition: {
+        duration: 0.3
+      }
+    },
+    exit: {
+      opacity: 0,
+      x: -50,
+      transition: {
+        duration: 0.2
       }
     }
-    
-    setCurrentAyah({
-      surahNumber,
-      ayahNumber: 1, // يجب تحديد رقم الآية بدقة في التطبيق الحقيقي
-      ayahText: selectedText
-    });
-    
-    setShowTafsir(true);
-    setSelectionMenuVisible(false);
   };
-  
-  // معالج إضافة إشارة مرجعية
-  const handleBookmark = () => {
-    // Determine the surah for this page
-    let surahNumber = 1;
-    for (let i = 0; i < SURAH_NAMES.length; i++) {
-      if (i === SURAH_NAMES.length - 1 || 
-          (SURAH_NAMES[i+1]?.page && SURAH_NAMES[i+1]?.page > pageNumber)) {
-        surahNumber = SURAH_NAMES[i].number;
-        break;
-      }
-    }
-    
-    addBookmark({
-      surahNumber,
-      ayahNumber: 1, // يجب تحديد رقم الآية بدقة في التطبيق الحقيقي
-      pageNumber
-    });
-    
-    toast({
-      title: "تمت الإضافة",
-      description: "تمت إضافة الإشارة المرجعية بنجاح",
-    });
-    
-    setSelectionMenuVisible(false);
-  };
-  
-  // معالج نسخ النص المحدد
-  const handleCopy = async () => {
-    // Determine the surah for this page
-    let surahNumber = 1;
-    let surahName = '';
-    
-    for (let i = 0; i < SURAH_NAMES.length; i++) {
-      if (i === SURAH_NAMES.length - 1 || 
-          (SURAH_NAMES[i+1]?.page && SURAH_NAMES[i+1]?.page > pageNumber)) {
-        surahNumber = SURAH_NAMES[i].number;
-        surahName = SURAH_NAMES[i].name;
-        break;
-      }
-    }
-    
-    const success = await copyQuranText(selectedText, pageNumber, surahName);
-    
-    if (success) {
-      toast({
-        title: "تم النسخ",
-        description: "تم نسخ النص المحدد إلى الحافظة",
-      });
-    } else {
-      toast({
-        title: "خطأ",
-        description: "تعذر نسخ النص. يرجى المحاولة مرة أخرى.",
-        variant: "destructive",
-      });
-    }
-    
-    setSelectionMenuVisible(false);
-  };
-  
-  // معالج مشاركة النص المحدد
-  const handleShare = async () => {
-    // Determine the surah for this page
-    let surahNumber = 1;
-    let surahName = '';
-    
-    for (let i = 0; i < SURAH_NAMES.length; i++) {
-      if (i === SURAH_NAMES.length - 1 || 
-          (SURAH_NAMES[i+1]?.page && SURAH_NAMES[i+1]?.page > pageNumber)) {
-        surahNumber = SURAH_NAMES[i].number;
-        surahName = SURAH_NAMES[i].name;
-        break;
-      }
-    }
-    
-    const success = await shareQuranPage(pageNumber, surahName, selectedText);
-    
-    if (success) {
-      toast({
-        title: "تمت المشاركة",
-        description: "تمت مشاركة النص المحدد بنجاح",
-      });
-    } else {
-      toast({
-        title: "تم نسخ الرابط",
-        description: "تم نسخ رابط المشاركة إلى الحافظة",
-      });
-    }
-    
-    setSelectionMenuVisible(false);
-  };
-  
-  // عرض حالة التحميل
-  if (isLoading) {
+
+  // عرض رسالة التحميل
+  if (loading) {
     return (
-      <div className="flex items-center justify-center w-full h-full">
-        <LoadingSpinner />
+      <div className="flex items-center justify-center min-h-[70vh]">
+        <div className="flex flex-col items-center gap-4">
+          <div className="relative w-16 h-16">
+            <div className="absolute inset-0 border-4 border-amber-200 rounded-full animate-ping"></div>
+            <div className="absolute inset-0 border-4 border-amber-500 rounded-full animate-pulse"></div>
+          </div>
+          <p className="text-lg font-medium text-amber-600 dark:text-amber-400">جارِ تحميل الصفحة...</p>
+        </div>
       </div>
     );
   }
-  
-  // عرض حالة الخطأ
+
+  // عرض رسالة الخطأ
   if (error) {
     return (
-      <div className="w-full h-full flex items-center justify-center">
-        <ErrorDisplay message={error} />
+      <div className="flex items-center justify-center min-h-[70vh]">
+        <div className="bg-red-50 dark:bg-red-900/20 p-6 rounded-lg border border-red-200 dark:border-red-800 max-w-lg text-center">
+          <div className="text-red-500 dark:text-red-400 text-4xl mb-4">⚠️</div>
+          <h3 className="text-lg font-semibold text-red-700 dark:text-red-300 mb-2">خطأ في التحميل</h3>
+          <p className="text-red-600 dark:text-red-400">{error}</p>
+          <button 
+            onClick={() => setCurrentPage(currentPage)} 
+            className="mt-4 px-4 py-2 bg-red-100 dark:bg-red-800 text-red-700 dark:text-red-200 rounded-md hover:bg-red-200 dark:hover:bg-red-700 transition-colors"
+          >
+            إعادة المحاولة
+          </button>
+        </div>
       </div>
     );
   }
-  
+
   return (
     <div 
-      ref={containerRef}
-      className="w-full h-full flex flex-col items-center justify-center overflow-auto relative"
-      onMouseDown={handleMouseDown}
-      onMouseMove={handleMouseMove}
-      onMouseUp={handleMouseUp}
-      onWheel={handleWheel}
+      ref={pageRef}
+      className="quran-mushaf-container relative bg-amber-50 dark:bg-amber-950/20 p-6 rounded-lg shadow-md"
     >
-      {/* صورة المصحف */}
-      <img
-        ref={imgRef}
-        src={imageUrl}
-        alt={`صفحة ${pageNumber} من المصحف الشريف`}
-        className="select-text"
-        style={{
-          width: imgWidth * currentZoom,
-          height: imgHeight * currentZoom,
-          cursor: isDragging ? 'grabbing' : currentZoom > 1 ? 'grab' : 'default',
-          userSelect: 'text'
-        }}
-      />
-      
-      {/* قائمة تحديد النص */}
-      <SelectionMenu
-        visible={selectionMenuVisible}
-        position={selectionPosition}
-        onCopy={handleCopy}
-        onShare={handleShare}
-        onBookmark={handleBookmark}
-        onView={handleShowTafsir}
-      />
-      
-      {/* نافذة التفسير المنبثقة */}
-      <TafsirDialog
-        isOpen={showTafsir}
-        onClose={() => setShowTafsir(false)}
-        surahNumber={currentAyah?.surahNumber || 1}
-        ayahNumber={currentAyah?.ayahNumber || 1}
-        ayahText={currentAyah?.ayahText || ''}
-      />
-      
-      {/* أزرار التكبير والتصغير */}
-      {!hideControls && (
-        <div className="absolute bottom-20 left-4 flex flex-col gap-2 z-10">
-          <button
-            onClick={() => handleZoom(true)}
-            className="w-10 h-10 rounded-full bg-white/80 dark:bg-gray-800/80 border border-gray-200 dark:border-gray-700 flex items-center justify-center shadow-md text-gray-700 dark:text-gray-300 hover:bg-amber-50 dark:hover:bg-amber-900/20"
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <circle cx="11" cy="11" r="8"></circle>
-              <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-              <line x1="11" y1="8" x2="11" y2="14"></line>
-              <line x1="8" y1="11" x2="14" y2="11"></line>
-            </svg>
-          </button>
-          <button
-            onClick={() => handleZoom(false)}
-            className="w-10 h-10 rounded-full bg-white/80 dark:bg-gray-800/80 border border-gray-200 dark:border-gray-700 flex items-center justify-center shadow-md text-gray-700 dark:text-gray-300 hover:bg-amber-50 dark:hover:bg-amber-900/20"
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <circle cx="11" cy="11" r="8"></circle>
-              <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-              <line x1="8" y1="11" x2="14" y2="11"></line>
-            </svg>
-          </button>
+      {/* عنوان الصفحة والسورة */}
+      <div className="page-header mb-6 text-center">
+        <h2 className="text-2xl font-bold text-amber-800 dark:text-amber-200">
+          {pageData?.data?.ayahs[0]?.surah?.name || "سورة القرآن"}
+        </h2>
+        <div className="page-number text-sm text-amber-600 dark:text-amber-400">
+          صفحة {currentPage} من 604
         </div>
-      )}
+      </div>
+
+      {/* عرض الآيات */}
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={currentPage}
+          variants={pageVariants}
+          initial="initial"
+          animate="animate"
+          exit="exit"
+          className="verses-container my-4 space-y-4"
+          dir="rtl"
+        >
+          {pageData?.data?.ayahs.map((ayah: any) => (
+            <HighlightedVerse
+              key={`${ayah.surah.number}-${ayah.numberInSurah}`}
+              verseText={ayah.text}
+              verseNumber={ayah.numberInSurah}
+              surahNumber={ayah.surah.number}
+              isActive={
+                activeVerse?.surah === ayah.surah.number && 
+                activeVerse?.verse === ayah.numberInSurah
+              }
+              isPlaying={
+                isPlaying && 
+                currentVerse?.surah === ayah.surah.number && 
+                currentVerse?.verse === ayah.numberInSurah
+              }
+              onClick={() => handleVerseClick(ayah.surah.number, ayah.numberInSurah)}
+              fontSize={settings.fontSize}
+              withAnimation={settings.highlightCurrentVerse}
+              translation={
+                settings.showTranslation && translations ? 
+                translations[`${ayah.surah.number}:${ayah.numberInSurah}`] : 
+                undefined
+              }
+            />
+          ))}
+        </motion.div>
+      </AnimatePresence>
+
+      {/* عناصر التحكم */}
+      <AnimatePresence>
+        {isControlsVisible && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 20 }}
+            transition={{ duration: 0.2 }}
+            className="controls-container fixed bottom-8 left-1/2 transform -translate-x-1/2 flex items-center gap-4 bg-white dark:bg-gray-800 p-3 rounded-full shadow-lg z-10"
+          >
+            <button 
+              onClick={goToPreviousPage}
+              disabled={currentPage <= 1}
+              className="p-2 rounded-full bg-amber-100 dark:bg-amber-900/50 text-amber-800 dark:text-amber-200 hover:bg-amber-200 dark:hover:bg-amber-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              title="الصفحة السابقة"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+              </svg>
+            </button>
+            
+            {isPlaying ? (
+              <button 
+                onClick={handlePausePlayback}
+                className="p-3 rounded-full bg-red-100 dark:bg-red-900/50 text-red-800 dark:text-red-200 hover:bg-red-200 dark:hover:bg-red-800 transition-colors"
+                title="إيقاف التلاوة"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </button>
+            ) : activeVerse && (
+              <button 
+                onClick={() => handleVersePlay(activeVerse.surah, activeVerse.verse)}
+                className="p-3 rounded-full bg-green-100 dark:bg-green-900/50 text-green-800 dark:text-green-200 hover:bg-green-200 dark:hover:bg-green-800 transition-colors"
+                title="تشغيل التلاوة"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </button>
+            )}
+            
+            <button 
+              onClick={goToNextPage}
+              disabled={currentPage >= 604}
+              className="p-2 rounded-full bg-amber-100 dark:bg-amber-900/50 text-amber-800 dark:text-amber-200 hover:bg-amber-200 dark:hover:bg-amber-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              title="الصفحة التالية"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+              </svg>
+            </button>
+            
+            <div className="page-input-container flex items-center gap-2">
+              <input
+                type="number"
+                min={1}
+                max={604}
+                value={currentPage}
+                onChange={(e) => setCurrentPage(Number(e.target.value))}
+                className="w-16 p-2 text-center rounded bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200 border border-gray-300 dark:border-gray-600"
+              />
+              <span className="text-sm text-gray-500 dark:text-gray-400">/ 604</span>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };

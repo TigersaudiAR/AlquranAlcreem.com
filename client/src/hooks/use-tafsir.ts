@@ -1,89 +1,90 @@
-import { useState, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { getTafsir } from '../lib/quran-api';
 
 interface UseTafsirProps {
   defaultSource?: string;
 }
 
+/**
+ * خطاف للتعامل مع جلب وعرض بيانات التفسير
+ * يدعم تغيير مصدر التفسير والتنقل بين الآيات
+ */
 export function useTafsir({ defaultSource = 'ar-tafsir-al-jalalayn' }: UseTafsirProps = {}) {
-  const [isOpen, setIsOpen] = useState(false);
   const [tafsirSource, setTafsirSource] = useState(defaultSource);
+  const [tafsirText, setTafsirText] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [currentAyah, setCurrentAyah] = useState<{
-    surahNumber: number;
-    ayahNumber: number;
-    ayahText: string;
-    tafsirText: string;
-  } | null>(null);
+  const [currentVerse, setCurrentVerse] = useState<{ surah: number; ayah: number } | null>(null);
 
-  // فتح نافذة التفسير
-  const openTafsir = useCallback(async (surahNumber: number, ayahNumber: number, ayahText: string) => {
-    setIsOpen(true);
-    setCurrentAyah({
-      surahNumber,
-      ayahNumber,
-      ayahText,
-      tafsirText: ''
-    });
-    setIsLoading(true);
-    setError(null);
-
+  /**
+   * جلب تفسير آية محددة
+   * @param surahNumber رقم السورة
+   * @param ayahNumber رقم الآية
+   */
+  const fetchTafsir = async (surahNumber: number, ayahNumber: number) => {
     try {
-      const data = await getTafsir(surahNumber, ayahNumber, tafsirSource);
-      
-      if (data && data.tafsirText) {
-        setCurrentAyah(prev => prev ? { ...prev, tafsirText: data.tafsirText } : null);
-      } else {
-        setError('لم يتم العثور على تفسير لهذه الآية.');
-      }
-    } catch (err) {
-      console.error('خطأ في تحميل التفسير:', err);
-      setError('حدث خطأ أثناء تحميل التفسير. يرجى المحاولة مرة أخرى.');
-    } finally {
-      setIsLoading(false);
-    }
-  }, [tafsirSource]);
-
-  // إغلاق نافذة التفسير
-  const closeTafsir = useCallback(() => {
-    setIsOpen(false);
-    setCurrentAyah(null);
-  }, []);
-
-  // تغيير مصدر التفسير
-  const changeTafsirSource = useCallback(async (newSource: string) => {
-    setTafsirSource(newSource);
-    
-    if (currentAyah) {
       setIsLoading(true);
       setError(null);
       
-      try {
-        const data = await getTafsir(currentAyah.surahNumber, currentAyah.ayahNumber, newSource);
-        
-        if (data && data.tafsirText) {
-          setCurrentAyah(prev => prev ? { ...prev, tafsirText: data.tafsirText } : null);
-        } else {
-          setError('لم يتم العثور على تفسير لهذه الآية.');
-        }
-      } catch (err) {
-        console.error('خطأ في تحميل التفسير:', err);
-        setError('حدث خطأ أثناء تحميل التفسير. يرجى المحاولة مرة أخرى.');
-      } finally {
-        setIsLoading(false);
-      }
+      const data = await getTafsir(surahNumber, ayahNumber, tafsirSource);
+      setTafsirText(data.tafsirText);
+      setCurrentVerse({ surah: surahNumber, ayah: ayahNumber });
+      
+    } catch (err) {
+      console.error('Error fetching tafsir:', err);
+      setError('حدث خطأ أثناء جلب التفسير. يرجى المحاولة مرة أخرى.');
+      setTafsirText(null);
+    } finally {
+      setIsLoading(false);
     }
-  }, [currentAyah]);
+  };
+
+  /**
+   * التنقل إلى الآية السابقة في نفس السورة
+   */
+  const goToPreviousAyah = () => {
+    if (!currentVerse) return;
+    
+    const { surah, ayah } = currentVerse;
+    if (ayah > 1) {
+      fetchTafsir(surah, ayah - 1);
+    }
+    // في حالة الآية الأولى، يمكن الانتقال إلى السورة السابقة
+    // لكن هذا يتطلب معرفة عدد آيات كل سورة
+  };
+
+  /**
+   * التنقل إلى الآية التالية في نفس السورة
+   * @param totalAyahsInSurah إجمالي عدد الآيات في السورة
+   */
+  const goToNextAyah = (totalAyahsInSurah?: number) => {
+    if (!currentVerse || !totalAyahsInSurah) return;
+    
+    const { surah, ayah } = currentVerse;
+    if (ayah < totalAyahsInSurah) {
+      fetchTafsir(surah, ayah + 1);
+    }
+    // في حالة الآية الأخيرة، يمكن الانتقال إلى السورة التالية
+  };
+
+  /**
+   * إعادة تحميل التفسير عند تغيير مصدر التفسير
+   */
+  useEffect(() => {
+    if (currentVerse) {
+      fetchTafsir(currentVerse.surah, currentVerse.ayah);
+    }
+  }, [tafsirSource]);
 
   return {
-    isOpen,
+    tafsirSource,
+    setTafsirSource,
+    tafsirText,
     isLoading,
     error,
-    currentAyah,
-    tafsirSource,
-    openTafsir,
-    closeTafsir,
-    changeTafsirSource
+    currentVerse,
+    fetchTafsir,
+    goToPreviousAyah,
+    goToNextAyah
   };
 }

@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, { createContext, useState, useEffect, useContext, ReactNode } from 'react';
 
 interface AppSettings {
   reciter: string;
@@ -12,106 +12,126 @@ interface AppSettings {
   autoSaveLastRead: boolean;
 }
 
+interface BookmarkItem {
+  surahNumber: number;
+  ayahNumber: number;
+  pageNumber: number;
+  timestamp: string;
+}
+
+interface LastRead {
+  surahNumber: number;
+  ayahNumber: number;
+  pageNumber: number;
+  timestamp: string;
+}
+
 interface AppContextType {
   settings: AppSettings;
   updateSettings: (newSettings: Partial<AppSettings>) => void;
-  bookmarks: {
-    surahNumber: number;
-    ayahNumber: number;
-    pageNumber: number;
-    timestamp: string;
-  }[];
+  bookmarks: BookmarkItem[];
   addBookmark: (bookmark: { surahNumber: number; ayahNumber: number; pageNumber: number }) => void;
   removeBookmark: (index: number) => void;
-  lastRead: {
-    surahNumber: number;
-    ayahNumber: number;
-    pageNumber: number;
-    timestamp: string;
-  } | null;
+  lastRead: LastRead | null;
   updateLastRead: (lastRead: { surahNumber: number; ayahNumber: number; pageNumber: number }) => void;
 }
 
 const defaultSettings: AppSettings = {
   reciter: 'ar.alafasy',
-  translation: 'ar',
-  fontSize: 18,
-  showTranslation: true,
+  translation: 'ar.muyassar',
+  fontSize: 24,
+  showTranslation: false,
   autoPlayAudio: false,
-  prayerMethod: 2, // Umm al-Qura University, Makkah
+  prayerMethod: 4, // مركز الملك فهد
   showNextPrayer: true,
   highlightCurrentVerse: true,
   autoSaveLastRead: true
 };
 
-const AppContext = createContext<AppContextType | null>(null);
+// إنشاء سياق التطبيق
+const AppContext = createContext<AppContextType | undefined>(undefined);
 
+// مزود سياق التطبيق
 export const AppProvider = ({ children }: { children: ReactNode }) => {
+  // حالة الإعدادات
   const [settings, setSettings] = useState<AppSettings>(() => {
-    // Load settings from localStorage
+    // جلب الإعدادات من التخزين المحلي
     const savedSettings = localStorage.getItem('quranAppSettings');
     return savedSettings ? JSON.parse(savedSettings) : defaultSettings;
   });
-  
-  const [bookmarks, setBookmarks] = useState<AppContextType['bookmarks']>(() => {
-    // Load bookmarks from localStorage
-    const savedBookmarks = localStorage.getItem('quranBookmarks');
+
+  // حالة الإشارات المرجعية
+  const [bookmarks, setBookmarks] = useState<BookmarkItem[]>(() => {
+    const savedBookmarks = localStorage.getItem('quranAppBookmarks');
     return savedBookmarks ? JSON.parse(savedBookmarks) : [];
   });
-  
-  const [lastRead, setLastRead] = useState<AppContextType['lastRead']>(() => {
-    // Load last read position from localStorage
-    const savedLastRead = localStorage.getItem('quranLastRead');
+
+  // حالة آخر قراءة
+  const [lastRead, setLastRead] = useState<LastRead | null>(() => {
+    const savedLastRead = localStorage.getItem('quranAppLastRead');
     return savedLastRead ? JSON.parse(savedLastRead) : null;
   });
-  
-  // Save settings to localStorage whenever they change
+
+  // حفظ الإعدادات عند تغييرها
   useEffect(() => {
     localStorage.setItem('quranAppSettings', JSON.stringify(settings));
   }, [settings]);
-  
-  // Save bookmarks to localStorage whenever they change
+
+  // حفظ الإشارات المرجعية عند تغييرها
   useEffect(() => {
-    localStorage.setItem('quranBookmarks', JSON.stringify(bookmarks));
+    localStorage.setItem('quranAppBookmarks', JSON.stringify(bookmarks));
   }, [bookmarks]);
-  
-  // Save last read position to localStorage whenever it changes
+
+  // حفظ آخر قراءة عند تغييرها
   useEffect(() => {
     if (lastRead) {
-      localStorage.setItem('quranLastRead', JSON.stringify(lastRead));
+      localStorage.setItem('quranAppLastRead', JSON.stringify(lastRead));
     }
   }, [lastRead]);
-  
-  // Update settings function
+
+  // تحديث الإعدادات
   const updateSettings = (newSettings: Partial<AppSettings>) => {
-    setSettings(prev => ({ ...prev, ...newSettings }));
+    setSettings(prevSettings => ({
+      ...prevSettings,
+      ...newSettings
+    }));
   };
-  
-  // Add bookmark function
+
+  // إضافة إشارة مرجعية
   const addBookmark = (bookmark: { surahNumber: number; ayahNumber: number; pageNumber: number }) => {
-    setBookmarks(prev => [
-      ...prev,
-      {
-        ...bookmark,
-        timestamp: new Date().toISOString(),
-      },
-    ]);
+    const timestamp = new Date().toISOString();
+    const newBookmark: BookmarkItem = {
+      ...bookmark,
+      timestamp
+    };
+    
+    // التحقق من عدم وجود نفس الإشارة المرجعية
+    const bookmarkExists = bookmarks.some(
+      b => b.surahNumber === bookmark.surahNumber && b.ayahNumber === bookmark.ayahNumber
+    );
+    
+    if (!bookmarkExists) {
+      setBookmarks(prevBookmarks => [...prevBookmarks, newBookmark]);
+    }
   };
-  
-  // Remove bookmark function
+
+  // حذف إشارة مرجعية
   const removeBookmark = (index: number) => {
-    setBookmarks(prev => prev.filter((_, i) => i !== index));
+    setBookmarks(prevBookmarks => prevBookmarks.filter((_, i) => i !== index));
   };
-  
-  // Update last read function
-  const updateLastRead = (newLastRead: { surahNumber: number; ayahNumber: number; pageNumber: number }) => {
-    setLastRead({
-      ...newLastRead,
-      timestamp: new Date().toISOString(),
-    });
+
+  // تحديث آخر قراءة
+  const updateLastRead = (lastReadData: { surahNumber: number; ayahNumber: number; pageNumber: number }) => {
+    const timestamp = new Date().toISOString();
+    const newLastRead: LastRead = {
+      ...lastReadData,
+      timestamp
+    };
+    
+    setLastRead(newLastRead);
   };
-  
-  // Provide context value
+
+  // قيمة السياق
   const contextValue: AppContextType = {
     settings,
     updateSettings,
@@ -119,9 +139,9 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     addBookmark,
     removeBookmark,
     lastRead,
-    updateLastRead,
+    updateLastRead
   };
-  
+
   return (
     <AppContext.Provider value={contextValue}>
       {children}
@@ -129,9 +149,10 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   );
 };
 
+// خطاف استخدام سياق التطبيق
 export const useApp = () => {
   const context = useContext(AppContext);
-  if (context === null) {
+  if (context === undefined) {
     throw new Error('useApp must be used within an AppProvider');
   }
   return context;

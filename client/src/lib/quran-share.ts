@@ -7,16 +7,16 @@
  * يضيف معلومات السورة والآية إذا كانت متوفرة
  */
 export function formatQuranText(text: string, pageNumber: number, surahName?: string) {
-  let formattedText = text.trim();
+  const formattedText = `﴿${text}﴾`;
   
-  // إضافة اسم السورة ورقم الصفحة إذا كانا متوفرين
+  let citation = '';
   if (surahName) {
-    formattedText += `\n\n— ${surahName}، صفحة ${pageNumber} من المصحف الشريف`;
+    citation = `\n— ${surahName}، صفحة ${pageNumber}`;
   } else {
-    formattedText += `\n\n— صفحة ${pageNumber} من المصحف الشريف`;
+    citation = `\n— المصحف الشريف، صفحة ${pageNumber}`;
   }
   
-  return formattedText;
+  return `${formattedText}${citation}`;
 }
 
 /**
@@ -26,19 +26,15 @@ export async function copyQuranText(text: string, pageNumber: number, surahName?
   const formattedText = formatQuranText(text, pageNumber, surahName);
   
   try {
-    // استخدام واجهة الحافظة الحديثة إن كانت متوفرة
     if (navigator.clipboard && navigator.clipboard.writeText) {
       await navigator.clipboard.writeText(formattedText);
-      return true;
     } else {
-      // طريقة بديلة قديمة
+      // طريقة احتياطية للمتصفحات القديمة
       copyTextFallback(formattedText);
-      return true;
     }
+    return true;
   } catch (error) {
-    console.error('خطأ في نسخ النص:', error);
-    // محاولة النسخ بالطريقة البديلة
-    copyTextFallback(formattedText);
+    console.error('Failed to copy text:', error);
     return false;
   }
 }
@@ -49,43 +45,45 @@ export async function copyQuranText(text: string, pageNumber: number, surahName?
 function copyTextFallback(text: string) {
   const textArea = document.createElement('textarea');
   textArea.value = text;
+  
+  // جعل النص غير مرئي ولكن موجود في الصفحة
   textArea.style.position = 'fixed';
   textArea.style.opacity = '0';
+  
   document.body.appendChild(textArea);
   textArea.select();
   
   try {
     document.execCommand('copy');
   } catch (err) {
-    console.error('فشل نسخ النص بالطريقة البديلة:', err);
+    console.error('Fallback: Failed to copy text', err);
+    throw err;
+  } finally {
+    document.body.removeChild(textArea);
   }
-  
-  document.body.removeChild(textArea);
 }
 
 /**
  * إنشاء رابط مشاركة للصفحة
  */
 export function createShareLink(pageNumber: number, surahName?: string, selectedText?: string) {
-  // تحديد الصفحة الحالية
-  const pageUrl = `${window.location.origin}/quran/page/${pageNumber}`;
+  const baseUrl = window.location.origin;
+  const path = '/quran';
   
-  // إنشاء نص المشاركة
-  let shareText = selectedText 
-    ? `"${selectedText.substring(0, 100)}${selectedText.length > 100 ? '...' : ''}"`
-    : '';
+  // إضافة المعلومات إلى عنوان الصفحة
+  const params = new URLSearchParams();
+  params.append('page', pageNumber.toString());
   
   if (surahName) {
-    shareText += ` — ${surahName}، صفحة ${pageNumber} من المصحف الشريف`;
-  } else {
-    shareText += ` — صفحة ${pageNumber} من المصحف الشريف`;
+    params.append('surah', surahName);
   }
   
-  // إنشاء رابط المشاركة
-  return {
-    url: pageUrl,
-    text: shareText.trim()
-  };
+  // يمكن أيضًا إضافة النص المحدد مشفرًا إذا كان موجودًا
+  if (selectedText) {
+    params.append('highlight', encodeURIComponent(selectedText));
+  }
+  
+  return `${baseUrl}${path}?${params.toString()}`;
 }
 
 /**
@@ -93,26 +91,40 @@ export function createShareLink(pageNumber: number, surahName?: string, selected
  * أو إنشاء رابط مباشر في حالة عدم توفر واجهة المشاركة
  */
 export async function shareQuranPage(pageNumber: number, surahName?: string, selectedText?: string) {
-  const { url, text } = createShareLink(pageNumber, surahName, selectedText);
+  const shareLink = createShareLink(pageNumber, surahName, selectedText);
+  
+  let shareText = surahName
+    ? `قراءة ${surahName} من المصحف - صفحة ${pageNumber}`
+    : `قراءة المصحف الشريف - صفحة ${pageNumber}`;
+    
+  if (selectedText) {
+    // إضافة الآية المحددة للنص المشارك
+    shareText = `${formatQuranText(selectedText, pageNumber, surahName)}\n\n${shareText}`;
+  }
   
   try {
-    // استخدام واجهة المشاركة الحديثة إن كانت متوفرة
     if (navigator.share) {
       await navigator.share({
         title: 'مشاركة من المصحف الشريف',
-        text,
-        url
+        text: shareText,
+        url: shareLink
       });
       return true;
     } else {
-      // في حالة عدم توفر واجهة المشاركة، يتم نسخ الرابط للحافظة
-      await navigator.clipboard.writeText(`${text}\n${url}`);
-      return false;
+      // نسخ الرابط إلى الحافظة إذا لم تكن واجهة المشاركة متوفرة
+      await navigator.clipboard.writeText(`${shareText}\n\n${shareLink}`);
+      return true;
     }
   } catch (error) {
-    console.error('خطأ في مشاركة الصفحة:', error);
-    // محاولة نسخ الرابط بالطريقة البديلة
-    copyTextFallback(`${text}\n${url}`);
-    return false;
+    console.error('Error sharing page:', error);
+    
+    // محاولة نسخ الرابط فقط كخيار أخير
+    try {
+      await navigator.clipboard.writeText(shareLink);
+      return true;
+    } catch (err) {
+      console.error('Error copying share link:', err);
+      return false;
+    }
   }
 }

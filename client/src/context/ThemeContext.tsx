@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, { createContext, useState, useEffect, useContext, ReactNode } from 'react';
 
 interface ThemeContextType {
   theme: 'light' | 'dark';
@@ -6,43 +6,61 @@ interface ThemeContextType {
   setTheme: (theme: 'light' | 'dark') => void;
 }
 
-const ThemeContext = createContext<ThemeContextType | null>(null);
+// إنشاء سياق المظهر
+const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
+// مزود سياق المظهر
 export const ThemeProvider = ({ children }: { children: ReactNode }) => {
-  const [theme, setTheme] = useState<'light' | 'dark'>(() => {
-    // Check localStorage first
+  // حالة المظهر (فاتح أو داكن)
+  const [theme, setThemeState] = useState<'light' | 'dark'>(() => {
+    // البحث عن المظهر المحفوظ في التخزين المحلي
     const savedTheme = localStorage.getItem('quranAppTheme');
+    
     if (savedTheme === 'dark' || savedTheme === 'light') {
       return savedTheme;
     }
     
-    // Check system preference
+    // استخدام تفضيلات النظام إذا لم يكن هناك مظهر محفوظ
     if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
       return 'dark';
     }
     
-    // Default to light
     return 'light';
   });
-  
+
+  // تبديل المظهر
+  const toggleTheme = () => {
+    setThemeState(prevTheme => (prevTheme === 'light' ? 'dark' : 'light'));
+  };
+
+  // تعيين المظهر بشكل مباشر
+  const setTheme = (newTheme: 'light' | 'dark') => {
+    setThemeState(newTheme);
+  };
+
+  // تطبيق المظهر على العنصر الجذر (html)
   useEffect(() => {
-    // Save theme to localStorage
-    localStorage.setItem('quranAppTheme', theme);
-    
-    // Apply theme to document
     if (theme === 'dark') {
       document.documentElement.classList.add('dark');
     } else {
       document.documentElement.classList.remove('dark');
     }
+    
+    // حفظ المظهر في التخزين المحلي
+    localStorage.setItem('quranAppTheme', theme);
   }, [theme]);
-  
-  // Listen for system theme changes
+
+  // الاستماع لتغييرات تفضيلات النظام
   useEffect(() => {
     const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
     
     const handleChange = (e: MediaQueryListEvent) => {
-      setTheme(e.matches ? 'dark' : 'light');
+      const newTheme = e.matches ? 'dark' : 'light';
+      
+      // استخدام تفضيلات النظام فقط إذا لم يكن المستخدم قد اختار مظهرًا
+      if (!localStorage.getItem('quranAppTheme')) {
+        setThemeState(newTheme);
+      }
     };
     
     mediaQuery.addEventListener('change', handleChange);
@@ -51,21 +69,25 @@ export const ThemeProvider = ({ children }: { children: ReactNode }) => {
       mediaQuery.removeEventListener('change', handleChange);
     };
   }, []);
-  
-  const toggleTheme = () => {
-    setTheme(prevTheme => (prevTheme === 'light' ? 'dark' : 'light'));
+
+  // قيمة السياق
+  const contextValue: ThemeContextType = {
+    theme,
+    toggleTheme,
+    setTheme
   };
-  
+
   return (
-    <ThemeContext.Provider value={{ theme, toggleTheme, setTheme }}>
+    <ThemeContext.Provider value={contextValue}>
       {children}
     </ThemeContext.Provider>
   );
 };
 
+// خطاف استخدام سياق المظهر
 export const useTheme = () => {
   const context = useContext(ThemeContext);
-  if (context === null) {
+  if (context === undefined) {
     throw new Error('useTheme must be used within a ThemeProvider');
   }
   return context;
