@@ -1,7 +1,5 @@
-import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { RECITERS, LANGUAGES } from '../lib/constants';
+import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 
-// Define app settings types
 interface AppSettings {
   reciter: string;
   translation: string;
@@ -14,7 +12,6 @@ interface AppSettings {
   autoSaveLastRead: boolean;
 }
 
-// Define the overall app context type
 interface AppContextType {
   settings: AppSettings;
   updateSettings: (newSettings: Partial<AppSettings>) => void;
@@ -35,79 +32,37 @@ interface AppContextType {
   updateLastRead: (lastRead: { surahNumber: number; ayahNumber: number; pageNumber: number }) => void;
 }
 
-// Create the context with default values
-const AppContext = createContext<AppContextType>({
-  settings: {
-    reciter: RECITERS[0].id,
-    translation: LANGUAGES[0].translation,
-    fontSize: 3,
-    showTranslation: true,
-    autoPlayAudio: false,
-    prayerMethod: 2,
-    showNextPrayer: true,
-    highlightCurrentVerse: true,
-    autoSaveLastRead: true,
-  },
-  updateSettings: () => {},
-  bookmarks: [],
-  addBookmark: () => {},
-  removeBookmark: () => {},
-  lastRead: null,
-  updateLastRead: () => {},
-});
+const defaultSettings: AppSettings = {
+  reciter: 'ar.alafasy',
+  translation: 'ar',
+  fontSize: 18,
+  showTranslation: true,
+  autoPlayAudio: false,
+  prayerMethod: 2, // Umm al-Qura University, Makkah
+  showNextPrayer: true,
+  highlightCurrentVerse: true,
+  autoSaveLastRead: true
+};
 
-// Context provider component
+const AppContext = createContext<AppContextType | null>(null);
+
 export const AppProvider = ({ children }: { children: ReactNode }) => {
-  // Initialize settings from localStorage or use defaults
   const [settings, setSettings] = useState<AppSettings>(() => {
+    // Load settings from localStorage
     const savedSettings = localStorage.getItem('quranAppSettings');
-    if (savedSettings) {
-      try {
-        return JSON.parse(savedSettings);
-      } catch (e) {
-        console.error('Failed to parse saved settings:', e);
-      }
-    }
-    
-    return {
-      reciter: RECITERS[0].id,
-      translation: LANGUAGES[0].translation,
-      fontSize: 3,
-      showTranslation: true,
-      autoPlayAudio: false,
-      prayerMethod: 2,
-      showNextPrayer: true,
-      highlightCurrentVerse: true,
-      autoSaveLastRead: true,
-    };
+    return savedSettings ? JSON.parse(savedSettings) : defaultSettings;
   });
   
-  // Initialize bookmarks from localStorage or use empty array
-  const [bookmarks, setBookmarks] = useState<any[]>(() => {
+  const [bookmarks, setBookmarks] = useState<AppContextType['bookmarks']>(() => {
+    // Load bookmarks from localStorage
     const savedBookmarks = localStorage.getItem('quranBookmarks');
-    if (savedBookmarks) {
-      try {
-        return JSON.parse(savedBookmarks);
-      } catch (e) {
-        console.error('Failed to parse saved bookmarks:', e);
-        return [];
-      }
-    }
-    return [];
+    return savedBookmarks ? JSON.parse(savedBookmarks) : [];
   });
   
-  // Initialize last read position from localStorage
-  const [lastRead, setLastRead] = useState<any>(() => {
+  const [lastRead, setLastRead] = useState<AppContextType['lastRead']>(() => {
+    // Load last read position from localStorage
     const savedLastRead = localStorage.getItem('quranLastRead');
-    if (savedLastRead) {
-      try {
-        return JSON.parse(savedLastRead);
-      } catch (e) {
-        console.error('Failed to parse saved last read:', e);
-        return null;
-      }
-    }
-    return null;
+    return savedLastRead ? JSON.parse(savedLastRead) : null;
   });
   
   // Save settings to localStorage whenever they change
@@ -174,5 +129,10 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   );
 };
 
-// Custom hook for using the app context
-export const useApp = () => useContext(AppContext);
+export const useApp = () => {
+  const context = useContext(AppContext);
+  if (context === null) {
+    throw new Error('useApp must be used within an AppProvider');
+  }
+  return context;
+};

@@ -1,10 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useSwipeable } from 'react-swipeable';
+import { SURAH_NAMES } from '../../lib/constants';
 import LoadingSpinner from '../common/LoadingSpinner';
 import ErrorDisplay from '../common/ErrorDisplay';
+import { useToast } from '../../hooks/use-toast';
+import { useApp } from '../../context/AppContext';
+import TafsirDialog from './TafsirDialog';
 import SelectionMenu from './SelectionMenu';
-import { SURAH_NAMES } from '../../lib/constants';
-import { ZoomIn, ZoomOut, Bookmark, SkipBack, SkipForward, Info, ChevronRight, ChevronLeft, X } from 'lucide-react';
+import { useSelection } from '../../hooks/use-selection';
 import { copyQuranText, shareQuranPage } from '../../lib/quran-share';
 
 interface KingFahdMushafProps {
@@ -14,639 +16,419 @@ interface KingFahdMushafProps {
 }
 
 /**
- * مكون عرض المصحف الشريف من مطبعة الملك فهد للطباعة
- * يعرض صفحات المصحف كما هي دون أي تعديل أو إعادة كتابة
+ * مكوّن عرض مصحف الملك فهد للطباعة
+ * يعرض صفحات المصحف بالتصميم الرسمي مع إمكانية الانتقال بين الصفحات
  */
-export default function KingFahdMushaf({ pageNumber, onPageChange, hideControls = false }: KingFahdMushafProps) {
+const KingFahdMushaf: React.FC<KingFahdMushafProps> = ({
+  pageNumber,
+  onPageChange,
+  hideControls = false
+}) => {
+  const { toast } = useToast();
+  const { addBookmark, updateLastRead, settings } = useApp();
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [zoomLevel, setZoomLevel] = useState(1);
-  const [pageInfo, setPageInfo] = useState<{surahName?: string, juzNumber?: number, hizbNumber?: number}>({});
-  const [preloadedImages, setPreloadedImages] = useState<Record<number, string>>({});
-  // تتبع مصدر الصورة الحالي
-  const [currentImageSource, setCurrentImageSource] = useState(0);
-  // عدد محاولات لتحميل الصورة
-  const [loadAttempts, setLoadAttempts] = useState(0);
-  // حالة ظهور عناصر التحكم في وضع ملء الشاشة
-  const [showFullScreenControls, setShowFullScreenControls] = useState(false);
-  // وضع تحديد النص
-  const [textSelectionMode, setTextSelectionMode] = useState(false);
-  // حالة ووضع قائمة التحديد
-  const [selectionMenu, setSelectionMenu] = useState({
-    visible: false,
-    position: { x: 0, y: 0 },
-    selectedText: ''
-  });
-  
+  const [imageUrl, setImageUrl] = useState<string>('');
+  const [imgWidth, setImgWidth] = useState(0);
+  const [imgHeight, setImgHeight] = useState(0);
   const containerRef = useRef<HTMLDivElement>(null);
   const imgRef = useRef<HTMLImageElement>(null);
-  const totalPages = 604; // إجمالي عدد صفحات المصحف الشريف
+  const [currentZoom, setCurrentZoom] = useState(1);
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
+  const [scrollPosition, setScrollPosition] = useState({ x: 0, y: 0 });
   
-  // قاعدة عنوان الصورة للصفحة من مطبعة الملك فهد (أو مصدر بديل)
-  const getImageUrl = (page: number, sourceIndex = currentImageSource) => {
-    // تنسيق رقم الصفحة مع الأصفار القائدة
-    const formattedPageNumber = String(page).padStart(3, '0');
-    
-    // مصادر موثوقة لصور المصحف
-    const imageUrls = [
-      // مصدر 1: الزخرفة القرآنية - mp3quran.net
-      `https://www.mp3quran.net/api/quran_pages_arabic/${formattedPageNumber}.png`,
-      // مصدر 2: القرآن المجيد API 
-      `https://static.qurancdn.com/images/w/rq-color/pages/page_${formattedPageNumber}.png`,
-      // مصدر 3: قرآن فلاش
-      `https://www.quranflash.com/public/assets/pages-color/${formattedPageNumber}.png`
-    ];
-    
-    // استخدام المصدر المحدد حسب فهرس المصدر المرسل
-    return imageUrls[sourceIndex % imageUrls.length];
-  };
+  // مكان العرض للتفسير والإشارات المرجعية
+  const [showTafsir, setShowTafsir] = useState(false);
+  const [currentAyah, setCurrentAyah] = useState<{
+    surahNumber: number;
+    ayahNumber: number;
+    ayahText: string;
+  } | null>(null);
   
-  // معالجة فشل تحميل الصورة بالانتقال للمصدر التالي
-  const handleImageError = () => {
-    if (loadAttempts < 2) { // لدينا 3 مصادر، نجرب مرتين للانتقال للمصدر التالي
-      const nextSource = (currentImageSource + 1) % 3;
-      console.log(`محاولة تحميل الصورة من المصدر البديل ${nextSource + 1}`);
-      setCurrentImageSource(nextSource);
-      setLoadAttempts(loadAttempts + 1);
-      
-      // تحميل الصورة من المصدر الجديد (إعادة الحصول على صورة جديدة)
-      if (imgRef.current) {
-        imgRef.current.src = getImageUrl(pageNumber, nextSource);
-      }
-    } else {
-      // إذا فشلت جميع المصادر، نظهر رسالة خطأ
-      setError("تعذر تحميل صفحة المصحف. يرجى التحقق من اتصالك بالإنترنت والمحاولة مرة أخرى أو استخدم زر تبديل المصدر.");
-    }
-  };
+  // قائمة تحديد النص
+  const { 
+    selectedText, 
+    selectionMenuVisible, 
+    selectionPosition, 
+    setSelectionMenuVisible 
+  } = useSelection();
   
-  // تغيير مصدر الصورة يدويًا
-  const switchImageSource = () => {
-    const nextSource = (currentImageSource + 1) % 3;
-    setCurrentImageSource(nextSource);
-    setLoadAttempts(0); // إعادة تعيين محاولات التحميل
-    setError(null); // إعادة تعيين رسائل الخطأ
-    
-    // تحميل الصورة من المصدر الجديد مباشرة
-    if (imgRef.current) {
-      imgRef.current.src = getImageUrl(pageNumber, nextSource);
-    }
-  };
-  
-  // تحميل الصور مسبقًا للصفحات التالية والسابقة
+  // تحميل صورة الصفحة المناسبة
   useEffect(() => {
-    const preloadImages = async () => {
-      // تحميل الصفحة الحالية والصفحتين التالية والسابقة
-      const pagesToPreload = [
-        pageNumber,
-        Math.min(pageNumber + 1, totalPages),
-        Math.max(pageNumber - 1, 1)
+    if (pageNumber < 1 || pageNumber > 604) {
+      setError('رقم الصفحة غير صالح. يجب أن يكون بين 1 و 604.');
+      setIsLoading(false);
+      return;
+    }
+    
+    setIsLoading(true);
+    
+    // محاولة تحميل الصفحة من المصادر المختلفة
+    const loadImage = async () => {
+      const sources = [
+        `/quran/hafs/${pageNumber.toString().padStart(3, '0')}.png`,
+        `https://quran-images.qurancomplex.gov.sa/hafs/${pageNumber.toString().padStart(3, '0')}.png`,
+        `https://www.islamicnet.com/islamic-library/assets/quran-images/page${pageNumber}.png`
       ];
       
-      // تحميل الصور
-      const newPreloadedImages: Record<number, string> = { ...preloadedImages };
+      let loaded = false;
       
-      for (const page of pagesToPreload) {
-        if (!preloadedImages[page]) {
-          try {
-            const url = getImageUrl(page);
-            const img = new Image();
-            img.src = url;
-            await new Promise((resolve) => {
-              img.onload = resolve;
-              img.onerror = resolve; // حتى في حالة الفشل، نستمر
-            });
-            newPreloadedImages[page] = url;
-          } catch (error) {
-            console.error(`فشل تحميل الصورة للصفحة ${page}:`, error);
-          }
+      for (const src of sources) {
+        try {
+          const img = new Image();
+          img.src = src;
+          
+          await new Promise((resolve, reject) => {
+            img.onload = resolve;
+            img.onerror = reject;
+          });
+          
+          setImageUrl(src);
+          setImgWidth(img.naturalWidth);
+          setImgHeight(img.naturalHeight);
+          loaded = true;
+          break;
+        } catch (err) {
+          console.error(`فشل تحميل الصورة من المصدر: ${src}`, err);
         }
       }
       
-      setPreloadedImages(newPreloadedImages);
+      if (!loaded) {
+        setError('تعذر تحميل صفحة المصحف. يرجى التحقق من اتصالك بالإنترنت وحاول مرة أخرى.');
+      }
+      
+      setIsLoading(false);
     };
     
-    preloadImages();
-  }, [pageNumber]);
-  
-  // تحديد معلومات السورة والجزء للصفحة الحالية
-  useEffect(() => {
-    setIsLoading(true);
-    // إعادة تعيين محاولات التحميل ومصدر الصورة عند تغيير الصفحة
-    setLoadAttempts(0);
-    setCurrentImageSource(0);
-    setError(null);
+    loadImage();
     
-    // الحصول على معلومات السورة للصفحة الحالية
-    const getSurahForPage = () => {
-      // البحث عن السورة التي تبدأ في هذه الصفحة أو قبلها
-      let currentSurah = SURAH_NAMES[0]; // نبدأ بسورة الفاتحة
-      
+    // حفظ موضع القراءة الحالي إذا كان الخيار مفعلاً
+    if (settings.autoSaveLastRead) {
+      // البحث عن السورة المناسبة لهذه الصفحة
+      let surahNumber = 1;
       for (let i = 0; i < SURAH_NAMES.length; i++) {
-        const surah = SURAH_NAMES[i];
-        // إذا كانت السورة التالية تبدأ بعد الصفحة الحالية، فإن السورة الحالية هي الصحيحة
         if (i === SURAH_NAMES.length - 1 || 
             (SURAH_NAMES[i+1]?.page && SURAH_NAMES[i+1]?.page > pageNumber)) {
-          currentSurah = surah;
+          surahNumber = SURAH_NAMES[i].number;
           break;
         }
       }
       
-      // تقدير رقم الجزء والحزب (تقريبي)
-      const juzNumber = Math.ceil(pageNumber / 20);
-      const hizbNumber = Math.ceil(pageNumber / 10);
+      updateLastRead({
+        surahNumber,
+        ayahNumber: 1, // لا يمكن تحديد رقم الآية بدقة هنا
+        pageNumber
+      });
+    }
+  }, [pageNumber, settings.autoSaveLastRead, updateLastRead]);
+  
+  // ضبط الحجم والتكبير بناءً على حجم النافذة
+  useEffect(() => {
+    if (!containerRef.current || !imgRef.current || imgWidth === 0 || imgHeight === 0) return;
+    
+    const updateSize = () => {
+      const container = containerRef.current;
+      if (!container) return;
       
-      return {
-        surahName: currentSurah?.name || "غير معروف",
-        juzNumber: juzNumber,
-        hizbNumber: hizbNumber
-      };
+      // حساب نسبة العرض المناسبة للشاشة
+      const containerWidth = container.clientWidth;
+      const containerHeight = container.clientHeight;
+      
+      const widthRatio = containerWidth / imgWidth;
+      const heightRatio = containerHeight / imgHeight;
+      
+      // استخدام النسبة الأصغر للتأكد من ظهور الصورة كاملة
+      const ratio = Math.min(widthRatio, heightRatio) * 0.9;
+      
+      setCurrentZoom(ratio);
     };
     
-    // تحديث معلومات الصفحة
-    setPageInfo(getSurahForPage());
+    updateSize();
     
-    // إظهار حالة التحميل لمدة قصيرة عند تغيير الصفحة
-    const timer = setTimeout(() => {
-      setIsLoading(false);
-    }, 300);
+    const handleResize = () => {
+      updateSize();
+    };
     
-    return () => clearTimeout(timer);
-  }, [pageNumber]);
+    window.addEventListener('resize', handleResize);
+    
+    return () => {
+      window.removeEventListener('resize', handleResize);
+    };
+  }, [imgWidth, imgHeight]);
   
-  // التعامل مع سحب الصفحة يمينًا أو يسارًا (على الأجهزة اللمسية)
-  const swipeHandlers = useSwipeable({
-    onSwipedRight: () => {
-      if (pageNumber > 1) {
-        onPageChange(pageNumber - 1);
-      }
-    },
-    onSwipedLeft: () => {
-      if (pageNumber < totalPages) {
-        onPageChange(pageNumber + 1);
-      }
-    },
-    preventScrollOnSwipe: true,
-    trackMouse: true,
-    delta: 10,
-    swipeDuration: 500
-  });
-  
-  // التنقل بين الصفحات
-  const handlePreviousPage = () => {
-    if (pageNumber > 1) {
-      onPageChange(pageNumber - 1);
+  // معالج التكبير والتصغير
+  const handleZoom = (zoomIn: boolean) => {
+    if (zoomIn) {
+      setCurrentZoom(prev => Math.min(prev * 1.2, 3));
+    } else {
+      setCurrentZoom(prev => Math.max(prev * 0.8, 0.5));
     }
   };
   
-  const handleNextPage = () => {
-    if (pageNumber < totalPages) {
-      onPageChange(pageNumber + 1);
+  // معالجات السحب والتنقل
+  const handleMouseDown = (e: React.MouseEvent) => {
+    if (currentZoom > 1) {
+      setIsDragging(true);
+      setDragStart({
+        x: e.clientX,
+        y: e.clientY
+      });
     }
   };
   
-  // التكبير والتصغير
-  const handleZoomIn = () => {
-    if (zoomLevel < 2) {
-      setZoomLevel(prevZoom => prevZoom + 0.1);
+  const handleMouseMove = (e: React.MouseEvent) => {
+    if (isDragging && containerRef.current) {
+      const deltaX = e.clientX - dragStart.x;
+      const deltaY = e.clientY - dragStart.y;
+      
+      containerRef.current.scrollLeft = scrollPosition.x - deltaX;
+      containerRef.current.scrollTop = scrollPosition.y - deltaY;
     }
   };
   
-  const handleZoomOut = () => {
-    if (zoomLevel > 0.6) {
-      setZoomLevel(prevZoom => prevZoom - 0.1);
+  const handleMouseUp = () => {
+    if (isDragging && containerRef.current) {
+      setScrollPosition({
+        x: containerRef.current.scrollLeft,
+        y: containerRef.current.scrollTop
+      });
+      setIsDragging(false);
     }
   };
   
-  // معالجة تحديد النص وإظهار القائمة المناسبة
-  const handleTextSelection = () => {
-    if (!textSelectionMode) return;
-    
-    const selection = window.getSelection();
-    if (!selection || selection.rangeCount === 0 || selection.toString().trim() === '') {
-      // إخفاء القائمة إذا لم يكن هناك نص محدد
-      setSelectionMenu(prev => ({ ...prev, visible: false }));
-      return;
+  const handleWheel = (e: React.WheelEvent) => {
+    if (e.ctrlKey) {
+      e.preventDefault();
+      handleZoom(e.deltaY < 0);
     }
-    
-    const selectedText = selection.toString().trim();
-    const range = selection.getRangeAt(0);
-    const rect = range.getBoundingClientRect();
-    
-    // الحصول على الموقع المناسب للقائمة (بجوار التحديد)
-    setSelectionMenu({
-      visible: true,
-      position: { 
-        x: rect.left + rect.width / 2,
-        y: rect.bottom + 10
-      },
-      selectedText
-    });
   };
   
-  // نسخ النص المحدد
-  const handleCopyText = async () => {
-    await copyQuranText(
-      selectionMenu.selectedText,
-      pageNumber,
-      pageInfo.surahName
-    );
-    // إظهار إشعار بنجاح النسخ
-    alert('تم نسخ النص بنجاح');
-    // إخفاء القائمة بعد النسخ
-    setSelectionMenu(prev => ({ ...prev, visible: false }));
-  };
-  
-  // مشاركة النص المحدد مع صفحة المصحف
-  const handleShareText = async () => {
-    await shareQuranPage(
-      pageNumber,
-      pageInfo.surahName,
-      selectionMenu.selectedText
-    );
-    // إظهار إشعار بنجاح المشاركة
-    alert('تم نسخ رابط المشاركة إلى الحافظة');
-    // إخفاء القائمة بعد المشاركة
-    setSelectionMenu(prev => ({ ...prev, visible: false }));
-  };
-  
-  // إضافة إشارة مرجعية للنص المحدد
-  const handleBookmarkText = () => {
-    // ستكون هذه الوظيفة مرتبطة بسياق التطبيق عند تنفيذ حفظ الإشارات المرجعية
-    alert(`تمت إضافة إشارة مرجعية للنص المحدد في صفحة ${pageNumber}`);
-    // إخفاء القائمة
-    setSelectionMenu(prev => ({ ...prev, visible: false }));
-  };
-  
-  // عرض التفسير للنص المحدد
-  const handleViewTafsir = () => {
-    // ستقوم بالانتقال إلى صفحة التفسير مع النص المحدد (يمكن تطويرها لاحقاً)
-    alert(`سيتم عرض تفسير النص المحدد قريباً`);
-    // إخفاء القائمة
-    setSelectionMenu(prev => ({ ...prev, visible: false }));
-  };
-  
-  // استجابة للضغط على مفاتيح الأسهم
+  // الانتقال إلى الصفحة السابقة/التالية باستخدام لوحة المفاتيح
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'ArrowRight') {
-        handlePreviousPage();
-      } else if (e.key === 'ArrowLeft') {
-        handleNextPage();
+      if (e.key === 'ArrowRight' || e.key === 'PageUp') {
+        if (pageNumber > 1) {
+          onPageChange(pageNumber - 1);
+        }
+      } else if (e.key === 'ArrowLeft' || e.key === 'PageDown') {
+        if (pageNumber < 604) {
+          onPageChange(pageNumber + 1);
+        }
       }
     };
     
     window.addEventListener('keydown', handleKeyDown);
+    
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
     };
-  }, [pageNumber]);
+  }, [pageNumber, onPageChange]);
   
-  if (error) {
-    return <ErrorDisplay message={error} />;
-  }
+  // معالج إظهار تفسير الآية
+  const handleShowTafsir = () => {
+    // في الواقع نحتاج إلى معرفة رقم السورة والآية من النص المحدد
+    // هنا نفترض أننا نحصل عليهما بطريقة ما
+    
+    // Determine the surah for this page
+    let surahNumber = 1;
+    for (let i = 0; i < SURAH_NAMES.length; i++) {
+      if (i === SURAH_NAMES.length - 1 || 
+          (SURAH_NAMES[i+1]?.page && SURAH_NAMES[i+1]?.page > pageNumber)) {
+        surahNumber = SURAH_NAMES[i].number;
+        break;
+      }
+    }
+    
+    setCurrentAyah({
+      surahNumber,
+      ayahNumber: 1, // يجب تحديد رقم الآية بدقة في التطبيق الحقيقي
+      ayahText: selectedText
+    });
+    
+    setShowTafsir(true);
+    setSelectionMenuVisible(false);
+  };
   
-  // عرض نمط واجهة كاملة (نمط آية/سورة) إذا كان hideControls = true
-  if (hideControls) {
+  // معالج إضافة إشارة مرجعية
+  const handleBookmark = () => {
+    // Determine the surah for this page
+    let surahNumber = 1;
+    for (let i = 0; i < SURAH_NAMES.length; i++) {
+      if (i === SURAH_NAMES.length - 1 || 
+          (SURAH_NAMES[i+1]?.page && SURAH_NAMES[i+1]?.page > pageNumber)) {
+        surahNumber = SURAH_NAMES[i].number;
+        break;
+      }
+    }
+    
+    addBookmark({
+      surahNumber,
+      ayahNumber: 1, // يجب تحديد رقم الآية بدقة في التطبيق الحقيقي
+      pageNumber
+    });
+    
+    toast({
+      title: "تمت الإضافة",
+      description: "تمت إضافة الإشارة المرجعية بنجاح",
+    });
+    
+    setSelectionMenuVisible(false);
+  };
+  
+  // معالج نسخ النص المحدد
+  const handleCopy = async () => {
+    // Determine the surah for this page
+    let surahNumber = 1;
+    let surahName = '';
+    
+    for (let i = 0; i < SURAH_NAMES.length; i++) {
+      if (i === SURAH_NAMES.length - 1 || 
+          (SURAH_NAMES[i+1]?.page && SURAH_NAMES[i+1]?.page > pageNumber)) {
+        surahNumber = SURAH_NAMES[i].number;
+        surahName = SURAH_NAMES[i].name;
+        break;
+      }
+    }
+    
+    const success = await copyQuranText(selectedText, pageNumber, surahName);
+    
+    if (success) {
+      toast({
+        title: "تم النسخ",
+        description: "تم نسخ النص المحدد إلى الحافظة",
+      });
+    } else {
+      toast({
+        title: "خطأ",
+        description: "تعذر نسخ النص. يرجى المحاولة مرة أخرى.",
+        variant: "destructive",
+      });
+    }
+    
+    setSelectionMenuVisible(false);
+  };
+  
+  // معالج مشاركة النص المحدد
+  const handleShare = async () => {
+    // Determine the surah for this page
+    let surahNumber = 1;
+    let surahName = '';
+    
+    for (let i = 0; i < SURAH_NAMES.length; i++) {
+      if (i === SURAH_NAMES.length - 1 || 
+          (SURAH_NAMES[i+1]?.page && SURAH_NAMES[i+1]?.page > pageNumber)) {
+        surahNumber = SURAH_NAMES[i].number;
+        surahName = SURAH_NAMES[i].name;
+        break;
+      }
+    }
+    
+    const success = await shareQuranPage(pageNumber, surahName, selectedText);
+    
+    if (success) {
+      toast({
+        title: "تمت المشاركة",
+        description: "تمت مشاركة النص المحدد بنجاح",
+      });
+    } else {
+      toast({
+        title: "تم نسخ الرابط",
+        description: "تم نسخ رابط المشاركة إلى الحافظة",
+      });
+    }
+    
+    setSelectionMenuVisible(false);
+  };
+  
+  // عرض حالة التحميل
+  if (isLoading) {
     return (
-      <div 
-        className="king-fahd-mushaf-container h-screen w-screen fixed top-0 left-0 flex flex-col items-center justify-center"
-        style={{
-          backgroundImage: 'url(/assets/mushaf/mushaf-background.svg)',
-          backgroundSize: 'cover',
-          backgroundPosition: 'center',
-          backgroundRepeat: 'no-repeat',
-          zIndex: 50
-        }}
-      >
-        {/* عرض صفحة المصحف الشريف بدون أي إضافات - نمط تطبيق آية/سورة */}
-        <div 
-          className="h-full w-full flex items-center justify-center"
-          {...swipeHandlers}
-          onDoubleClick={switchImageSource} // تبديل مصدر الصورة عند النقر المزدوج (تفيد في حالة نمط القراءة الكامل)
-          onMouseMove={() => setShowFullScreenControls(true)} // إظهار عناصر التحكم عند تحريك الماوس
-          onClick={() => setShowFullScreenControls(!showFullScreenControls)} // إظهار/إخفاء عناصر التحكم عند النقر
-        >
-          {isLoading ? (
-            <div className="flex justify-center items-center">
-              <LoadingSpinner />
-            </div>
-          ) : (
-            <div 
-              className="h-full w-full flex flex-col items-center justify-center overflow-auto select-none"
-              style={{ 
-                transform: `scale(${zoomLevel})`,
-                transformOrigin: 'center center',
-                transition: 'transform 0.2s ease-in-out'
-              }}
-            >
-              {/* أزرار التحكم في وضع ملء الشاشة - تظهر عند تحريك الماوس أو الضغط على الشاشة */}
-              <div 
-                className={`absolute left-0 top-0 w-full p-2 flex justify-between items-center bg-amber-50/80 dark:bg-gray-900/80 backdrop-blur-sm transition-opacity duration-300 ${showFullScreenControls ? 'opacity-100' : 'opacity-0'}`}
-                onMouseEnter={() => setShowFullScreenControls(true)}
-                onMouseLeave={() => setShowFullScreenControls(false)}
-              >
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={() => window.history.back()}
-                    className="p-2 rounded-full bg-white/90 dark:bg-gray-800/90 hover:bg-amber-100 dark:hover:bg-gray-700 text-amber-700 dark:text-amber-300 border border-amber-200/30 dark:border-gray-700/30"
-                    aria-label="العودة"
-                  >
-                    <X className="h-4 w-4" />
-                  </button>
-                  <div className="text-sm text-amber-800 dark:text-amber-200">
-                    صفحة {pageNumber} من {totalPages}
-                  </div>
-                </div>
-                
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={() => setTextSelectionMode(!textSelectionMode)}
-                    className={`p-2 rounded-full ${textSelectionMode ? 'bg-amber-200 dark:bg-amber-700' : 'bg-white/90 dark:bg-gray-800/90'} hover:bg-amber-100 dark:hover:bg-gray-700 text-amber-700 dark:text-amber-300 border border-amber-200/30 dark:border-gray-700/30`}
-                    aria-label={textSelectionMode ? "إيقاف تحديد النص" : "تفعيل تحديد النص"}
-                    title={textSelectionMode ? "إيقاف تحديد النص" : "تفعيل تحديد النص"}
-                  >
-                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4">
-                      <path d="M8 3H7a2 2 0 0 0-2 2v5a2 2 0 0 0 2 2h1"></path>
-                      <path d="M12 19h4a2 2 0 0 0 2-2v-5a2 2 0 0 0-2-2h-4"></path>
-                      <path d="M12 19V5"></path>
-                      <path d="M12 12h4"></path>
-                    </svg>
-                  </button>
-                  <button
-                    onClick={handleZoomOut}
-                    className="p-2 rounded-full bg-white/90 dark:bg-gray-800/90 hover:bg-amber-100 dark:hover:bg-gray-700 text-amber-700 dark:text-amber-300 border border-amber-200/30 dark:border-gray-700/30"
-                    aria-label="تصغير"
-                  >
-                    <ZoomOut className="h-4 w-4" />
-                  </button>
-                  <div className="px-2 py-1 text-xs text-amber-800 dark:text-amber-300 bg-white/70 dark:bg-gray-800/70 rounded">
-                    {Math.round(zoomLevel * 100)}%
-                  </div>
-                  <button
-                    onClick={handleZoomIn}
-                    className="p-2 rounded-full bg-white/90 dark:bg-gray-800/90 hover:bg-amber-100 dark:hover:bg-gray-700 text-amber-700 dark:text-amber-300 border border-amber-200/30 dark:border-gray-700/30"
-                    aria-label="تكبير"
-                  >
-                    <ZoomIn className="h-4 w-4" />
-                  </button>
-                  <button
-                    onClick={switchImageSource}
-                    className="p-2 rounded-full bg-white/90 dark:bg-gray-800/90 hover:bg-amber-100 dark:hover:bg-gray-700 text-amber-700 dark:text-amber-300 border border-amber-200/30 dark:border-gray-700/30"
-                    aria-label="تبديل مصدر الصورة"
-                    title="تبديل مصدر الصورة"
-                  >
-                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4">
-                      <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"></path>
-                      <path d="M21 3v5h-5"></path>
-                      <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"></path>
-                      <path d="M3 21v-5h5"></path>
-                    </svg>
-                  </button>
-                </div>
-              </div>
-                
-              {/* مؤشر مصدر الصورة */}
-              <div className="absolute bottom-2 left-2 text-xs text-amber-700/70 dark:text-amber-300/70 font-cairo-light bg-amber-50/80 dark:bg-gray-900/80 px-1 py-0.5 rounded shadow-sm">
-                {currentImageSource === 0 ? 'المصحف المصور' : currentImageSource === 1 ? 'القرآن المجيد' : 'قرآن فلاش'}
-                <div className="text-[10px] opacity-80">نقرتين لتبديل المصدر</div>
-              </div>
-              <div className="relative">
-                <img 
-                  ref={imgRef}
-                  src={getImageUrl(pageNumber)} 
-                  alt={`صفحة ${pageNumber} من المصحف الشريف`}
-                  className="max-h-full max-w-full object-contain"
-                  style={{ 
-                    userSelect: textSelectionMode ? 'text' : 'none',
-                  }}
-                  onError={handleImageError}
-                  draggable={false}
-                  onMouseUp={handleTextSelection}
-                  onTouchEnd={handleTextSelection}
-                />
-                
-                {/* قائمة النسخ والمشاركة عند تحديد النص - تظهر في وضع ملء الشاشة */}
-                <SelectionMenu
-                  visible={selectionMenu.visible && textSelectionMode}
-                  position={selectionMenu.position}
-                  onCopy={handleCopyText}
-                  onShare={handleShareText}
-                  onBookmark={handleBookmarkText}
-                  onView={handleViewTafsir}
-                />
-              </div>
-            </div>
-          )}
-        </div>
+      <div className="flex items-center justify-center w-full h-full">
+        <LoadingSpinner />
       </div>
     );
   }
   
-  // نمط العرض العادي مع أدوات التحكم
+  // عرض حالة الخطأ
+  if (error) {
+    return (
+      <div className="w-full h-full flex items-center justify-center">
+        <ErrorDisplay message={error} />
+      </div>
+    );
+  }
+  
   return (
-    <div className="king-fahd-mushaf-container flex flex-col items-center relative">
-      {/* شريط المعلومات في الأعلى */}
-      <div className="w-full bg-amber-50 dark:bg-gray-900/50 text-amber-900 dark:text-amber-300 p-3 rounded-t-lg border-t border-x border-amber-200 dark:border-amber-900/30 mb-0 flex justify-between items-center">
-        <div className="flex items-center text-sm">
-          <Info className="h-4 w-4 ml-1 text-amber-600 dark:text-amber-400" />
-          <span>سورة {pageInfo.surahName}</span>
-          <span className="mx-2">•</span>
-          <span>الجزء {pageInfo.juzNumber}</span>
-          <span className="mx-2">•</span>
-          <span>الحزب {pageInfo.hizbNumber}</span>
-        </div>
-        <div className="text-sm font-medium">
-          صفحة {pageNumber} من {totalPages}
-        </div>
-      </div>
-      
-      {/* عرض صفحة المصحف الشريف */}
-      <div 
-        className="mushaf-page-container bg-amber-100/50 dark:bg-gray-900/30 p-4 border border-amber-200 dark:border-amber-900/30 shadow-sm mx-auto"
-        style={{ 
-          maxWidth: '800px', 
-          overflow: 'hidden',
-          backgroundImage: 'url(/assets/mushaf/mushaf-background.svg)',
-          backgroundSize: 'cover',
-          backgroundPosition: 'center',
-          backgroundRepeat: 'no-repeat'
+    <div 
+      ref={containerRef}
+      className="w-full h-full flex flex-col items-center justify-center overflow-auto relative"
+      onMouseDown={handleMouseDown}
+      onMouseMove={handleMouseMove}
+      onMouseUp={handleMouseUp}
+      onWheel={handleWheel}
+    >
+      {/* صورة المصحف */}
+      <img
+        ref={imgRef}
+        src={imageUrl}
+        alt={`صفحة ${pageNumber} من المصحف الشريف`}
+        className="select-text"
+        style={{
+          width: imgWidth * currentZoom,
+          height: imgHeight * currentZoom,
+          cursor: isDragging ? 'grabbing' : currentZoom > 1 ? 'grab' : 'default',
+          userSelect: 'text'
         }}
-        {...swipeHandlers}
-        ref={containerRef}
-      >
-        {isLoading ? (
-          <div className="flex justify-center items-center py-20">
-            <LoadingSpinner />
-          </div>
-        ) : (
-          <div 
-            className="overflow-auto select-none flex justify-center"
-            style={{ 
-              transform: `scale(${zoomLevel})`, 
-              transformOrigin: 'center top',
-              transition: 'transform 0.2s ease-in-out'
-            }}
-          >
-            <div className="relative">
-              <img 
-                ref={imgRef}
-                src={getImageUrl(pageNumber)} 
-                alt={`صفحة ${pageNumber} من المصحف الشريف`}
-                className="w-full h-auto"
-                style={{ 
-                  maxWidth: '100%',
-                  userSelect: textSelectionMode ? 'text' : 'none',
-                  boxShadow: '0 4px 8px rgba(0,0,0,0.1)'
-                }}
-                onError={handleImageError}
-                draggable={false}
-                onMouseUp={handleTextSelection}
-                onTouchEnd={handleTextSelection}
-              />
-              
-              {/* قائمة النسخ والمشاركة عند تحديد النص - نمط العرض العادي */}
-              <SelectionMenu
-                visible={selectionMenu.visible && textSelectionMode}
-                position={selectionMenu.position}
-                onCopy={handleCopyText}
-                onShare={handleShareText}
-                onBookmark={handleBookmarkText}
-                onView={handleViewTafsir}
-              />
-            </div>
-          </div>
-        )}
-      </div>
+      />
       
-      {/* أزرار التنقل والتكبير/التصغير */}
-      <div className="w-full bg-amber-50 dark:bg-gray-900/50 p-3 rounded-b-lg border-b border-x border-amber-200 dark:border-amber-900/30 mt-0">
-        <div className="flex justify-between items-center">
-          <div className="flex gap-2">
-            <button
-              onClick={handleZoomOut}
-              className="p-2 rounded-full bg-white dark:bg-gray-800 hover:bg-amber-100 dark:hover:bg-gray-700 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-gray-700"
-              aria-label="تصغير"
-            >
-              <ZoomOut className="h-4 w-4" />
-            </button>
-            <button
-              onClick={handleZoomIn}
-              className="p-2 rounded-full bg-white dark:bg-gray-800 hover:bg-amber-100 dark:hover:bg-gray-700 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-gray-700"
-              aria-label="تكبير"
-            >
-              <ZoomIn className="h-4 w-4" />
-            </button>
-            <div className="px-2 py-1 text-sm text-amber-800 dark:text-amber-300 flex items-center">
-              {Math.round(zoomLevel * 100)}%
-            </div>
-            {/* زر تفعيل تحديد النص */}
-            <button
-              onClick={() => setTextSelectionMode(!textSelectionMode)}
-              className={`p-2 rounded-full ${textSelectionMode ? 'bg-amber-200 dark:bg-amber-700' : 'bg-white dark:bg-gray-800'} hover:bg-amber-100 dark:hover:bg-gray-700 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-gray-700`}
-              aria-label={textSelectionMode ? "إيقاف تحديد النص" : "تفعيل تحديد النص"}
-              title={textSelectionMode ? "إيقاف تحديد النص" : "تفعيل تحديد النص"}
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4">
-                <path d="M8 3H7a2 2 0 0 0-2 2v5a2 2 0 0 0 2 2h1"></path>
-                <path d="M12 19h4a2 2 0 0 0 2-2v-5a2 2 0 0 0-2-2h-4"></path>
-                <path d="M12 19V5"></path>
-                <path d="M12 12h4"></path>
-              </svg>
-            </button>
-            
-            {/* زر تبديل مصدر الصورة */}
-            <button
-              onClick={switchImageSource}
-              title="تبديل مصدر الصورة في حالة وجود مشكلة"
-              className="p-2 rounded-full bg-white dark:bg-gray-800 hover:bg-amber-100 dark:hover:bg-gray-700 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-gray-700"
-              aria-label="تبديل مصدر الصورة"
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4">
-                <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"></path>
-                <path d="M21 3v5h-5"></path>
-                <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"></path>
-                <path d="M3 21v-5h5"></path>
-              </svg>
-            </button>
-          </div>
-          
-          <div className="flex items-center gap-1">
-            <button
-              onClick={() => onPageChange(Math.max(pageNumber - 10, 1))}
-              className="p-2 rounded-full bg-white dark:bg-gray-800 hover:bg-amber-100 dark:hover:bg-gray-700 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-gray-700"
-              aria-label="عشر صفحات للخلف"
-              disabled={pageNumber <= 10}
-            >
-              <SkipBack className="h-4 w-4" />
-            </button>
-            <button
-              onClick={handlePreviousPage}
-              disabled={pageNumber <= 1}
-              className="py-1 px-3 rounded-md bg-white dark:bg-gray-800 hover:bg-amber-100 dark:hover:bg-gray-700 text-amber-700 dark:text-amber-300 font-medium text-sm border border-amber-200 dark:border-gray-700 flex items-center"
-            >
-              <ChevronRight className="h-4 w-4 ml-1" />
-              السابقة
-            </button>
-            
-            <form onSubmit={(e) => {
-              e.preventDefault();
-              const formData = new FormData(e.currentTarget);
-              const pageInput = formData.get('pageNumber');
-              if (pageInput) {
-                const pageNum = parseInt(pageInput as string);
-                if (!isNaN(pageNum) && pageNum >= 1 && pageNum <= totalPages) {
-                  onPageChange(pageNum);
-                }
-              }
-            }} className="mx-2 flex items-center">
-              <input
-                type="number"
-                id="pageNumber"
-                name="pageNumber"
-                min="1"
-                max={totalPages}
-                defaultValue={pageNumber}
-                className="w-16 py-1 px-2 border border-amber-200 dark:border-gray-700 bg-white dark:bg-gray-800 rounded-md text-center text-sm text-amber-800 dark:text-amber-200"
-              />
-            </form>
-            
-            <button
-              onClick={handleNextPage}
-              disabled={pageNumber >= totalPages}
-              className="py-1 px-3 rounded-md bg-white dark:bg-gray-800 hover:bg-amber-100 dark:hover:bg-gray-700 text-amber-700 dark:text-amber-300 font-medium text-sm border border-amber-200 dark:border-gray-700 flex items-center"
-            >
-              التالية
-              <ChevronLeft className="h-4 w-4 mr-1" />
-            </button>
-            <button
-              onClick={() => onPageChange(Math.min(pageNumber + 10, totalPages))}
-              className="p-2 rounded-full bg-white dark:bg-gray-800 hover:bg-amber-100 dark:hover:bg-gray-700 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-gray-700"
-              aria-label="عشر صفحات للأمام"
-              disabled={pageNumber >= totalPages - 10}
-            >
-              <SkipForward className="h-4 w-4" />
-            </button>
-          </div>
-          
+      {/* قائمة تحديد النص */}
+      <SelectionMenu
+        visible={selectionMenuVisible}
+        position={selectionPosition}
+        onCopy={handleCopy}
+        onShare={handleShare}
+        onBookmark={handleBookmark}
+        onView={handleShowTafsir}
+      />
+      
+      {/* نافذة التفسير المنبثقة */}
+      <TafsirDialog
+        isOpen={showTafsir}
+        onClose={() => setShowTafsir(false)}
+        surahNumber={currentAyah?.surahNumber || 1}
+        ayahNumber={currentAyah?.ayahNumber || 1}
+        ayahText={currentAyah?.ayahText || ''}
+      />
+      
+      {/* أزرار التكبير والتصغير */}
+      {!hideControls && (
+        <div className="absolute bottom-20 left-4 flex flex-col gap-2 z-10">
           <button
-            onClick={() => alert(`تمت إضافة الصفحة ${pageNumber} إلى المفضلة`)}
-            className="p-2 rounded-full bg-white dark:bg-gray-800 hover:bg-amber-100 dark:hover:bg-gray-700 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-gray-700"
-            aria-label="إضافة للمفضلة"
+            onClick={() => handleZoom(true)}
+            className="w-10 h-10 rounded-full bg-white/80 dark:bg-gray-800/80 border border-gray-200 dark:border-gray-700 flex items-center justify-center shadow-md text-gray-700 dark:text-gray-300 hover:bg-amber-50 dark:hover:bg-amber-900/20"
           >
-            <Bookmark className="h-4 w-4" />
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="11" cy="11" r="8"></circle>
+              <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+              <line x1="11" y1="8" x2="11" y2="14"></line>
+              <line x1="8" y1="11" x2="14" y2="11"></line>
+            </svg>
+          </button>
+          <button
+            onClick={() => handleZoom(false)}
+            className="w-10 h-10 rounded-full bg-white/80 dark:bg-gray-800/80 border border-gray-200 dark:border-gray-700 flex items-center justify-center shadow-md text-gray-700 dark:text-gray-300 hover:bg-amber-50 dark:hover:bg-amber-900/20"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="11" cy="11" r="8"></circle>
+              <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+              <line x1="8" y1="11" x2="14" y2="11"></line>
+            </svg>
           </button>
         </div>
-      </div>
-      
-      {/* معلومات إضافية عن الصفحة */}
-      <div className="mt-4 text-center text-gray-600 dark:text-gray-400 text-xs">
-        <p>مصحف المدينة المنورة للنشر الحاسوبي - مجمع الملك فهد لطباعة المصحف الشريف</p>
-        <p className="mt-1 text-amber-500 dark:text-amber-400">
-          {currentImageSource === 0 ? 'مصدر الصور: المصحف المصور' : 
-           currentImageSource === 1 ? 'مصدر الصور: القرآن المجيد' : 
-           'مصدر الصور: قرآن فلاش'}
-        </p>
-      </div>
+      )}
     </div>
   );
-}
+};
+
+export default KingFahdMushaf;
