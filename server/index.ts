@@ -39,7 +39,7 @@ setupVite(app, server);
 server.listen(PORT, '0.0.0.0', () => {
   console.log(`✅ SERVER RUNNING ON PORT ${PORT}`);
   console.log(`🚀 Server available at http://localhost:${PORT}`);
-  
+
   // Log port ready indicator
   console.log('X-Replit-Port-Ready header added to all responses');
 });
