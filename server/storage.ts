@@ -169,12 +169,29 @@ export class MemStorage implements IStorage {
 // فئة DbStorage الجديدة التي تستخدم PostgreSQL
 export class DbStorage implements IStorage {
   private db: ReturnType<typeof drizzle>;
+  private static instance: DbStorage;
+  private static clientInstance: ReturnType<typeof postgres>;
 
   constructor() {
-    // إنشاء اتصال بقاعدة البيانات باستخدام متغير البيئة DATABASE_URL
-    const connectionString = process.env.DATABASE_URL as string;
-    const client = postgres(connectionString);
-    this.db = drizzle(client);
+    // تحسين أداء اتصال قاعدة البيانات باستخدام نمط Singleton
+    if (!DbStorage.clientInstance) {
+      // إنشاء اتصال بقاعدة البيانات باستخدام متغير البيئة DATABASE_URL
+      const connectionString = process.env.DATABASE_URL;
+      if (!connectionString) {
+        throw new Error('DATABASE_URL environment variable is not set');
+      }
+      try {
+        DbStorage.clientInstance = postgres(connectionString, { 
+          connect_timeout: 10, // تقليل وقت الاتصال إلى 10 ثوانٍ
+          idle_timeout: 20, // تقليل وقت الخمول
+          max: 10, // تقييد عدد الاتصالات المتزامنة
+        });
+      } catch (error) {
+        console.error('خطأ في الاتصال بقاعدة البيانات:', error);
+        throw error;
+      }
+    }
+    this.db = drizzle(DbStorage.clientInstance);
   }
 
   // User operations
@@ -260,5 +277,5 @@ export class DbStorage implements IStorage {
   }
 }
 
-// استخدام DbStorage بدلاً من MemStorage
-export const storage = new DbStorage();
+// استخدام DbStorage للتخزين الدائم في قاعدة البيانات PostgreSQL
+export const storage: IStorage = new DbStorage();

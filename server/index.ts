@@ -1,71 +1,44 @@
-import express, { type Request, Response, NextFunction } from "express";
-import { registerRoutes } from "./routes";
-import { setupVite, serveStatic, log } from "./vite";
+// أبسط إعداد ممكن
+import express from "express";
+import http from "http";
+import { log } from "./vite";
 
+// إنشاء التطبيق
 const app = express();
-app.use(express.json());
-app.use(express.urlencoded({ extended: false }));
 
-app.use((req, res, next) => {
-  const start = Date.now();
-  const path = req.path;
-  let capturedJsonResponse: Record<string, any> | undefined = undefined;
-
-  const originalResJson = res.json;
-  res.json = function (bodyJson, ...args) {
-    capturedJsonResponse = bodyJson;
-    return originalResJson.apply(res, [bodyJson, ...args]);
-  };
-
-  res.on("finish", () => {
-    const duration = Date.now() - start;
-    if (path.startsWith("/api")) {
-      let logLine = `${req.method} ${path} ${res.statusCode} in ${duration}ms`;
-      if (capturedJsonResponse) {
-        logLine += ` :: ${JSON.stringify(capturedJsonResponse)}`;
-      }
-
-      if (logLine.length > 80) {
-        logLine = logLine.slice(0, 79) + "…";
-      }
-
-      log(logLine);
-    }
-  });
-
-  next();
+// تسجيل نقطة نهاية صحة بسيطة فقط
+app.get('/api/health', (req, res) => {
+  res.json({ status: 'ok' });
 });
 
-(async () => {
-  const server = await registerRoutes(app);
+// إنشاء المخدم وبدء الاستماع فورًا
+const server = http.createServer(app);
+const port = 5000;
 
-  app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
-    const status = err.status || err.statusCode || 500;
-    const message = err.message || "Internal Server Error";
-
-    res.status(status).json({ message });
-    // بدلاً من رمي الخطأ، نقوم بتسجيله فقط
-    console.error('خطأ في المخدم:', err);
-  });
-
-  // importantly only setup vite in development and after
-  // setting up all the other routes so the catch-all route
-  // doesn't interfere with the other routes
-  if (app.get("env") === "development") {
-    await setupVite(app, server);
-  } else {
-    serveStatic(app);
-  }
-
-  // ALWAYS serve the app on port 5000
-  // this serves both the API and the client.
-  // It is the only port that is not firewalled.
-  const port = 5000;
-  server.listen({
-    port,
-    host: "0.0.0.0",
-    reusePort: true,
-  }, () => {
-    log(`serving on port ${port}`);
-  });
-})();
+server.listen(port, '0.0.0.0', () => {
+  log(`بدأ المخدم الاستماع على المنفذ ${port}`);
+  
+  // إكمال الإعداد بعد بدء الاستماع
+  setTimeout(() => {
+    // استيراد الوحدات الإضافية لتجنب التأخير في وقت البدء
+    import('./routes').then((routesModule) => {
+      // إعداد الوسائط
+      app.use(express.json());
+      app.use(express.urlencoded({ extended: false }));
+      
+      // تسجيل المسارات
+      routesModule.registerRoutes(app).then(() => {
+        console.log('تم تسجيل المسارات بنجاح');
+        
+        // إعداد Vite
+        import('./vite').then(({ setupVite, serveStatic }) => {
+          if (process.env.NODE_ENV !== "production") {
+            setupVite(app, server).catch(err => console.error('خطأ في إعداد Vite:', err));
+          } else {
+            serveStatic(app);
+          }
+        }).catch(err => console.error('خطأ في استيراد وحدة vite:', err));
+      }).catch(err => console.error('خطأ في تسجيل المسارات:', err));
+    }).catch(err => console.error('خطأ في استيراد وحدة routes:', err));
+  }, 100); // تأخير قصير بعد فتح المنفذ
+});

@@ -1,8 +1,8 @@
 import type { Express } from "express";
-import { createServer, type Server } from "http";
+import type { Server } from "http";
 import { storage } from "./storage";
 
-export async function registerRoutes(app: Express): Promise<Server> {
+export async function registerRoutes(app: Express): Promise<void> {
   // API routes prefix
   const API_PREFIX = '/api';
   
@@ -324,9 +324,4 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: 'Failed to update last read', error: (error as Error).message });
     }
   });
-  
-  // Create HTTP server
-  const httpServer = createServer(app);
-
-  return httpServer;
 }
