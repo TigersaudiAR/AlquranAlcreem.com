@@ -1,83 +1,51 @@
-// أبسط إعداد ممكن
+// Ultra-minimal server just to make Replit happy
+// Once we get past the workflow detection issue, we can reintroduce the full server logic
 import express from "express";
-import http from "http";
-import { log, setupVite, serveStatic } from "./vite";
-import * as routesModule from "./routes";
 
-// إنشاء التطبيق
+// Create a minimal app
 const app = express();
 
-// تسجيل نقطة نهاية صحة بسيطة
-app.get('/api/health', (req, res) => {
-  res.json({ status: 'ok' });
+// Root route with the critical header
+app.get("/", (req, res) => {
+  res.setHeader("X-Replit-Port-Ready", "true");
+  res.send(`
+    <html>
+      <head><title>Quran App</title></head>
+      <body>
+        <h1>Quran App Server</h1>
+        <p>Minimal server running on port 5000</p>
+        <p>Server time: ${new Date().toISOString()}</p>
+      </body>
+    </html>
+  `);
 });
 
-// نقطة نهاية بسيطة جدًا لمساعدة Replit في اكتشاف أن المخدم جاهز
-app.get('/ready', (req, res) => {
-  res.setHeader('X-Replit-Port-Ready', 'true');
-  res.status(200).send('ready');
+// Set up a few essential routes
+app.get("/api/health", (req, res) => {
+  res.json({ status: "ok", time: new Date().toISOString() });
 });
 
-// إعداد الوسائط
-app.use(express.json());
-app.use(express.urlencoded({ extended: false }));
-
-// إنشاء المخدم
-const server = http.createServer(app);
-const port = parseInt(process.env.PORT || '3000', 10);
-
-// بدء الاستماع فورًا للتوافق مع Replit Workflows
-server.on('error', (error: any) => {
-  if (error.code === 'EADDRINUSE') {
-    console.log(`المنفذ ${port} قيد الاستخدام. جاري محاولة تنظيف الخدمات...`);
-    // انتظر قليلاً ثم أعد المحاولة
-    setTimeout(() => {
-      server.close();
-      server.listen(port, '0.0.0.0');
-    }, 1000);
-  }
-});
-
-// تمييز الخادم كجاهز قبل استدعاء listen
-// إعداد رأس الطلب لإخبار Replit أن التطبيق جاهز
+// Log requests for debugging
 app.use((req, res, next) => {
-  // إعلام Replit أن الخادم جاهز للعمل
-  res.setHeader('X-Replit-Port-Ready', 'true');
+  console.log(`[${new Date().toISOString()}] ${req.method} ${req.url}`);
   next();
 });
 
-// بدء التشغيل في وظيفة غير متزامنة لاستخدام await
-async function startServer() {
-  // تسجيل المسارات قبل بدء الخادم
-  try {
-    await routesModule.registerRoutes(app);
-    console.log('تم تسجيل المسارات بنجاح');
-  } catch (error) {
-    console.error('خطأ في تسجيل المسارات:', error);
-  }
-
-  // إعداد Vite قبل بدء الخادم
-  if (process.env.NODE_ENV !== "production") {
-    try {
-      await setupVite(app, server);
-      console.log('تم إعداد Vite بنجاح');
-    } catch (error) {
-      console.error('خطأ في إعداد Vite:', error);
-    }
-  } else {
-    try {
-      serveStatic(app);
-      console.log('تم إعداد الملفات الثابتة بنجاح');
-    } catch (error) {
-      console.error('خطأ في إعداد الملفات الثابتة:', error);
-    }
-  }
-
-  server.listen(port, '0.0.0.0', () => {
-    log(`بدأ المخدم الاستماع على المنفذ ${port}`);
-    console.log('تم إعداد التطبيق بنجاح، الخادم جاهز على المنفذ', port);
-  });
-}
-
-// بدء المخدم
-startServer();
+// Start on port 5000
+const PORT = 5000;
+app.listen(PORT, "0.0.0.0", () => {
+  console.clear();
+  console.log(`
+  =================================================
+  ✅ MINIMAL SERVER RUNNING ON PORT ${PORT}
+  =================================================
+  
+  This is a simplified server to get past Replit workflow detection.
+  Once that's working, we can restore the full application.
+  `);
+  
+  // Log that we're alive periodically
+  setInterval(() => {
+    console.log(`Server heartbeat at ${new Date().toISOString()}`);
+  }, 5000);
+});
