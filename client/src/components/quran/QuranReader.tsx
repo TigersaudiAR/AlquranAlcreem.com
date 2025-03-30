@@ -1,9 +1,32 @@
 import { useState, useEffect, useRef } from 'react';
+import OttomanHafs from '/assets/UthmanicHafs.css';
+import { PopupModal } from './PopupModal';
 import { useQuranAudio } from '../../hooks/useQuranAudio';
 import AudioPlayer from './AudioPlayer';
 import LoadingSpinner from '../common/LoadingSpinner';
 import ErrorDisplay from '../common/ErrorDisplay';
 import { SURAH_NAMES } from '../../lib/constants';
+
+export default function QuranReader({ surahNumber }) {
+  const [selectedAyah, setSelectedAyah] = useState(null);
+  
+  const handleAyahClick = (ayah) => {
+    setSelectedAyah(ayah);
+  };
+
+  return (
+    <div className="quran-text quran-reader-container" onClick={() => handleAyahClick(ayah)}>
+      {ayah.text}
+    </div>
+
+    {selectedAyah && (
+      <PopupModal onClose={() => setSelectedAyah(null)}>
+        <h2>Ayah Explanation</h2>
+        <p>{/** Display ayah explanations or tafsir here **/}</p>
+      </PopupModal>
+    )}
+  );
+}
 
 interface QuranReaderProps {
   fontSize: number;
