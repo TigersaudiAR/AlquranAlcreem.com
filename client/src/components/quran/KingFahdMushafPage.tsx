@@ -123,7 +123,7 @@ const KingFahdMushafPage: React.FC<KingFahdMushafPageProps> = ({
               className="line-content"
               style={{ 
                 fontSize: `${fontSize}px`,
-                fontFamily: 'HafsSmart',
+                fontFamily: '"HafsSmart", "UthmanicHafs", "Amiri Quran", sans-serif',
                 lineHeight: 2.2
               }}
             >

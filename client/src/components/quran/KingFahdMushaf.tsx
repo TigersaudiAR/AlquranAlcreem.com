@@ -31,31 +31,112 @@ const KingFahdMushaf: React.FC<KingFahdMushafProps> = ({
   const controlsTimerRef = useRef<NodeJS.Timeout | null>(null);
   
   // تحميل بيانات الصفحة
+  // استخدام مرجع لتخزين بيانات القرآن الكاملة وتخزينها بين عمليات التحميل
+  const quranDataRef = useRef<any[]>([]);
+  
+  // تحميل بيانات الصفحة من بيانات مخزنة مؤقتًا أو من الخادم
   useEffect(() => {
     const fetchPageData = async () => {
       setLoading(true);
       try {
-        const response = await fetch(`/assets/quran/hafs_smart_v8.json`);
-        if (!response.ok) {
-          throw new Error('Failed to fetch Quran data');
+        // إذا كانت البيانات مخزنة مؤقتًا بالفعل، استخدمها
+        if (quranDataRef.current.length > 0) {
+          console.log('استخدام البيانات المخزنة مؤقتًا، صفحة:', pageNumber);
+          const filteredData = quranDataRef.current.filter((ayah: any) => ayah.page === pageNumber);
+          setPageData(filteredData);
+          
+          // تحديث آخر قراءة إذا كان الإعداد مفعلاً
+          if (settings.autoSaveLastRead && filteredData.length > 0) {
+            const firstAyah = filteredData[0];
+            updateLastRead({
+              surahNumber: firstAyah.sura_no,
+              ayahNumber: firstAyah.aya_no,
+              pageNumber: pageNumber
+            });
+          }
+          
+          setLoading(false);
+          return;
         }
         
-        const allData = await response.json();
-        // تصفية البيانات لصفحة محددة
-        const filteredData = allData.filter((ayah: any) => ayah.page === pageNumber);
-        setPageData(filteredData);
+        // تحميل البيانات من الخادم
+        console.log('جاري تحميل بيانات القرآن من المسار:', '/assets/quran/hafs_smart_v8.json');
         
-        // تحديث آخر قراءة إذا كان الإعداد مفعلاً
-        if (settings.autoSaveLastRead && filteredData.length > 0) {
-          const firstAyah = filteredData[0];
-          updateLastRead({
-            surahNumber: firstAyah.sura_no,
-            ayahNumber: firstAyah.aya_no,
-            pageNumber: pageNumber
-          });
+        // محاولة تحميل البيانات من المسار الصحيح
+        let response;
+        let allData;
+        
+        // جرب المسار الأساسي أولاً
+        try {
+          response = await fetch(`/assets/quran/hafs_smart_v8.json`);
+          if (response.ok) {
+            allData = await response.json();
+          }
+        } catch (e) {
+          console.error('خطأ في تحميل البيانات من المسار الأساسي:', e);
+        }
+        
+        // جرب مسارًا بديلاً إذا فشل المسار الأساسي
+        if (!allData) {
+          try {
+            console.log('محاولة استخدام مسار بديل للبيانات');
+            response = await fetch(`/public/assets/quran/hafs_smart_v8.json`);
+            if (response.ok) {
+              allData = await response.json();
+            }
+          } catch (e) {
+            console.error('خطأ في تحميل البيانات من المسار البديل الأول:', e);
+          }
+        }
+        
+        // جرب مسارًا ثالثًا إذا فشلت المحاولات السابقة
+        if (!allData) {
+          try {
+            console.log('محاولة استخدام مسار بديل ثاني للبيانات');
+            response = await fetch(`/quran/hafs_smart_v8.json`);
+            if (response.ok) {
+              allData = await response.json();
+            }
+          } catch (e) {
+            console.error('خطأ في تحميل البيانات من المسار البديل الثاني:', e);
+          }
+        }
+        
+        // إذا تم الحصول على البيانات
+        if (allData && allData.length > 0) {
+          console.log('تم استلام البيانات بنجاح، عدد الآيات الكلي:', allData.length);
+          
+          // حفظ البيانات في المرجع للاستخدام لاحقًا
+          quranDataRef.current = allData;
+          
+          // تصفية البيانات لصفحة محددة
+          const filteredData = allData.filter((ayah: any) => ayah.page === pageNumber);
+          console.log(`تم تصفية البيانات للصفحة ${pageNumber}، عدد الآيات في الصفحة:`, filteredData.length);
+          
+          setPageData(filteredData);
+          
+          // تحديث آخر قراءة إذا كان الإعداد مفعلاً
+          if (settings.autoSaveLastRead && filteredData.length > 0) {
+            const firstAyah = filteredData[0];
+            console.log('تحديث آخر قراءة:', {
+              surahNumber: firstAyah.sura_no,
+              ayahNumber: firstAyah.aya_no,
+              pageNumber: pageNumber
+            });
+            
+            updateLastRead({
+              surahNumber: firstAyah.sura_no,
+              ayahNumber: firstAyah.aya_no,
+              pageNumber: pageNumber
+            });
+          }
+        } else {
+          console.error('لم يتم العثور على بيانات القرآن من أي مسار');
+          setPageData([]);
         }
       } catch (error) {
-        console.error('Error fetching page data:', error);
+        console.error('خطأ في تحميل بيانات الصفحة:', error);
+        setPageData([]);
       } finally {
         setLoading(false);
       }

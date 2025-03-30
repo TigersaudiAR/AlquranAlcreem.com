@@ -1,15 +1,16 @@
-import { ReactNode } from 'react';
+import { ReactNode, useContext } from 'react';
 import Sidebar from './Sidebar';
 import MobileHeader from './MobileHeader';
 import Footer from './Footer';
-import { useTheme } from '../../context/ThemeContext';
+import { ThemeContext } from '../../context/ThemeContext';
 
 interface MainLayoutProps {
   children: ReactNode;
 }
 
 const MainLayout = ({ children }: MainLayoutProps) => {
-  const { theme } = useTheme();
+  const context = useContext(ThemeContext);
+  const theme = context?.theme || 'light';
   
   return (
     <div className={`flex h-screen overflow-hidden ${theme === 'dark' ? 'dark' : ''}`}>

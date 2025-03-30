@@ -7,7 +7,7 @@ interface ThemeContextType {
 }
 
 // إنشاء سياق المظهر
-const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
+export const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
 // مزود سياق المظهر
 export const ThemeProvider = ({ children }: { children: ReactNode }) => {

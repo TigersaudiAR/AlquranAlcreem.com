@@ -5,7 +5,9 @@
 /* تعريف خط حفص سمارت من مجمع الملك فهد */
 @font-face {
   font-family: 'HafsSmart';
-  src: url('/assets/quran/fonts/HafsSmart_08.ttf') format('truetype');
+  src: url('/assets/fonts/HafsSmart_08.ttf') format('truetype'),
+       url('/fonts/HafsSmart_08.ttf') format('truetype'),
+       url('/fonts/kfgqpc_hafs_smart_font/HafsSmart_08.ttf') format('truetype');
   font-weight: normal;
   font-style: normal;
   font-display: swap;
@@ -13,7 +15,9 @@
 
 @font-face {
   font-family: 'HafsSmart';
-  src: url('/assets/quran/fonts/HafsSmart_08.ttf') format('truetype');
+  src: url('/assets/fonts/HafsSmart_08.ttf') format('truetype'),
+       url('/fonts/HafsSmart_08.ttf') format('truetype'),
+       url('/fonts/kfgqpc_hafs_smart_font/HafsSmart_08.ttf') format('truetype');
   font-weight: bold;
   font-style: normal;
   font-display: swap;
@@ -360,23 +364,9 @@
   .memorization-progress {
     transition: width 0.5s ease-in-out;
   }
-}
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
-
-@layer base {
-  html {
-    @apply text-black bg-white;
-  }
-
-  html.dark {
-    @apply text-white bg-gray-900;
-  }
-  
   /* Ottoman Hafs Font */
   .font-uthmani {
-    font-family: 'UthmanicHafs', 'Traditional Arabic', 'Amiri Quran', serif;
+    font-family: 'HafsSmart', 'UthmanicHafs', 'Traditional Arabic', 'Amiri Quran', serif;
     line-height: 2;
   }
   
@@ -392,9 +382,12 @@
   .verse-number {
     @apply inline-block text-sm align-top;
   }
-  
-  /* Bismillah styling */
-  .bismillah {
-    @apply text-center my-6 font-uthmani;
+
+  html {
+    @apply text-black bg-white;
+  }
+
+  html.dark {
+    @apply text-white bg-gray-900;
   }
 }
