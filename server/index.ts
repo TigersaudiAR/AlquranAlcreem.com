@@ -1,44 +1,41 @@
 // أبسط إعداد ممكن
 import express from "express";
 import http from "http";
-import { log } from "./vite";
+import { log, setupVite, serveStatic } from "./vite";
+import * as routesModule from "./routes";
 
 // إنشاء التطبيق
 const app = express();
 
-// تسجيل نقطة نهاية صحة بسيطة فقط
+// تسجيل نقطة نهاية صحة بسيطة
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok' });
 });
 
-// إنشاء المخدم وبدء الاستماع فورًا
+// إعداد الوسائط
+app.use(express.json());
+app.use(express.urlencoded({ extended: false }));
+
+// إنشاء المخدم
 const server = http.createServer(app);
 const port = 5000;
 
-server.listen(port, '0.0.0.0', () => {
+// بدء الاستماع فورًا للتوافق مع Replit Workflows
+server.listen(port, '0.0.0.0', async () => {
   log(`بدأ المخدم الاستماع على المنفذ ${port}`);
   
-  // إكمال الإعداد بعد بدء الاستماع
-  setTimeout(() => {
-    // استيراد الوحدات الإضافية لتجنب التأخير في وقت البدء
-    import('./routes').then((routesModule) => {
-      // إعداد الوسائط
-      app.use(express.json());
-      app.use(express.urlencoded({ extended: false }));
-      
-      // تسجيل المسارات
-      routesModule.registerRoutes(app).then(() => {
-        console.log('تم تسجيل المسارات بنجاح');
-        
-        // إعداد Vite
-        import('./vite').then(({ setupVite, serveStatic }) => {
-          if (process.env.NODE_ENV !== "production") {
-            setupVite(app, server).catch(err => console.error('خطأ في إعداد Vite:', err));
-          } else {
-            serveStatic(app);
-          }
-        }).catch(err => console.error('خطأ في استيراد وحدة vite:', err));
-      }).catch(err => console.error('خطأ في تسجيل المسارات:', err));
-    }).catch(err => console.error('خطأ في استيراد وحدة routes:', err));
-  }, 100); // تأخير قصير بعد فتح المنفذ
+  try {
+    // تسجيل المسارات
+    await routesModule.registerRoutes(app);
+    console.log('تم تسجيل المسارات بنجاح');
+
+    // إعداد Vite
+    if (process.env.NODE_ENV !== "production") {
+      setupVite(app, server);
+    } else {
+      serveStatic(app);
+    }
+  } catch (error) {
+    console.error('خطأ في إعداد التطبيق:', error);
+  }
 });
