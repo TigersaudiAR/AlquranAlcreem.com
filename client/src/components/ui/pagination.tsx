@@ -1,117 +1,128 @@
-import * as React from "react"
-import { ChevronLeft, ChevronRight, MoreHorizontal } from "lucide-react"
+import React from 'react';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { Button } from './button';
 
-import { cn } from "@/lib/utils"
-import { ButtonProps, buttonVariants } from "@/components/ui/button"
-
-const Pagination = ({ className, ...props }: React.ComponentProps<"nav">) => (
-  <nav
-    role="navigation"
-    aria-label="pagination"
-    className={cn("mx-auto flex w-full justify-center", className)}
-    {...props}
-  />
-)
-Pagination.displayName = "Pagination"
-
-const PaginationContent = React.forwardRef<
-  HTMLUListElement,
-  React.ComponentProps<"ul">
->(({ className, ...props }, ref) => (
-  <ul
-    ref={ref}
-    className={cn("flex flex-row items-center gap-1", className)}
-    {...props}
-  />
-))
-PaginationContent.displayName = "PaginationContent"
-
-const PaginationItem = React.forwardRef<
-  HTMLLIElement,
-  React.ComponentProps<"li">
->(({ className, ...props }, ref) => (
-  <li ref={ref} className={cn("", className)} {...props} />
-))
-PaginationItem.displayName = "PaginationItem"
-
-type PaginationLinkProps = {
-  isActive?: boolean
-} & Pick<ButtonProps, "size"> &
-  React.ComponentProps<"a">
-
-const PaginationLink = ({
-  className,
-  isActive,
-  size = "icon",
-  ...props
-}: PaginationLinkProps) => (
-  <a
-    aria-current={isActive ? "page" : undefined}
-    className={cn(
-      buttonVariants({
-        variant: isActive ? "outline" : "ghost",
-        size,
-      }),
-      className
-    )}
-    {...props}
-  />
-)
-PaginationLink.displayName = "PaginationLink"
-
-const PaginationPrevious = ({
-  className,
-  ...props
-}: React.ComponentProps<typeof PaginationLink>) => (
-  <PaginationLink
-    aria-label="Go to previous page"
-    size="default"
-    className={cn("gap-1 pl-2.5", className)}
-    {...props}
-  >
-    <ChevronLeft className="h-4 w-4" />
-    <span>Previous</span>
-  </PaginationLink>
-)
-PaginationPrevious.displayName = "PaginationPrevious"
-
-const PaginationNext = ({
-  className,
-  ...props
-}: React.ComponentProps<typeof PaginationLink>) => (
-  <PaginationLink
-    aria-label="Go to next page"
-    size="default"
-    className={cn("gap-1 pr-2.5", className)}
-    {...props}
-  >
-    <span>Next</span>
-    <ChevronRight className="h-4 w-4" />
-  </PaginationLink>
-)
-PaginationNext.displayName = "PaginationNext"
-
-const PaginationEllipsis = ({
-  className,
-  ...props
-}: React.ComponentProps<"span">) => (
-  <span
-    aria-hidden
-    className={cn("flex h-9 w-9 items-center justify-center", className)}
-    {...props}
-  >
-    <MoreHorizontal className="h-4 w-4" />
-    <span className="sr-only">More pages</span>
-  </span>
-)
-PaginationEllipsis.displayName = "PaginationEllipsis"
-
-export {
-  Pagination,
-  PaginationContent,
-  PaginationEllipsis,
-  PaginationItem,
-  PaginationLink,
-  PaginationNext,
-  PaginationPrevious,
+interface PaginationProps {
+  currentPage: number;
+  totalPages: number;
+  onPageChange: (page: number) => void;
 }
+
+export const Pagination: React.FC<PaginationProps> = ({ currentPage, totalPages, onPageChange }) => {
+  // عدد الأزرار المرئية في وحدة التنقل بين الصفحات
+  const maxVisibleButtons = 5;
+  
+  // حساب نطاق الأزرار المرئية
+  const getPageRange = () => {
+    // إذا كان عدد الصفحات أقل من عدد الأزرار المرئية، أظهر كل الصفحات
+    if (totalPages <= maxVisibleButtons) {
+      return Array.from({ length: totalPages }, (_, i) => i + 1);
+    }
+    
+    // حساب نصف عدد الأزرار المرئية (للأزرار التي ستظهر قبل وبعد الصفحة الحالية)
+    const halfVisible = Math.floor(maxVisibleButtons / 2);
+    
+    // حالة الصفحات الأولى (الصفحة الحالية قريبة من البداية)
+    if (currentPage <= halfVisible + 1) {
+      return Array.from({ length: maxVisibleButtons }, (_, i) => i + 1);
+    }
+    
+    // حالة الصفحات الأخيرة (الصفحة الحالية قريبة من النهاية)
+    if (currentPage >= totalPages - halfVisible) {
+      return Array.from({ length: maxVisibleButtons }, (_, i) => totalPages - maxVisibleButtons + i + 1);
+    }
+    
+    // الحالة العامة (الصفحة الحالية في الوسط)
+    return Array.from({ length: maxVisibleButtons }, (_, i) => currentPage - halfVisible + i);
+  };
+  
+  // معالج الصفحة السابقة
+  const handlePreviousPage = () => {
+    if (currentPage > 1) {
+      onPageChange(currentPage - 1);
+    }
+  };
+  
+  // معالج الصفحة التالية
+  const handleNextPage = () => {
+    if (currentPage < totalPages) {
+      onPageChange(currentPage + 1);
+    }
+  };
+  
+  // إذا كان هناك صفحة واحدة فقط، لا تعرض أي شيء
+  if (totalPages <= 1) {
+    return null;
+  }
+  
+  return (
+    <nav className="flex items-center justify-center space-x-1 rtl:space-x-reverse">
+      {/* زر الصفحة السابقة */}
+      <Button
+        variant="outline"
+        size="sm"
+        className="h-8 w-8 p-0"
+        onClick={handlePreviousPage}
+        disabled={currentPage === 1}
+      >
+        <ChevronRight className="h-4 w-4" />
+        <span className="sr-only">السابق</span>
+      </Button>
+      
+      {/* زر الصفحة الأولى (إذا كان بعيدًا عن البداية) */}
+      {currentPage > 3 && totalPages > maxVisibleButtons && (
+        <>
+          <Button
+            variant={currentPage === 1 ? "default" : "outline"}
+            size="sm"
+            className="h-8 w-8 p-0"
+            onClick={() => onPageChange(1)}
+          >
+            1
+          </Button>
+          {currentPage > 4 && <span className="px-2">...</span>}
+        </>
+      )}
+      
+      {/* أزرار الصفحات الوسطى */}
+      {getPageRange().map(page => (
+        <Button
+          key={page}
+          variant={currentPage === page ? "default" : "outline"}
+          size="sm"
+          className="h-8 w-8 p-0"
+          onClick={() => onPageChange(page)}
+        >
+          {page}
+        </Button>
+      ))}
+      
+      {/* زر الصفحة الأخيرة (إذا كان بعيدًا عن النهاية) */}
+      {currentPage < totalPages - 2 && totalPages > maxVisibleButtons && (
+        <>
+          {currentPage < totalPages - 3 && <span className="px-2">...</span>}
+          <Button
+            variant={currentPage === totalPages ? "default" : "outline"}
+            size="sm"
+            className="h-8 w-8 p-0"
+            onClick={() => onPageChange(totalPages)}
+          >
+            {totalPages}
+          </Button>
+        </>
+      )}
+      
+      {/* زر الصفحة التالية */}
+      <Button
+        variant="outline"
+        size="sm"
+        className="h-8 w-8 p-0"
+        onClick={handleNextPage}
+        disabled={currentPage === totalPages}
+      >
+        <ChevronLeft className="h-4 w-4" />
+        <span className="sr-only">التالي</span>
+      </Button>
+    </nav>
+  );
+};

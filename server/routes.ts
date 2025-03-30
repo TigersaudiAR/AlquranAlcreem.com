@@ -11,6 +11,75 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.status(200).json({ status: 'ok', timestamp: new Date().toISOString() });
   });
   
+  // تسجيل مستخدم جديد
+  app.post(`${API_PREFIX}/register`, async (req, res) => {
+    try {
+      const { username, password } = req.body;
+      
+      if (!username || !password) {
+        return res.status(400).json({ message: 'Username and password are required' });
+      }
+      
+      // التحقق مما إذا كان اسم المستخدم موجودًا بالفعل
+      const existingUser = await storage.getUserByUsername(username);
+      if (existingUser) {
+        return res.status(409).json({ message: 'Username already exists' });
+      }
+      
+      // إنشاء مستخدم جديد
+      const newUser = await storage.createUser({ username, password });
+      
+      // إنشاء إعدادات افتراضية للمستخدم
+      await storage.createUserSettings({
+        userId: newUser.id,
+        reciter: 'ar.alafasy',
+        translation: 'ar.asad',
+        fontSize: 3,
+        showTranslation: true,
+        autoPlayAudio: false,
+        prayerMethod: 2,
+        showNextPrayer: true,
+        highlightCurrentVerse: true,
+        autoSaveLastRead: true
+      });
+      
+      res.status(201).json({
+        message: 'User registered successfully',
+        user: { id: newUser.id, username: newUser.username }
+      });
+    } catch (error) {
+      res.status(500).json({ message: 'Failed to register user', error: (error as Error).message });
+    }
+  });
+  
+  // تسجيل الدخول
+  app.post(`${API_PREFIX}/login`, async (req, res) => {
+    try {
+      const { username, password } = req.body;
+      
+      if (!username || !password) {
+        return res.status(400).json({ message: 'Username and password are required' });
+      }
+      
+      // البحث عن المستخدم بواسطة اسم المستخدم
+      const user = await storage.getUserByUsername(username);
+      
+      // التحقق من وجود المستخدم وصحة كلمة المرور
+      // ملاحظة: في تطبيق حقيقي، يجب استخدام طريقة آمنة لتخزين ومقارنة كلمات المرور
+      if (!user || user.password !== password) {
+        return res.status(401).json({ message: 'Invalid username or password' });
+      }
+      
+      // إرجاع معلومات المستخدم بدون كلمة المرور
+      res.status(200).json({
+        message: 'Login successful',
+        user: { id: user.id, username: user.username }
+      });
+    } catch (error) {
+      res.status(500).json({ message: 'Failed to login', error: (error as Error).message });
+    }
+  });
+  
   // User preferences API - for storing user preferences server-side
   // Get user preferences
   app.get(`${API_PREFIX}/preferences/:userId`, async (req, res) => {
@@ -22,17 +91,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: 'User not found' });
       }
       
-      // In a real app, we would retrieve user preferences from a database
-      // For now, just return a mock response
-      res.status(200).json({
-        preferences: {
-          theme: 'light',
+      const userSettings = await storage.getUserSettings(userId);
+      
+      if (!userSettings) {
+        // إذا لم تكن الإعدادات موجودة، قم بإنشاء إعدادات افتراضية
+        const defaultSettings = await storage.createUserSettings({
+          userId,
+          reciter: 'ar.alafasy',
+          translation: 'ar.asad',
           fontSize: 3,
-          reciterId: 'ar.alafasy',
-          translationId: 'ar.asad',
-          showTranslation: true
-        }
-      });
+          showTranslation: true,
+          autoPlayAudio: false,
+          prayerMethod: 2,
+          showNextPrayer: true,
+          highlightCurrentVerse: true,
+          autoSaveLastRead: true
+        });
+        
+        return res.status(200).json({ preferences: defaultSettings });
+      }
+      
+      res.status(200).json({ preferences: userSettings });
     } catch (error) {
       res.status(500).json({ message: 'Failed to get user preferences', error: (error as Error).message });
     }
@@ -50,11 +129,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: 'User not found' });
       }
       
-      // In a real app, we would update the user preferences in a database
-      // For now, just return a success response
+      // تحقق مما إذا كانت الإعدادات موجودة مسبقًا
+      const existingSettings = await storage.getUserSettings(userId);
+      
+      let updatedSettings;
+      if (existingSettings) {
+        // تحديث الإعدادات الموجودة
+        updatedSettings = await storage.updateUserSettings(userId, preferences);
+      } else {
+        // إنشاء إعدادات جديدة
+        updatedSettings = await storage.createUserSettings({
+          userId,
+          ...preferences
+        });
+      }
+      
       res.status(200).json({
         message: 'Preferences updated successfully',
-        preferences
+        preferences: updatedSettings
       });
     } catch (error) {
       res.status(500).json({ message: 'Failed to update user preferences', error: (error as Error).message });
@@ -106,6 +198,130 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(200).json(data);
     } catch (error) {
       res.status(500).json({ message: 'Failed to proxy Hadith API', error: (error as Error).message });
+    }
+  });
+  
+  // API الإشارات المرجعية
+  // الحصول على الإشارات المرجعية للمستخدم
+  app.get(`${API_PREFIX}/bookmarks/:userId`, async (req, res) => {
+    try {
+      const userId = parseInt(req.params.userId);
+      const user = await storage.getUser(userId);
+      
+      if (!user) {
+        return res.status(404).json({ message: 'User not found' });
+      }
+      
+      const userBookmarks = await storage.getBookmarks(userId);
+      res.status(200).json({ bookmarks: userBookmarks });
+    } catch (error) {
+      res.status(500).json({ message: 'Failed to get bookmarks', error: (error as Error).message });
+    }
+  });
+  
+  // إضافة إشارة مرجعية جديدة
+  app.post(`${API_PREFIX}/bookmarks/:userId`, async (req, res) => {
+    try {
+      const userId = parseInt(req.params.userId);
+      const { surahNumber, ayahNumber, pageNumber, note } = req.body;
+      
+      const user = await storage.getUser(userId);
+      
+      if (!user) {
+        return res.status(404).json({ message: 'User not found' });
+      }
+      
+      const newBookmark = await storage.createBookmark({
+        userId,
+        surahNumber,
+        ayahNumber,
+        pageNumber,
+        note: note || null
+      });
+      
+      res.status(201).json({
+        message: 'Bookmark added successfully',
+        bookmark: newBookmark
+      });
+    } catch (error) {
+      res.status(500).json({ message: 'Failed to add bookmark', error: (error as Error).message });
+    }
+  });
+  
+  // حذف إشارة مرجعية
+  app.delete(`${API_PREFIX}/bookmarks/:userId/:bookmarkId`, async (req, res) => {
+    try {
+      const userId = parseInt(req.params.userId);
+      const bookmarkId = parseInt(req.params.bookmarkId);
+      
+      const user = await storage.getUser(userId);
+      
+      if (!user) {
+        return res.status(404).json({ message: 'User not found' });
+      }
+      
+      const deleted = await storage.deleteBookmark(bookmarkId, userId);
+      
+      if (!deleted) {
+        return res.status(404).json({ message: 'Bookmark not found or not owned by user' });
+      }
+      
+      res.status(200).json({
+        message: 'Bookmark deleted successfully'
+      });
+    } catch (error) {
+      res.status(500).json({ message: 'Failed to delete bookmark', error: (error as Error).message });
+    }
+  });
+  
+  // آخر قراءة API
+  // الحصول على آخر قراءة للمستخدم
+  app.get(`${API_PREFIX}/last-read/:userId`, async (req, res) => {
+    try {
+      const userId = parseInt(req.params.userId);
+      const user = await storage.getUser(userId);
+      
+      if (!user) {
+        return res.status(404).json({ message: 'User not found' });
+      }
+      
+      const lastReadData = await storage.getLastRead(userId);
+      
+      if (!lastReadData) {
+        return res.status(404).json({ message: 'No last read data found' });
+      }
+      
+      res.status(200).json({ lastRead: lastReadData });
+    } catch (error) {
+      res.status(500).json({ message: 'Failed to get last read data', error: (error as Error).message });
+    }
+  });
+  
+  // تحديث آخر قراءة للمستخدم
+  app.post(`${API_PREFIX}/last-read/:userId`, async (req, res) => {
+    try {
+      const userId = parseInt(req.params.userId);
+      const { surahNumber, ayahNumber, pageNumber } = req.body;
+      
+      const user = await storage.getUser(userId);
+      
+      if (!user) {
+        return res.status(404).json({ message: 'User not found' });
+      }
+      
+      const updatedLastRead = await storage.updateLastRead({
+        userId,
+        surahNumber,
+        ayahNumber,
+        pageNumber
+      });
+      
+      res.status(200).json({
+        message: 'Last read updated successfully',
+        lastRead: updatedLastRead
+      });
+    } catch (error) {
+      res.status(500).json({ message: 'Failed to update last read', error: (error as Error).message });
     }
   });
   

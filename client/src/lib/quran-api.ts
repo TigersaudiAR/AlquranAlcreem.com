@@ -1,230 +1,307 @@
+/**
+ * واجهة برمجة تطبيقات القرآن الكريم
+ * مجموعة من الوظائف للتفاعل مع واجهة برمجة تطبيقات القرآن لجلب البيانات
+ */
+
+// استيراد الثوابت
 import { APP_CONFIG } from './constants';
 
-// واجهة لبيانات سورة
-interface Surah {
-  id: number;
-  name: string;
-  englishName: string;
-  englishNameTranslation: string;
-  numberOfAyahs: number;
-  revelationType: string;
-}
+// مصدر API الرئيسي
+const API_BASE_URL = 'https://api.quran.com/api/v4';
+const API_CDN_URL = 'https://cdn.islamic.network/quran';
 
-// واجهة لبيانات آية
-interface Ayah {
+// أنواع البيانات للواجهة البرمجية
+interface ChapterData {
   id: number;
-  surah_id: number;
-  verse_number: number;
-  verse_key: string;
-  text_uthmani: string;
-  text_simple: string;
-  juz_number: number;
-  hizb_number: number;
-  rub_number: number;
-  sajdah_type: string | null;
-  page_number: number;
-  translations?: AyahTranslation[];
-}
-
-// واجهة لترجمة آية
-interface AyahTranslation {
-  id: number;
-  text: string;
-  language_name: string;
-  resource_name: string;
-}
-
-// واجهة لبيانات صفحة
-interface Page {
-  number: number;
-  verses: Ayah[];
-}
-
-// واجهة لبيانات جزء
-interface Juz {
-  id: number;
-  juz_number: number;
-  verse_mapping: Record<string, string>;
-  first_verse_id: number;
-  last_verse_id: number;
+  revelation_place?: string;
+  revelation_order?: number;
+  bismillah_pre?: boolean;
+  name_arabic?: string;
+  name_simple?: string;
+  name?: string;
   verses_count: number;
-}
-
-// واجهة للتفسير
-interface Tafsir {
-  surahNumber: number;
-  ayahNumber: number;
-  tafsirId: string;
-  tafsirName: string;
-  tafsirText: string;
-  ayahText: string;
-}
-
-// واجهة لنتائج البحث
-interface SearchResult {
-  query: string;
-  total_results: number;
-  page: number;
-  total_pages: number;
-  results: SearchResultItem[];
-}
-
-// واجهة لعنصر نتائج البحث
-interface SearchResultItem {
-  verse_id: number;
-  verse_key: string;
-  text: string;
-  highlighted: string;
-  translations?: { [key: string]: string };
+  pages?: number[];
+  translated_name?: {
+    language_name?: string;
+    name?: string;
+  };
 }
 
 /**
- * الحصول على قائمة السور
- * @returns وعد بقائمة السور
+ * جلب بيانات سورة محددة
+ * @param surahNumber رقم السورة
+ * @returns وعد بتفاصيل السورة
  */
-export async function getSurahs(): Promise<Surah[]> {
+export async function getSurah(surahNumber: number) {
   try {
-    const response = await fetch(`${APP_CONFIG.API_BASE_URL}/chapters?language=ar`);
-    
-    if (!response.ok) {
-      throw new Error(`Failed to fetch surahs: ${response.status}`);
-    }
-    
-    const data = await response.json();
-    return data.chapters;
-  } catch (error) {
-    console.error('Error fetching surahs:', error);
-    throw error;
-  }
-}
-
-/**
- * الحصول على سورة محددة بالرقم
- * @param surahNumber رقم السورة (1-114)
- * @returns وعد ببيانات السورة
- */
-export async function getSurah(surahNumber: number): Promise<Surah> {
-  try {
-    const response = await fetch(`${APP_CONFIG.API_BASE_URL}/chapters/${surahNumber}?language=ar`);
-    
-    if (!response.ok) {
-      throw new Error(`Failed to fetch surah ${surahNumber}: ${response.status}`);
-    }
+    const response = await fetch(`${API_BASE_URL}/chapters/${surahNumber}?language=ar`);
+    if (!response.ok) throw new Error(`فشل جلب بيانات السورة: ${response.statusText}`);
     
     const data = await response.json();
     return data.chapter;
   } catch (error) {
-    console.error(`Error fetching surah ${surahNumber}:`, error);
+    console.error('خطأ في جلب بيانات السورة:', error);
     throw error;
   }
 }
 
 /**
- * الحصول على آيات سورة محددة
- * @param surahNumber رقم السورة (1-114)
- * @param translationId معرف الترجمة (اختياري)
- * @returns وعد بآيات السورة
+ * جلب قائمة جميع السور مع تنسيق البيانات لتتوافق مع واجهة QuranData
+ * @returns وعد بكائن يحتوي على بيانات السور
  */
-export async function getSurahVerses(surahNumber: number, translationId?: string): Promise<Ayah[]> {
+export async function getSurahs() {
   try {
-    let url = `${APP_CONFIG.API_BASE_URL}/verses/by_chapter/${surahNumber}?language=ar&words=false&fields=text_uthmani,text_simple,verse_key`;
+    const chapters = await getAllSurahs() as ChapterData[];
     
-    if (translationId) {
-      url += `&translations=${translationId}`;
-    }
-    
-    const response = await fetch(url);
-    
-    if (!response.ok) {
-      throw new Error(`Failed to fetch verses for surah ${surahNumber}: ${response.status}`);
-    }
+    // تهيئة الكائن الذي سيتم إعادته
+    return {
+      surahs: {
+        list: chapters.map(chapter => ({
+          number: chapter.id,
+          name: chapter.name_arabic || chapter.name || '',
+          englishName: chapter.name_simple || chapter.name || '',
+          englishNameTranslation: chapter.translated_name?.name || chapter.name || '',
+          numberOfAyahs: chapter.verses_count,
+          revelationType: chapter.revelation_place || 'Meccan'
+        }))
+      }
+    };
+  } catch (error) {
+    console.error('خطأ في جلب وتنسيق بيانات السور:', error);
+    throw error;
+  }
+}
+
+/**
+ * جلب قائمة جميع السور (اسم آخر لنفس الوظيفة)
+ * @returns وعد بقائمة جميع السور
+ */
+export async function getAllSurahs() {
+  try {
+    const response = await fetch(`${API_BASE_URL}/chapters?language=ar`);
+    if (!response.ok) throw new Error(`فشل جلب قائمة السور: ${response.statusText}`);
     
     const data = await response.json();
-    return data.verses;
+    return data.chapters;
   } catch (error) {
-    console.error(`Error fetching verses for surah ${surahNumber}:`, error);
+    console.error('خطأ في جلب قائمة السور:', error);
     throw error;
   }
 }
 
 /**
- * الحصول على آية محددة
- * @param surahNumber رقم السورة (1-114)
- * @param ayahNumber رقم الآية
- * @param translationId معرف الترجمة (اختياري)
- * @returns وعد ببيانات الآية
+ * جلب آيات سورة معينة
+ * @param surahNumber رقم السورة
+ * @param options خيارات إضافية مثل الترجمة والصفحة
+ * @returns وعد بآيات السورة
  */
-export async function getVerse(surahNumber: number, ayahNumber: number, translationId?: string): Promise<Ayah> {
+export async function getSurahVerses(
+  surahNumber: number, 
+  options: { 
+    translationId?: string; 
+    page?: number; 
+    perPage?: number; 
+    wordByWord?: boolean;
+  } = {}
+) {
   try {
-    const verseKey = `${surahNumber}:${ayahNumber}`;
-    let url = `${APP_CONFIG.API_BASE_URL}/verses/by_key/${verseKey}?language=ar&words=false&fields=text_uthmani,text_simple`;
+    const { translationId, page = 1, perPage = 50, wordByWord = false } = options;
+    
+    const params = new URLSearchParams({
+      language: 'ar',
+      page: page.toString(),
+      per_page: perPage.toString(),
+      fields: 'text_uthmani,chapter_id,hizb_number,text_imlaei,page_number,juz_number,verse_key',
+      word_fields: wordByWord ? 'text_uthmani,code_v1,code_v2,qpc_uthmani_hafs' : ''
+    });
     
     if (translationId) {
-      url += `&translations=${translationId}`;
+      params.append('translations', translationId);
     }
     
-    const response = await fetch(url);
-    
-    if (!response.ok) {
-      throw new Error(`Failed to fetch verse ${verseKey}: ${response.status}`);
+    if (wordByWord) {
+      params.append('word_translation', 'true');
     }
+    
+    const response = await fetch(
+      `${API_BASE_URL}/verses/by_chapter/${surahNumber}?${params.toString()}`
+    );
+    
+    if (!response.ok) throw new Error(`فشل جلب آيات السورة: ${response.statusText}`);
+    
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error('خطأ في جلب آيات السورة:', error);
+    throw error;
+  }
+}
+
+/**
+ * جلب معلومات آية محددة
+ * @param surahNumber رقم السورة
+ * @param verseNumber رقم الآية
+ * @param translationId معرف الترجمة
+ * @returns وعد ببيانات الآية
+ */
+export async function getVerse(
+  surahNumber: number, 
+  verseNumber: number, 
+  translationId?: string
+) {
+  try {
+    const verseKey = `${surahNumber}:${verseNumber}`;
+    const params = new URLSearchParams({
+      language: 'ar',
+      fields: 'text_uthmani,chapter_id,hizb_number,text_imlaei,page_number,juz_number,verse_key'
+    });
+    
+    if (translationId) {
+      params.append('translations', translationId);
+    }
+    
+    const response = await fetch(
+      `${API_BASE_URL}/verses/by_key/${verseKey}?${params.toString()}`
+    );
+    
+    if (!response.ok) throw new Error(`فشل جلب الآية: ${response.statusText}`);
     
     const data = await response.json();
     return data.verse;
   } catch (error) {
-    console.error(`Error fetching verse ${surahNumber}:${ayahNumber}:`, error);
+    console.error('خطأ في جلب الآية:', error);
     throw error;
   }
 }
 
 /**
- * الحصول على صفحة محددة من المصحف
+ * جلب بيانات صفحة معينة
  * @param pageNumber رقم الصفحة
- * @param translationId معرف الترجمة (اختياري)
+ * @param options خيارات إضافية
  * @returns وعد ببيانات الصفحة
  */
-export async function getPage(pageNumber: number, translationId?: string): Promise<Page> {
+export async function getPage(pageNumber: number, options: { translationId?: string } = {}) {
+  const data = await getPageVerses(pageNumber, options.translationId);
+  return data;
+}
+
+/**
+ * جلب آيات صفحة معينة
+ * @param pageNumber رقم الصفحة
+ * @param translationId معرف الترجمة
+ * @returns وعد بآيات الصفحة
+ */
+export async function getPageVerses(pageNumber: number, translationId?: string) {
   try {
-    let url = `${APP_CONFIG.API_BASE_URL}/verses/by_page/${pageNumber}?language=ar&words=false&fields=text_uthmani,text_simple,verse_key`;
+    const params = new URLSearchParams({
+      language: 'ar',
+      fields: 'text_uthmani,chapter_id,verse_key,page_number,juz_number'
+    });
     
     if (translationId) {
-      url += `&translations=${translationId}`;
+      params.append('translations', translationId);
     }
     
-    const response = await fetch(url);
+    const response = await fetch(
+      `${API_BASE_URL}/verses/by_page/${pageNumber}?${params.toString()}`
+    );
     
-    if (!response.ok) {
-      throw new Error(`Failed to fetch page ${pageNumber}: ${response.status}`);
-    }
+    if (!response.ok) throw new Error(`فشل جلب آيات الصفحة: ${response.statusText}`);
     
     const data = await response.json();
-    return {
-      number: pageNumber,
-      verses: data.verses
-    };
+    return data;
   } catch (error) {
-    console.error(`Error fetching page ${pageNumber}:`, error);
+    console.error('خطأ في جلب آيات الصفحة:', error);
     throw error;
   }
 }
 
 /**
- * الحصول على جزء محدد
- * @param juzNumber رقم الجزء (1-30)
- * @returns وعد ببيانات الجزء
+ * الحصول على عنوان URL للصوت
+ * @param surahNumber رقم السورة
+ * @param verseNumber رقم الآية
+ * @param reciterId معرف القارئ
+ * @returns رابط الملف الصوتي
  */
-export async function getJuz(juzNumber: number): Promise<Juz> {
+export function getAudioUrl(surahNumber: number, verseNumber: number, reciterId: string) {
+  return getVerseAudioUrl(reciterId, surahNumber, verseNumber);
+}
+
+/**
+ * جلب رابط ملف صوتي لآية محددة
+ * @param reciterId معرف القارئ
+ * @param surahNumber رقم السورة
+ * @param verseNumber رقم الآية
+ * @returns رابط الملف الصوتي
+ */
+export function getVerseAudioUrl(
+  reciterId: string, 
+  surahNumber: number, 
+  verseNumber: number
+) {
+  // تنسيق معرف القارئ ورقم السورة ورقم الآية
+  const formattedSurah = surahNumber.toString().padStart(3, '0');
+  const formattedVerse = verseNumber.toString().padStart(3, '0');
+  
+  // إرجاع رابط الملف الصوتي
+  return `${API_CDN_URL}/audio/${reciterId}/${formattedSurah}${formattedVerse}.mp3`;
+}
+
+/**
+ * جلب بيانات التفسير لآية محددة
+ * @param tafsirId معرف التفسير
+ * @param surahNumber رقم السورة
+ * @param verseNumber رقم الآية
+ * @returns وعد ببيانات التفسير
+ */
+export async function getTafsir(tafsirId: string, surahNumber: number, verseNumber: number) {
   try {
-    const response = await fetch(`${APP_CONFIG.API_BASE_URL}/juzs/${juzNumber}`);
+    const verseKey = `${surahNumber}:${verseNumber}`;
     
-    if (!response.ok) {
-      throw new Error(`Failed to fetch juz ${juzNumber}: ${response.status}`);
-    }
+    const response = await fetch(
+      `${API_BASE_URL}/tafsirs/${tafsirId}/by_ayah/${verseKey}`
+    );
+    
+    if (!response.ok) throw new Error(`فشل جلب التفسير: ${response.statusText}`);
     
     const data = await response.json();
-    return data.juz;
+    return data.tafsir;
   } catch (error) {
-    console.error(`Error fetching juz ${juzNumber}:`, error);
+    console.error('خطأ في جلب التفسير:', error);
+    throw error;
+  }
+}
+
+/**
+ * جلب قائمة قراء القرآن المتاحين
+ * @returns وعد بقائمة القراء
+ */
+export async function getReciters() {
+  try {
+    const response = await fetch(`${API_BASE_URL}/resources/recitations?language=ar`);
+    if (!response.ok) throw new Error(`فشل جلب قائمة القراء: ${response.statusText}`);
+    
+    const data = await response.json();
+    return data.recitations;
+  } catch (error) {
+    console.error('خطأ في جلب قائمة القراء:', error);
+    throw error;
+  }
+}
+
+/**
+ * جلب قائمة الترجمات المتاحة
+ * @returns وعد بقائمة الترجمات
+ */
+export async function getTranslations() {
+  try {
+    const response = await fetch(`${API_BASE_URL}/resources/translations`);
+    if (!response.ok) throw new Error(`فشل جلب قائمة الترجمات: ${response.statusText}`);
+    
+    const data = await response.json();
+    return data.translations;
+  } catch (error) {
+    console.error('خطأ في جلب قائمة الترجمات:', error);
     throw error;
   }
 }
@@ -232,99 +309,135 @@ export async function getJuz(juzNumber: number): Promise<Juz> {
 /**
  * البحث في القرآن الكريم
  * @param query نص البحث
- * @param page رقم الصفحة (الافتراضي: 1)
- * @param size عدد النتائج في الصفحة (الافتراضي: 20)
- * @param translationId معرف الترجمة (اختياري)
+ * @param page رقم الصفحة
+ * @param limit عدد النتائج في الصفحة
+ * @param translationId معرف الترجمة
  * @returns وعد بنتائج البحث
  */
 export async function searchQuran(
-  query: string,
-  page: number = 1,
-  size: number = 20,
+  query: string, 
+  page: number = 1, 
+  limit: number = 20,
   translationId?: string
-): Promise<SearchResult> {
+) {
   try {
-    let url = `${APP_CONFIG.API_BASE_URL}/search?q=${encodeURIComponent(query)}&page=${page}&size=${size}`;
+    const params = new URLSearchParams({
+      language: 'ar',
+      q: query,
+      page: page.toString(),
+      size: limit.toString()
+    });
     
     if (translationId) {
-      url += `&translations=${translationId}`;
+      params.append('translations', translationId);
     }
     
-    const response = await fetch(url);
-    
-    if (!response.ok) {
-      throw new Error(`Failed to search Quran for "${query}": ${response.status}`);
-    }
+    const response = await fetch(`${API_BASE_URL}/search?${params.toString()}`);
+    if (!response.ok) throw new Error(`فشل البحث: ${response.statusText}`);
     
     const data = await response.json();
+    
     return {
-      query,
-      total_results: data.total_results,
-      page: data.page,
-      total_pages: data.total_pages,
-      results: data.search.results
+      results: data.search.results,
+      total_results: data.search.total_results,
+      page: data.search.current_page,
+      total_pages: data.search.total_pages
     };
   } catch (error) {
-    console.error(`Error searching Quran for "${query}":`, error);
+    console.error('خطأ في البحث:', error);
     throw error;
   }
 }
 
 /**
- * الحصول على رابط ملف صوتي لآية محددة
- * @param surahNumber رقم السورة (1-114)
- * @param ayahNumber رقم الآية
- * @param reciterId معرف القارئ
- * @returns رابط الملف الصوتي
+ * البحث المتقدم في القرآن الكريم
+ * @param options خيارات البحث المتقدمة
+ * @returns وعد بنتائج البحث
  */
-export function getAudioUrl(surahNumber: number, ayahNumber: number, reciterId: string): string {
-  const formattedSurah = surahNumber.toString().padStart(3, '0');
-  const formattedAyah = ayahNumber.toString().padStart(3, '0');
-  return `${APP_CONFIG.AUDIO_BASE_URL}/${reciterId}/${formattedSurah}${formattedAyah}.mp3`;
-}
-
-/**
- * الحصول على تفسير آية محددة
- * @param surahNumber رقم السورة (1-114)
- * @param ayahNumber رقم الآية
- * @param tafsirId معرف التفسير
- * @returns وعد ببيانات التفسير
- */
-export async function getTafsir(
-  surahNumber: number,
-  ayahNumber: number,
-  tafsirId: string = 'ar-tafsir-al-jalalayn'
-): Promise<Tafsir> {
+export async function advancedSearch(options: {
+  query: string;
+  page?: number;
+  limit?: number;
+  translationId?: string;
+  filters?: {
+    surahIds?: number[];
+    juzNumbers?: number[];
+    revelationType?: 'meccan' | 'medinan';
+  };
+  options?: {
+    matchWholeWords?: boolean;
+    includeDerivatives?: boolean;
+    caseSensitive?: boolean;
+    searchInTranslations?: boolean;
+  };
+}) {
   try {
-    const verseKey = `${surahNumber}:${ayahNumber}`;
-    const response = await fetch(`${APP_CONFIG.API_BASE_URL}/tafsirs/${tafsirId}/by_ayah/${verseKey}`);
+    const { 
+      query, 
+      page = 1, 
+      limit = 20,
+      translationId,
+      filters = {},
+      options: searchOptions = {}
+    } = options;
     
-    if (!response.ok) {
-      throw new Error(`Failed to fetch tafsir for verse ${verseKey}: ${response.status}`);
+    const params = new URLSearchParams({
+      language: 'ar',
+      q: query,
+      page: page.toString(),
+      size: limit.toString()
+    });
+    
+    // إضافة معرف الترجمة إذا كان متوفرًا
+    if (translationId) {
+      params.append('translations', translationId);
     }
     
-    const tafsirData = await response.json();
-    
-    // جلب نص الآية أيضاً
-    const verseResponse = await fetch(`${APP_CONFIG.API_BASE_URL}/verses/by_key/${verseKey}?fields=text_uthmani`);
-    
-    if (!verseResponse.ok) {
-      throw new Error(`Failed to fetch verse ${verseKey}: ${verseResponse.status}`);
+    // إضافة فلاتر السور إذا كانت متوفرة
+    if (filters.surahIds && filters.surahIds.length > 0) {
+      params.append('chapter', filters.surahIds.join(','));
     }
     
-    const verseData = await verseResponse.json();
+    // إضافة فلاتر الأجزاء إذا كانت متوفرة
+    if (filters.juzNumbers && filters.juzNumbers.length > 0) {
+      params.append('juz', filters.juzNumbers.join(','));
+    }
     
-    // تجميع البيانات وإرجاعها
+    // إضافة فلتر نوع النزول إذا كان متوفرًا
+    if (filters.revelationType) {
+      params.append('revelation_type', filters.revelationType);
+    }
+    
+    // إضافة خيارات البحث إذا كانت متوفرة
+    if (searchOptions.matchWholeWords) {
+      params.append('phrase', 'true');
+    }
+    
+    if (searchOptions.includeDerivatives) {
+      params.append('with_root', 'true');
+    }
+    
+    if (searchOptions.caseSensitive) {
+      params.append('sensitive', 'true');
+    }
+    
+    if (searchOptions.searchInTranslations) {
+      params.append('translate', 'true');
+    }
+    
+    const response = await fetch(`${API_BASE_URL}/search?${params.toString()}`);
+    if (!response.ok) throw new Error(`فشل البحث المتقدم: ${response.statusText}`);
+    
+    const data = await response.json();
+    
     return {
-      surahNumber,
-      ayahNumber,
-      tafsirId,
-      tafsirName: tafsirData.tafsir.name,
-      tafsirText: tafsirData.tafsir.text,
-      ayahText: verseData.verse.text_uthmani
+      results: data.search.results,
+      total_results: data.search.total_results,
+      page: data.search.current_page,
+      total_pages: data.search.total_pages
     };
   } catch (error) {
-    console.error(`Error fetching tafsir for verse ${surahNumber}:${ayahNumber}:`, error);
+    console.error('خطأ في البحث المتقدم:', error);
     throw error;
   }
 }
