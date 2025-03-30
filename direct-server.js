@@ -1,68 +1,74 @@
-// Ultra-simplified server that should work with Replit's workflow detection
-import http from "http";
+// Ultra-simple Node.js server with NO dependencies
+// This should run directly without any compilation
 
-// Create a basic HTTP server with no dependencies
+// Native modules only using ES modules syntax
+import http from 'http';
+import fs from 'fs';
+import path from 'path';
+
+// Create a basic HTTP server
 const server = http.createServer((req, res) => {
-  // CRITICAL: This header is required for Replit to detect that the port is open
-  res.setHeader("X-Replit-Port-Ready", "true");
+  // Set the critical Replit header on all responses
+  res.setHeader('X-Replit-Port-Ready', 'true');
   
-  // ROOT ROUTE - Send a basic HTML response
+  // Handle the root route
   if (req.url === '/') {
     res.writeHead(200, { 'Content-Type': 'text/html' });
     res.end(`
       <html>
         <head>
-          <title>Quran App Server</title>
+          <title>Quran App</title>
           <style>
             body {
               font-family: Arial, sans-serif;
               max-width: 800px;
               margin: 0 auto;
               padding: 2rem;
-              direction: rtl;
               text-align: center;
             }
             h1 { color: green; }
           </style>
         </head>
         <body>
-          <h1>✅ الخادم يعمل بنجاح!</h1>
-          <p>هذا خادم بسيط يعمل على المنفذ 5000.</p>
-          <p>وقت الخادم: ${new Date().toISOString()}</p>
+          <h1>✅ Server Running Successfully!</h1>
+          <p>This is a minimal server running on port 5000.</p>
+          <p>Server time: ${new Date().toISOString()}</p>
           <hr>
-          <p>بمجرد تجاوز مشكلة اكتشاف تدفق العمل Replit، يمكننا العودة إلى التطبيق الكامل.</p>
+          <p>Once we get past the Replit workflow detection issue, we can switch back to the full application.</p>
         </body>
       </html>
     `);
     return;
   }
   
-  // HEALTH CHECK API
+  // Health check endpoint
   if (req.url === '/api/health') {
     res.writeHead(200, { 'Content-Type': 'application/json' });
     res.end(JSON.stringify({ status: 'ok', timestamp: new Date().toISOString() }));
     return;
   }
   
-  // 404 FALLBACK
+  // For all other routes, return 404
   res.writeHead(404, { 'Content-Type': 'text/plain' });
   res.end('Not found');
 });
 
-// Start on port 5000
+// Listen on port 5000
 const PORT = 5000;
-server.listen(PORT, "0.0.0.0", () => {
+server.listen(PORT, '0.0.0.0', () => {
   console.clear();
   console.log(`
 =================================================
-✅ SERVER RUNNING ON PORT ${PORT}
+✅ NODE.JS SERVER RUNNING ON PORT ${PORT}
 =================================================
 
-This server is minimal but should work with Replit's workflow detection.
-Access at http://localhost:${PORT}
+This is the most basic possible server to satisfy Replit's port detection.
+No dependencies, no TypeScript, just pure Node.js.
+
+Server is accessible at: http://localhost:${PORT}
   `);
   
-  // Log that we're alive periodically
+  // Log a heartbeat every 5 seconds
   setInterval(() => {
     console.log(`Server heartbeat at ${new Date().toISOString()}`);
   }, 5000);
