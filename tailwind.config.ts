@@ -1,7 +1,7 @@
 import { type Config } from "tailwindcss";
 import { fontFamily } from "tailwindcss/defaultTheme";
-// @ts-ignore - لتجاهل خطأ استيراد المكتبة
-import shadcnPlugin from "@replit/vite-plugin-shadcn-theme-json/plugin";
+// Import the plugin correctly
+import shadcnPlugin from "@replit/vite-plugin-shadcn-theme-json";
 import shadcnTheme from "./theme.json";
 
 const config = {

@@ -1,45 +1,42 @@
 @font-face {
-  font-family: 'HafsSmart';
-  src: url('/assets/fonts/HafsSmart_08.ttf') format('truetype');
+  font-family: 'UthmanicHafs';
+  src: local('Amiri Quran'),
+       local('Scheherazade New'),
+       local('Amiri'),
+       local('Noto Naskh Arabic'),
+       local('Traditional Arabic');
+  font-weight: normal;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'UthmanicHafs';
+  src: url("/fonts/UthmanicHafs1_Ver17.ttf") format("truetype");
   font-weight: normal;
   font-style: normal;
   font-display: swap;
 }
 
-.arabic-text {
-  font-family: 'HafsSmart', serif;
-  text-align: right;
-  direction: rtl;
+@font-face {
+  font-family: 'UthmanTN1B';
+  src: url("/fonts/UthmanTN1B.ttf") format("truetype");
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
 }
 
-.quran-page {
-  font-family: 'HafsSmart', serif;
-  line-height: 2.5;
-  text-align: justify;
-  direction: rtl;
+@font-face {
+  font-family: 'HafsSmart';
+  src: url('/assets/quran/fonts/HafsSmart_08.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
 }
-
-/* Specific font sizing for various contexts */
-.quran-text-small {
-  font-family: 'HafsSmart', serif;
-  font-size: 1.2rem;
-}
-
-.quran-text-medium {
-  font-family: 'HafsSmart', serif;
-  font-size: 1.5rem;
-}
-
-.quran-text-large {
-  font-family: 'HafsSmart', serif;
-  font-size: 1.8rem;
-}
-
-/* Additional utility classes */
-.rtl {
-  direction: rtl;
-}
-
-.text-right {
-  text-align: right;
+@font-face {
+  font-family: 'HafsSmart';
+  src: url('./UthmanicHafs.woff2') format('woff2'),
+       url('./UthmanicHafs.woff') format('woff');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
 }
