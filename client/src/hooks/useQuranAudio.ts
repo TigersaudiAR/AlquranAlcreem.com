@@ -167,3 +167,88 @@ export function useQuranAudio(reciterId: string) {
     currentAudioElement: audioRef.current
   };
 }
+import { useState, useEffect, useRef } from 'react';
+
+export const useQuranAudio = (surahNumber: number, reciter: string) => {
+  const [audioUrl, setAudioUrl] = useState<string>('');
+  const [isPlaying, setIsPlaying] = useState<boolean>(false);
+  const [currentVerse, setCurrentVerse] = useState<number>(1);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+
+  useEffect(() => {
+    // Get audio element
+    audioRef.current = document.getElementById('quran-audio') as HTMLAudioElement;
+    
+    // Set up event listeners
+    if (audioRef.current) {
+      audioRef.current.onended = handleVerseEnd;
+    }
+    
+    return () => {
+      if (audioRef.current) {
+        audioRef.current.onended = null;
+      }
+    };
+  }, []);
+
+  useEffect(() => {
+    // When surah number or reciter changes, reset audio
+    setIsPlaying(false);
+    setCurrentVerse(1);
+    updateAudioSource(1);
+  }, [surahNumber, reciter]);
+
+  useEffect(() => {
+    // When current verse changes, update audio source
+    updateAudioSource(currentVerse);
+  }, [currentVerse]);
+
+  const updateAudioSource = (verseNumber: number) => {
+    // Format: https://verses.quran.com/[reciter]/[surahNumber]_[verseNumber].mp3
+    // Example: https://verses.quran.com/ar.alafasy/1_1.mp3
+    const newUrl = `https://verses.quran.com/${reciter}/${surahNumber}_${verseNumber}.mp3`;
+    setAudioUrl(newUrl);
+    
+    if (audioRef.current) {
+      audioRef.current.src = newUrl;
+      
+      if (isPlaying) {
+        audioRef.current.play().catch(error => {
+          console.error('Error playing audio:', error);
+          setIsPlaying(false);
+        });
+      }
+    }
+  };
+
+  const togglePlay = () => {
+    if (!audioRef.current) return;
+    
+    if (isPlaying) {
+      audioRef.current.pause();
+    } else {
+      audioRef.current.play().catch(error => {
+        console.error('Error playing audio:', error);
+      });
+    }
+    
+    setIsPlaying(!isPlaying);
+  };
+
+  const handleVerseEnd = () => {
+    // Automatically move to next verse when current verse ends
+    if (currentVerse < 286) { // Arbitrary large number, will be limited by actual surah length
+      setCurrentVerse(currentVerse + 1);
+    } else {
+      setIsPlaying(false);
+    }
+  };
+
+  return {
+    audioUrl,
+    isPlaying,
+    togglePlay,
+    currentVerse,
+    setCurrentVerse
+  };
+};

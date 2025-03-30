@@ -43,3 +43,19 @@ const ErrorDisplay: React.FC<ErrorDisplayProps> = ({ message, retry }) => {
 };
 
 export default ErrorDisplay;
+import React from 'react';
+
+interface ErrorDisplayProps {
+  message: string;
+}
+
+const ErrorDisplay: React.FC<ErrorDisplayProps> = ({ message }) => {
+  return (
+    <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300 p-4 rounded-lg my-4">
+      <h3 className="text-lg font-bold mb-2">خطأ</h3>
+      <p>{message}</p>
+    </div>
+  );
+};
+
+export default ErrorDisplay;

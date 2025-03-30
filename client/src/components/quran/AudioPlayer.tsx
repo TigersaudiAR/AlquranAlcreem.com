@@ -227,3 +227,84 @@ function getSurahName(number: number): string {
   
   return names[number - 1] || '';
 }
+import React from 'react';
+import { IoPlayCircle, IoPauseCircle, IoPlaySkipBack, IoPlaySkipForward } from 'react-icons/io5';
+
+interface AudioPlayerProps {
+  audioUrl: string;
+  isPlaying: boolean;
+  togglePlay: () => void;
+  currentVerse: number;
+  totalVerses: number;
+  onVerseChange: (verse: number) => void;
+}
+
+const AudioPlayer: React.FC<AudioPlayerProps> = ({
+  audioUrl,
+  isPlaying,
+  togglePlay,
+  currentVerse,
+  totalVerses,
+  onVerseChange
+}) => {
+  const handlePrevVerse = () => {
+    if (currentVerse > 1) {
+      onVerseChange(currentVerse - 1);
+    }
+  };
+
+  const handleNextVerse = () => {
+    if (currentVerse < totalVerses) {
+      onVerseChange(currentVerse + 1);
+    }
+  };
+
+  return (
+    <div className="p-4 flex items-center justify-between">
+      <div className="flex items-center space-x-4">
+        <button
+          onClick={togglePlay}
+          className="text-amber-600 hover:text-amber-800 dark:text-amber-500 dark:hover:text-amber-400"
+        >
+          {isPlaying ? (
+            <IoPauseCircle size={40} />
+          ) : (
+            <IoPlayCircle size={40} />
+          )}
+        </button>
+        <div className="text-sm">
+          الآية {currentVerse} من {totalVerses}
+        </div>
+      </div>
+      
+      <div className="flex items-center space-x-2">
+        <button
+          onClick={handlePrevVerse}
+          disabled={currentVerse <= 1}
+          className={`p-2 rounded-full ${
+            currentVerse <= 1
+              ? 'text-gray-400 cursor-not-allowed'
+              : 'text-amber-600 hover:text-amber-800 dark:text-amber-500 dark:hover:text-amber-400'
+          }`}
+        >
+          <IoPlaySkipBack size={24} />
+        </button>
+        <button
+          onClick={handleNextVerse}
+          disabled={currentVerse >= totalVerses}
+          className={`p-2 rounded-full ${
+            currentVerse >= totalVerses
+              ? 'text-gray-400 cursor-not-allowed'
+              : 'text-amber-600 hover:text-amber-800 dark:text-amber-500 dark:hover:text-amber-400'
+          }`}
+        >
+          <IoPlaySkipForward size={24} />
+        </button>
+      </div>
+      
+      <audio src={audioUrl} id="quran-audio" className="hidden" />
+    </div>
+  );
+};
+
+export default AudioPlayer;

@@ -361,3 +361,40 @@
     transition: width 0.5s ease-in-out;
   }
 }
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    @apply text-black bg-white;
+  }
+
+  html.dark {
+    @apply text-white bg-gray-900;
+  }
+  
+  /* Ottoman Hafs Font */
+  .font-uthmani {
+    font-family: 'UthmanicHafs', 'Traditional Arabic', 'Amiri Quran', serif;
+    line-height: 2;
+  }
+  
+  /* Quran reader styles */
+  .quran-reader-container {
+    @apply pb-20; /* Space for audio player */
+  }
+  
+  .verse-container {
+    @apply cursor-pointer transition-colors duration-200;
+  }
+  
+  .verse-number {
+    @apply inline-block text-sm align-top;
+  }
+  
+  /* Bismillah styling */
+  .bismillah {
+    @apply text-center my-6 font-uthmani;
+  }
+}

@@ -17,3 +17,11 @@
   font-family: UthmanTN1B;
   src: url("/fonts/UthmanTN1B.ttf") format("truetype");
 }
+@font-face {
+  font-family: 'UthmanicHafs';
+  src: url('./UthmanicHafs.woff2') format('woff2'),
+       url('./UthmanicHafs.woff') format('woff');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}

@@ -1,495 +1,206 @@
 import { useState, useEffect, useRef } from 'react';
-import OttomanHafs from '/assets/UthmanicHafs.css';
-import { PopupModal } from './PopupModal';
 import { useQuranAudio } from '../../hooks/useQuranAudio';
 import AudioPlayer from './AudioPlayer';
 import LoadingSpinner from '../common/LoadingSpinner';
 import ErrorDisplay from '../common/ErrorDisplay';
 import { SURAH_NAMES } from '../../lib/constants';
-
-export default function QuranReader({ surahNumber }) {
-  const [selectedAyah, setSelectedAyah] = useState(null);
-  
-  const handleAyahClick = (ayah) => {
-    setSelectedAyah(ayah);
-  };
-
-  return (
-    <div className="quran-text quran-reader-container" onClick={() => handleAyahClick(ayah)}>
-      {ayah.text}
-    </div>
-
-    {selectedAyah && (
-      <PopupModal onClose={() => setSelectedAyah(null)}>
-        <h2>Ayah Explanation</h2>
-        <p>{/** Display ayah explanations or tafsir here **/}</p>
-      </PopupModal>
-    )}
-  );
-}
+import { PopupModal } from './PopupModal';
 
 interface QuranReaderProps {
   fontSize: number;
-  pageNumber: number;
-  surahNumber?: number;
-  juzNumber?: number;
-  viewMode: 'page' | 'surah' | 'juz';
+  surahNumber: number;
+  showTranslation: boolean;
   reciter: string;
   translation: string;
-  onPageChange: (page: number) => void;
+  onVerseClick?: (verseNumber: number) => void;
 }
 
-interface AyahData {
+interface Verse {
   number: number;
-  numberInQuran: number;
   text: string;
   translation?: string;
-  surah: {
-    number: number;
-    name: string;
-    englishName: string;
-  };
-  juz: number;
-  page: number;
-  sajda?: boolean;
-  hizbQuarter?: number;
+  explanation?: string;
 }
 
-const QuranReader = ({
+interface Surah {
+  number: number;
+  name: string;
+  verses: Verse[];
+}
+
+const QuranReader: React.FC<QuranReaderProps> = ({
   fontSize,
-  pageNumber,
   surahNumber,
-  juzNumber,
-  viewMode,
+  showTranslation,
   reciter,
   translation,
-  onPageChange,
-}: QuranReaderProps) => {
-  const [ayahs, setAyahs] = useState<AyahData[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  onVerseClick
+}) => {
+  const [surah, setSurah] = useState<Surah | null>(null);
+  const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
-  const [pagesTotal, setPagesTotal] = useState(604); // القرآن الكريم له 604 صفحة في المصحف العثماني
-  const [currentSurah, setCurrentSurah] = useState<number | null>(null);
-  const quranContainerRef = useRef<HTMLDivElement>(null);
-  
-  const { audioState, startRecitation, pauseRecitation, stopRecitation, isPlaying, progress, duration } = useQuranAudio(reciter);
-  
-  // تعيين حجم خط مناسب بناء على قيمة fontSize
-  const fontSizeMap = {
-    1: 'text-sm',
-    2: 'text-base',
-    3: 'text-lg', 
-    4: 'text-xl',
-    5: 'text-2xl',
-    6: 'text-3xl',
-    7: 'text-4xl',
-  };
-  const fontSizeClass = fontSizeMap[fontSize as keyof typeof fontSizeMap] || 'text-lg';
-  
+  const [selectedVerse, setSelectedVerse] = useState<Verse | null>(null);
+  const [explanation, setExplanation] = useState<string>('');
+  const [isLoadingExplanation, setIsLoadingExplanation] = useState<boolean>(false);
+
+  const contentRef = useRef<HTMLDivElement>(null);
+  const { audioUrl, isPlaying, togglePlay, currentVerse, setCurrentVerse } = useQuranAudio(surahNumber, reciter);
+
   useEffect(() => {
-    const fetchQuranData = async () => {
-      setIsLoading(true);
-      setError(null);
-      
+    const fetchSurah = async () => {
       try {
-        let endpoint = '';
-        
-        if (viewMode === 'page') {
-          endpoint = `/api/quran/page/${pageNumber}/quran-uthmani`;
-        } else if (viewMode === 'surah' && surahNumber) {
-          endpoint = `/api/quran/surah/${surahNumber}/quran-uthmani`;
-          setCurrentSurah(surahNumber);
-        } else if (viewMode === 'juz' && juzNumber) {
-          endpoint = `/api/quran/juz/${juzNumber}/quran-uthmani`;
-        }
-        
-        const response = await fetch(endpoint);
-        if (!response.ok) {
-          throw new Error(`فشل في تحميل البيانات: ${response.status}`);
-        }
-        
+        setLoading(true);
+        const response = await fetch(`/api/quran/surah/${surahNumber}`);
         const data = await response.json();
-        
-        // إذا طلب المستخدم ترجمة
-        let translationData = null;
-        if (translation && translation !== 'ar.asad') {
-          let translationEndpoint = '';
-          
-          if (viewMode === 'page') {
-            translationEndpoint = `/api/quran/page/${pageNumber}/${translation}`;
-          } else if (viewMode === 'surah' && surahNumber) {
-            translationEndpoint = `/api/quran/surah/${surahNumber}/${translation}`;
-          } else if (viewMode === 'juz' && juzNumber) {
-            translationEndpoint = `/api/quran/juz/${juzNumber}/${translation}`;
-          }
-          
-          const translationResponse = await fetch(translationEndpoint);
-          if (translationResponse.ok) {
-            translationData = await translationResponse.json();
-          }
-        }
-        
-        let processedAyahs: AyahData[] = [];
-        
-        if (data.code === 200 && data.data && data.data.ayahs) {
-          // تعيين السورة الحالية إذا كانت الصفحة تحتوي على آيات
-          if (data.data.ayahs.length > 0 && viewMode === 'page') {
-            setCurrentSurah(data.data.ayahs[0].surah.number);
-          }
-          
-          processedAyahs = data.data.ayahs.map((ayah: any, index: number) => {
-            let translationText;
-            if (translationData && translationData.data && translationData.data.ayahs) {
-              translationText = translationData.data.ayahs[index]?.text;
-            }
-            
-            return {
-              number: ayah.numberInSurah,
-              numberInQuran: ayah.number,
-              text: ayah.text,
-              translation: translationText,
-              surah: {
-                number: ayah.surah.number,
-                name: ayah.surah.name,
-                englishName: ayah.surah.englishName,
-              },
-              juz: ayah.juz,
-              page: ayah.page,
-              sajda: ayah.sajda || false,
-              hizbQuarter: ayah.hizbQuarter || null,
-            };
+
+        if (data.code === 200 && data.data) {
+          // Transform API data into our format
+          const verses = data.data.ayahs.map((ayah: any) => ({
+            number: ayah.numberInSurah,
+            text: ayah.text,
+            translation: ayah.translation ? ayah.translation.text : '',
+          }));
+
+          setSurah({
+            number: data.data.number,
+            name: SURAH_NAMES[data.data.number - 1] || data.data.name,
+            verses
           });
+        } else {
+          setError('Failed to load surah data');
         }
-        
-        setAyahs(processedAyahs);
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'حدث خطأ أثناء تحميل البيانات');
+        setError('Error fetching surah: ' + (err instanceof Error ? err.message : String(err)));
       } finally {
-        setIsLoading(false);
+        setLoading(false);
       }
     };
-    
-    fetchQuranData();
-  }, [pageNumber, surahNumber, juzNumber, viewMode, translation]);
-  
-  const handlePageTurn = (direction: 'next' | 'prev') => {
-    if (direction === 'next' && pageNumber < pagesTotal) {
-      onPageChange(pageNumber + 1);
-    } else if (direction === 'prev' && pageNumber > 1) {
-      onPageChange(pageNumber - 1);
+
+    fetchSurah();
+  }, [surahNumber, translation]);
+
+  const handleVerseClick = async (verse: Verse) => {
+    setSelectedVerse(verse);
+    if (onVerseClick) {
+      onVerseClick(verse.number);
     }
-    
-    // عند تغيير الصفحة، نعود إلى أعلى المصحف
-    if (quranContainerRef.current) {
-      quranContainerRef.current.scrollTop = 0;
+
+    try {
+      setIsLoadingExplanation(true);
+      // Fetch explanation/tafsir for this verse
+      const response = await fetch(`/api/quran/tafsir/${surahNumber}/${verse.number}`);
+      const data = await response.json();
+
+      if (data && data.data && data.data.text) {
+        setExplanation(data.data.text);
+      } else {
+        setExplanation('لا يوجد تفسير متاح لهذه الآية');
+      }
+    } catch (err) {
+      setExplanation('حدث خطأ أثناء تحميل التفسير');
+      console.error('Error fetching tafsir:', err);
+    } finally {
+      setIsLoadingExplanation(false);
     }
   };
-  
-  const handleAudioPlay = () => {
-    if (ayahs.length > 0) {
-      // إنشاء مصفوفة من معرفات الآيات لمشغل الصوت
-      const ayahIds = ayahs.map(ayah => `${ayah.surah.number}:${ayah.number}`);
-      startRecitation(ayahIds);
+
+  const getFontSizeClass = () => {
+    switch (fontSize) {
+      case 1: return 'text-lg';
+      case 2: return 'text-xl';
+      case 3: return 'text-2xl';
+      case 4: return 'text-3xl';
+      case 5: return 'text-4xl';
+      default: return 'text-2xl';
     }
   };
-  
-  if (isLoading) {
+
+  if (loading) {
     return <LoadingSpinner />;
   }
-  
+
   if (error) {
-    return <ErrorDisplay message={error || "حدث خطأ أثناء تحميل البيانات"} />;
+    return <ErrorDisplay message={error} />;
   }
-  
-  // تجميع الآيات حسب السورة
-  const ayahsBySurah = ayahs.reduce((acc, ayah) => {
-    if (!acc[ayah.surah.number]) {
-      acc[ayah.surah.number] = {
-        surahInfo: {
-          number: ayah.surah.number,
-          name: ayah.surah.name,
-          englishName: ayah.surah.englishName,
-        },
-        ayahs: []
-      };
-    }
-    acc[ayah.surah.number].ayahs.push(ayah);
-    return acc;
-  }, {} as { [key: number]: { surahInfo: { number: number, name: string, englishName: string }, ayahs: AyahData[] } });
-  
-  // معلومات عن السورة الحالية (للعرض في رأس الصفحة)
-  const currentSurahInfo = currentSurah ? SURAH_NAMES.find(s => s.number === currentSurah) : null;
-  
-  // مجموعة متنوعة من الألوان للزخارف (ألوان الخط الإسلامي المصحفي)
-  const decorColors = [
-    'rgba(66, 133, 91, 0.7)',  // أخضر
-    'rgba(153, 68, 68, 0.7)',  // أحمر
-    'rgba(75, 92, 165, 0.7)',  // أزرق
-    'rgba(191, 146, 42, 0.7)', // ذهبي
-  ];
-  
+
+  if (!surah) {
+    return <div className="text-center p-4">لا توجد بيانات متاحة للسورة</div>;
+  }
+
   return (
-    <>
-      <div className="kingfahd-mushaf mb-4 select-none">
-        {/* شريط العنوان والتنقل بين الصفحات */}
-        <div className="p-3 bg-white dark:bg-gray-800 border-b border-amber-200 dark:border-amber-900 shadow-sm mb-4 rounded-t-lg">
-          <div className="flex justify-between items-center">
-            <button 
-              className="py-2 px-4 bg-gradient-to-b from-amber-400 to-amber-500 text-white hover:from-amber-500 hover:to-amber-600 disabled:opacity-50 disabled:cursor-not-allowed rounded-md flex items-center text-sm shadow-sm"
-              onClick={() => handlePageTurn('prev')}
-              disabled={pageNumber <= 1}
-              style={{
-                transition: 'all 0.2s ease',
-                fontWeight: 'bold'
-              }}
-            >
-              <span className="ml-1">›</span>
-              <span>السابقة</span>
-            </button>
-            
-            <div className="text-center flex flex-col">
-              <span className="text-lg font-bold text-amber-700 dark:text-amber-300 mb-1" style={{
-                fontFamily: 'HafsSmart, Hafs, UthmanicHafs, serif',
-              }}>
-                {currentSurahInfo?.name || Object.values(ayahsBySurah).map(surah => surah.surahInfo.name).join(' - ')}
-              </span>
-              <div className="flex items-center justify-center gap-2 text-xs text-gray-600 dark:text-gray-400">
-                <span>الصفحة {getArabicNumber(pageNumber)} من {getArabicNumber(pagesTotal)}</span>
-                <span className="mx-2">|</span>
-                <span>{ayahs.length > 0 ? `الجزء ${getArabicNumber(ayahs[0].juz)}` : ''}</span>
-              </div>
-            </div>
-            
-            <button 
-              className="py-2 px-4 bg-gradient-to-b from-amber-400 to-amber-500 text-white hover:from-amber-500 hover:to-amber-600 disabled:opacity-50 disabled:cursor-not-allowed rounded-md flex items-center text-sm shadow-sm"
-              onClick={() => handlePageTurn('next')}
-              disabled={pageNumber >= pagesTotal}
-              style={{
-                transition: 'all 0.2s ease',
-                fontWeight: 'bold'
-              }}
-            >
-              <span>التالية</span>
-              <span className="mr-1">‹</span>
-            </button>
-          </div>
+    <div className="quran-reader-container h-screen w-full overflow-auto bg-white dark:bg-gray-900 p-4">
+      <div className="max-w-4xl mx-auto">
+        <div className="mb-6 text-center">
+          <h1 className="text-3xl font-bold mb-2">سورة {surah.name}</h1>
+          {surahNumber !== 9 && (
+            <div className="bismillah text-2xl mb-4 font-uthmani">بِسْمِ اللَّهِ الرَّحْمَنِ الرَّحِيمِ</div>
+          )}
         </div>
-        
-        {/* صفحة المصحف - تنسيق مصحف الملك فهد (مع دعم الوضع المظلم) */}
-        <div 
-          ref={quranContainerRef} 
-          className={`${fontSizeClass} madina-mushaf overflow-y-auto max-h-[70vh] p-5 rounded-b-lg dark:bg-gray-900 dark:border-gray-700 dark:text-amber-50`}
-          style={{
-            position: 'relative',
-            fontFamily: 'HafsSmart, Hafs, UthmanicHafs, Amiri Quran, serif',
-            backgroundColor: '#FEFAEE',
-            backgroundImage: "url('/assets/mushaf/mushaf-background.svg')",
-            backgroundSize: 'cover',
-            borderRadius: '15px',
-            border: '1px solid #E6DFC8',
-            boxShadow: '0 4px 12px rgba(0, 0, 0, 0.08)',
-            color: '#3A3A3A'
-          }}
-        >
-          {/* شريط رقم الصفحة */}
-          <div className="page-header flex justify-center items-center mt-2 mb-6">
-            <div className="page-number-badge" style={{
-              background: 'linear-gradient(135deg, #f0e2b6 0%, #dac896 100%)',
-              border: '1px solid #d4c896',
-              borderRadius: '50%',
-              width: '40px',
-              height: '40px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              fontSize: '1.1em',
-              fontWeight: 'bold',
-              color: '#705C3B',
-              boxShadow: '0 2px 4px rgba(0,0,0,0.05)'
-            }}>
-              <span>{getArabicNumber(pageNumber)}</span>
-            </div>
-          </div>
-          
-          {/* محتوى المصحف - السور والآيات */}
-          <div className="quran-content">
-            {Object.values(ayahsBySurah).map((surah) => (
-              <div key={surah.surahInfo.number} className="surah-container mb-8">
-                {/* رأس السورة وعنوانها إذا كانت بداية سورة - تنسيق مصحف الملك فهد */}
-                {surah.ayahs[0].number === 1 && (
-                  <div className="surah-header mb-6">
-                    <div className="surah-decoration relative">
-                      <div className="ornament-container relative text-center py-3 my-2">
-                        <div className="surah-ornament" style={{
-                          background: 'linear-gradient(135deg, #f6edd1 0%, #f0e2b6 100%)',
-                          border: '2px solid #d4c896',
-                          borderRadius: '15px',
-                          padding: '10px 15px 5px',
-                          position: 'relative',
-                          margin: '0 auto',
-                          width: '100%',
-                          boxShadow: '0 3px 5px rgba(0,0,0,0.05)'
-                        }}>
-                          <div className="surah-title" style={{
-                            fontFamily: 'HafsSmart, Hafs, UthmanicHafs, serif',
-                            fontSize: '2.2em',
-                            fontWeight: 'bold',
-                            color: '#6a442c',
-                            textAlign: 'center',
-                            margin: '0',
-                            padding: '5px 0',
-                            textShadow: '1px 1px 1px rgba(255,255,255,0.7)'
-                          }}>
-                            {surah.surahInfo.name}
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                    
-                    {/* البسملة - بداية كل سورة عدا التوبة - تنسيق مصحف الملك فهد */}
-                    {surah.surahInfo.number !== 9 && surah.ayahs[0].number === 1 && (
-                      <div className="bismillah text-center mt-6 mb-8 py-4 relative">
-                        <div className="bismillah-line before-line absolute w-1/3 h-px bg-amber-700 opacity-20 top-1/2 right-5"></div>
-                        <div className="bismillah-line after-line absolute w-1/3 h-px bg-amber-700 opacity-20 top-1/2 left-5"></div>
-                        
-                        <p style={{
-                          fontWeight: 600, 
-                          fontSize: '1.8em', 
-                          lineHeight: '1.5', 
-                          fontFamily: 'HafsSmart, Hafs, UthmanicHafs, serif',
-                          color: '#705C3B',
-                          letterSpacing: '0.01em',
-                          display: 'inline-block',
-                          padding: '0 20px',
-                          position: 'relative',
-                          whiteSpace: 'nowrap'
-                        }}>
-                          ﴿ بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ ﴾
-                        </p>
-                      </div>
-                    )}
-                  </div>
-                )}
-                
-                {/* الآيات - تطبيق محاذاة المصحف الشريف */}
-                <div className="ayahs-container p-4 madina-mushaf" style={{
-                  fontFamily: 'HafsSmart, Hafs, UthmanicHafs, Amiri Quran, serif', 
-                  lineHeight: '2.7',
-                  direction: 'rtl',
-                  textAlign: 'justify',
-                  textAlignLast: 'center',
-                  textJustify: 'inter-word',
-                  wordSpacing: '0.08em',
-                  fontSize: '1.35em'
-                }}>
-                  {surah.ayahs.map((ayah, index) => (
-                    <span 
-                      key={`${ayah.surah.number}-${ayah.number}`} 
-                      className="ayah-text inline-block"
-                      style={{
-                        wordSpacing: '0.1em',
-                        letterSpacing: '-0.01em',
-                        fontFamily: 'HafsSmart, Hafs, UthmanicHafs, serif',
-                        padding: '0 1px'
-                      }}
-                    >
-                      {/* نص الآية */}
-                      {ayah.text} 
-                      
-                      {/* رقم الآية - تنسيق مصحف الملك فهد */}
-                      <span 
-                        className="ayah-number inline-flex mx-[1px] align-middle" 
-                        style={{
-                          color: '#863d00',
-                          fontFamily: 'HafsSmart, Amiri Quran, Hafs, serif',
-                          fontSize: '0.9em',
-                          fontWeight: 500,
-                          position: 'relative',
-                          top: '-0.15em',
-                          margin: '0 0.07em',
-                          textShadow: '0px 0px 1px rgba(134, 61, 0, 0.2)'
-                        }}
-                      >
-                        ﴿{getArabicNumber(ayah.number)}﴾
-                      </span>
-                      {' '}
-                      
-                      {/* علامات الحزب والجزء */}
-                      {ayah.hizbQuarter && ayah.hizbQuarter % 4 === 0 && (
-                        <span 
-                          className="hizb-marker inline-block mx-1 align-middle"
-                          title={`حزب ${Math.ceil(ayah.hizbQuarter / 4)}`}
-                          style={{
-                            color: '#04a',
-                            fontSize: '1.2em',
-                            fontWeight: 'bold'
-                          }}
-                        >
-                          ۞
-                        </span>
-                      )}
-                      
-                      {/* علامة السجدة إذا وجدت */}
-                      {ayah.sajda && (
-                        <span 
-                          className="sajdah-marker inline-block mx-1 align-middle" 
-                          title="سجدة"
-                          style={{
-                            color: '#a40',
-                            fontSize: '1.2em',
-                            fontWeight: 'bold'
-                          }}
-                        >
-                          ۩
-                        </span>
-                      )}
-                    </span>
-                  ))}
+
+        <div ref={contentRef} className="space-y-4">
+          {surah.verses.map((verse) => (
+            <div 
+              key={verse.number}
+              className={`verse-container p-3 rounded-lg ${currentVerse === verse.number ? 'bg-amber-100 dark:bg-amber-900' : 'hover:bg-gray-100 dark:hover:bg-gray-800'}`}
+              onClick={() => handleVerseClick(verse)}
+            >
+              <div className={`arabic-text font-uthmani ${getFontSizeClass()} leading-loose`}>
+                {verse.text} 
+                <span className="verse-number mr-2 text-amber-500">﴿{verse.number}﴾</span>
+              </div>
+
+              {showTranslation && verse.translation && (
+                <div className="translation mt-2 text-gray-600 dark:text-gray-400 text-lg">
+                  {verse.translation}
                 </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-      
-      {/* القسم السفلي - الترجمة إذا كانت متاحة */}
-      {Object.values(ayahsBySurah).some(s => s.ayahs.some(a => a.translation)) && (
-        <div className="translation-section bg-white dark:bg-gray-800 p-4 rounded-lg mb-6 border border-gray-200 dark:border-gray-700">
-          <h3 className="text-base font-semibold mb-2 text-gray-700 dark:text-gray-300 border-b pb-1">الترجمة:</h3>
-          {Object.values(ayahsBySurah).map(surah => (
-            <div key={`trans-${surah.surahInfo.number}`}>
-              {surah.ayahs.map((ayah) => (
-                ayah.translation && (
-                  <div key={`trans-${ayah.surah.number}-${ayah.number}`} className="mb-2 text-sm">
-                    <span className="font-semibold ml-1 text-amber-600 dark:text-amber-400">{ayah.number} -</span>
-                    <span className="text-gray-700 dark:text-gray-300">{ayah.translation}</span>
-                  </div>
-                )
-              ))}
+              )}
             </div>
           ))}
         </div>
+      </div>
+
+      {audioUrl && (
+        <div className="fixed bottom-0 left-0 right-0 bg-white dark:bg-gray-800 shadow-lg">
+          <AudioPlayer 
+            audioUrl={audioUrl} 
+            isPlaying={isPlaying} 
+            togglePlay={togglePlay} 
+            currentVerse={currentVerse}
+            totalVerses={surah.verses.length}
+            onVerseChange={setCurrentVerse}
+          />
+        </div>
       )}
-      
-      {/* ضوابط الصوت */}
-      <AudioPlayer 
-        isPlaying={isPlaying}
-        progress={progress}
-        duration={duration}
-        onPlay={handleAudioPlay}
-        onPause={pauseRecitation}
-        onStop={stopRecitation}
-      />
-    </>
+
+      {selectedVerse && (
+        <PopupModal 
+          title={`تفسير الآية ${selectedVerse.number} من سورة ${surah.name}`}
+          onClose={() => setSelectedVerse(null)}
+        >
+          {isLoadingExplanation ? (
+            <div className="text-center p-4">
+              <LoadingSpinner size="small" />
+              <p className="mt-2">جاري تحميل التفسير...</p>
+            </div>
+          ) : (
+            <div>
+              <div className="mb-4 p-4 bg-amber-50 dark:bg-amber-900/20 rounded-lg">
+                <div className="font-uthmani text-xl">{selectedVerse.text}</div>
+                {showTranslation && selectedVerse.translation && (
+                  <div className="mt-2 text-gray-600 dark:text-gray-400">
+                    {selectedVerse.translation}
+                  </div>
+                )}
+              </div>
+              <div className="mt-4 text-lg leading-relaxed" dir="rtl">
+                {explanation}
+              </div>
+            </div>
+          )}
+        </PopupModal>
+      )}
+    </div>
   );
 };
-
-// دالة لتحويل الأرقام الإنجليزية إلى أرقام عربية
-function getArabicNumber(num: number): string {
-  const arabicDigits = ['٠', '١', '٢', '٣', '٤', '٥', '٦', '٧', '٨', '٩'];
-  return num.toString().split('').map(digit => {
-    return arabicDigits[parseInt(digit)];
-  }).join('');
-}
 
 export default QuranReader;
