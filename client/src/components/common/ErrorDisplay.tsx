@@ -6,54 +6,37 @@ interface ErrorDisplayProps {
 }
 
 /**
- * مكوّن عرض أخطاء التطبيق
- * يستخدم لعرض رسائل الخطأ بطريقة منسقة مع إمكانية وجود زر إعادة المحاولة
+ * مكوّن عرض الخطأ
+ * يستخدم لعرض رسائل الخطأ مع إمكانية إعادة المحاولة
  */
 const ErrorDisplay: React.FC<ErrorDisplayProps> = ({ message, retry }) => {
   return (
-    <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4 flex flex-col items-center justify-center text-center">
-      <svg 
-        xmlns="http://www.w3.org/2000/svg" 
-        width="24" 
-        height="24" 
-        viewBox="0 0 24 24" 
-        fill="none" 
-        stroke="currentColor" 
-        strokeWidth="2" 
-        strokeLinecap="round" 
-        strokeLinejoin="round" 
-        className="text-red-500 dark:text-red-400 mb-3"
-      >
-        <circle cx="12" cy="12" r="10"></circle>
-        <line x1="12" y1="8" x2="12" y2="12"></line>
-        <line x1="12" y1="16" x2="12.01" y2="16"></line>
-      </svg>
-      <p className="text-red-700 dark:text-red-300 mb-3">{message}</p>
-      
+    <div className="flex flex-col items-center justify-center p-4 text-center">
+      <div className="text-red-500 mb-2">
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          fill="none"
+          viewBox="0 0 24 24"
+          strokeWidth={1.5}
+          stroke="currentColor"
+          className="w-10 h-10 mx-auto"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z"
+          />
+        </svg>
+      </div>
+      <p className="text-gray-700 dark:text-gray-300 mb-4">{message}</p>
       {retry && (
-        <button 
+        <button
           onClick={retry}
-          className="px-4 py-2 bg-red-100 dark:bg-red-800 text-red-700 dark:text-red-200 rounded-md hover:bg-red-200 dark:hover:bg-red-700 transition-colors"
+          className="px-4 py-2 bg-amber-500 text-white rounded-md hover:bg-amber-600 transition-colors"
         >
           إعادة المحاولة
         </button>
       )}
-    </div>
-  );
-};
-
-export default ErrorDisplay;
-import React from 'react';
-
-interface ErrorDisplayProps {
-  message: string;
-}
-
-const ErrorDisplay: React.FC<ErrorDisplayProps> = ({ message }) => {
-  return (
-    <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300 p-4 rounded-lg my-4">
-      <h3 className="text-lg font-bold mb-2">خطأ</h3>
-      <p>{message}</p>
     </div>
   );
 };

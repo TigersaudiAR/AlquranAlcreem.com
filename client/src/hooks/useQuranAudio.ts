@@ -1,224 +1,188 @@
-import { useState, useRef, useCallback, useEffect } from 'react';
+
+import { useState, useEffect, useRef } from 'react';
 
 /**
- * خطاف للتحكم في تشغيل تلاوة آيات القرآن الكريم
- * يوفر وظائف التشغيل والإيقاف المؤقت وتتبع الآية الحالية
- * @param reciterId معرف القارئ المطلوب (مثل ar.alafasy)
+ * Hook for basic Quran audio functionality with a simple reciter ID
  */
-export function useQuranAudio(reciterId: string) {
+export function useQuranAudioBasic(reciterId: string) {
   const [isPlaying, setIsPlaying] = useState(false);
-  const [currentSrc, setCurrentSrc] = useState<string | null>(null);
-  const [currentVerse, setCurrentVerse] = useState<{ surah: number; verse: number } | null>(null);
-  const [nextVerse, setNextVerse] = useState<{ surah: number; verse: number } | null>(null);
-  const [volume, setVolume] = useState(1);
-  const audioRef = useRef<HTMLAudioElement | null>(null);
-  const nextAudioRef = useRef<HTMLAudioElement | null>(null);
+  const [currentAudio, setCurrentAudio] = useState<HTMLAudioElement | null>(null);
+  const [currentSurah, setCurrentSurah] = useState<number | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  // إنشاء عنصر صوت جديد عند تغيير القارئ
+  // Clean up audio when component unmounts
   useEffect(() => {
-    if (!audioRef.current) {
-      audioRef.current = new Audio();
-      audioRef.current.preload = 'auto';
-      
-      const handleEnded = () => {
-        setIsPlaying(false);
-      };
-      
-      const handleError = (error: Event) => {
-        console.error('Error playing audio:', error);
-        setIsPlaying(false);
-      };
-      
-      audioRef.current.addEventListener('ended', handleEnded);
-      audioRef.current.addEventListener('error', handleError);
-      
-      return () => {
-        if (audioRef.current) {
-          audioRef.current.removeEventListener('ended', handleEnded);
-          audioRef.current.removeEventListener('error', handleError);
-          audioRef.current.pause();
-          audioRef.current = null;
-        }
-      };
-    }
-  }, [reciterId]);
-
-  // إنشاء عنصر صوت للتحميل المسبق للآية التالية
-  useEffect(() => {
-    if (!nextAudioRef.current) {
-      nextAudioRef.current = new Audio();
-      nextAudioRef.current.preload = 'auto';
-      
-      return () => {
-        if (nextAudioRef.current) {
-          nextAudioRef.current.src = '';
-          nextAudioRef.current = null;
-        }
-      };
-    }
-  }, []);
-
-  /**
-   * تعيين مصدر الصوت وبيانات الآية
-   * @param src رابط ملف الصوت
-   * @param surahNumber رقم السورة
-   * @param verseNumber رقم الآية
-   */
-  const setAudioSrc = useCallback((src: string, surahNumber: number, verseNumber: number) => {
-    if (audioRef.current) {
-      audioRef.current.src = src;
-      audioRef.current.volume = volume;
-      setCurrentSrc(src);
-      setCurrentVerse({ surah: surahNumber, verse: verseNumber });
-    }
-  }, [volume]);
-
-  /**
-   * تعيين مصدر الصوت التالي للتحميل المسبق
-   * @param src رابط ملف الصوت التالي
-   * @param surahNumber رقم السورة
-   * @param verseNumber رقم الآية
-   */
-  const setNextAudioSrc = useCallback((src: string, surahNumber: number, verseNumber: number) => {
-    if (nextAudioRef.current) {
-      nextAudioRef.current.src = src;
-      nextAudioRef.current.volume = volume;
-      setNextVerse({ surah: surahNumber, verse: verseNumber });
-    }
-  }, [volume]);
-
-  /**
-   * تشغيل المقطع الصوتي الحالي
-   */
-  const play = useCallback(() => {
-    if (audioRef.current && currentSrc) {
-      const playPromise = audioRef.current.play();
-      
-      if (playPromise !== undefined) {
-        playPromise
-          .then(() => {
-            setIsPlaying(true);
-          })
-          .catch(error => {
-            console.error('Failed to play audio:', error);
-            setIsPlaying(false);
-          });
+    return () => {
+      if (currentAudio) {
+        currentAudio.pause();
+        currentAudio.src = '';
       }
-    }
-  }, [currentSrc]);
+    };
+  }, [currentAudio]);
 
-  /**
-   * إيقاف التشغيل مؤقتًا
-   */
-  const pause = useCallback(() => {
-    if (audioRef.current && isPlaying) {
-      audioRef.current.pause();
+  const playAudio = (surahNumber: number) => {
+    setIsLoading(true);
+    setError(null);
+
+    // Stop current audio if playing
+    if (currentAudio) {
+      currentAudio.pause();
+      currentAudio.src = '';
+    }
+
+    // Format surah number with leading zeros
+    const formattedSurah = surahNumber.toString().padStart(3, '0');
+    const audioUrl = `https://download.quranicaudio.com/quran/${reciterId}/${formattedSurah}.mp3`;
+
+    const audio = new Audio(audioUrl);
+    audio.onloadeddata = () => {
+      setIsLoading(false);
+      audio.play().catch(err => {
+        console.error('Error playing audio:', err);
+        setError('فشل في تشغيل الصوت. يرجى المحاولة مرة أخرى.');
+        setIsLoading(false);
+      });
+    };
+
+    audio.onerror = () => {
+      setError('فشل في تحميل الصوت. يرجى التحقق من اتصالك بالإنترنت والمحاولة مرة أخرى.');
+      setIsLoading(false);
+    };
+
+    audio.onplaying = () => {
+      setIsPlaying(true);
+      setCurrentSurah(surahNumber);
+    };
+
+    audio.onpause = () => {
       setIsPlaying(false);
-    }
-  }, [isPlaying]);
+    };
 
-  /**
-   * الانتقال إلى الآية التالية
-   */
-  const playNextVerse = useCallback(() => {
-    if (nextAudioRef.current && nextVerse) {
-      // تبديل العناصر الصوتية
-      const tempAudio = audioRef.current;
-      audioRef.current = nextAudioRef.current;
-      nextAudioRef.current = tempAudio;
-      
-      // تحديث الحالة
-      setCurrentSrc(audioRef.current.src);
-      setCurrentVerse(nextVerse);
-      setNextVerse(null);
-      
-      // تشغيل الصوت الجديد
-      play();
-    }
-  }, [nextVerse, play]);
+    audio.onended = () => {
+      setIsPlaying(false);
+      setCurrentSurah(null);
+    };
 
-  /**
-   * ضبط مستوى الصوت
-   * @param volume مستوى الصوت (0-1)
-   */
-  const setAudioVolume = useCallback((newVolume: number) => {
-    const clampedVolume = Math.max(0, Math.min(1, newVolume));
-    setVolume(clampedVolume);
-    
-    if (audioRef.current) {
-      audioRef.current.volume = clampedVolume;
+    setCurrentAudio(audio);
+  };
+
+  const pauseAudio = () => {
+    if (currentAudio) {
+      currentAudio.pause();
     }
-    
-    if (nextAudioRef.current) {
-      nextAudioRef.current.volume = clampedVolume;
+  };
+
+  const resumeAudio = () => {
+    if (currentAudio) {
+      currentAudio.play().catch(err => {
+        console.error('Error resuming audio:', err);
+        setError('فشل في استئناف التشغيل.');
+      });
     }
-  }, []);
+  };
+
+  const stopAudio = () => {
+    if (currentAudio) {
+      currentAudio.pause();
+      currentAudio.currentTime = 0;
+      setCurrentSurah(null);
+    }
+  };
 
   return {
     isPlaying,
-    currentVerse,
-    currentSrc,
-    play,
-    pause,
-    setAudioSrc,
-    setNextAudioSrc,
-    playNextVerse,
-    setVolume: setAudioVolume,
-    currentAudioElement: audioRef.current
+    isLoading,
+    error,
+    currentSurah,
+    playAudio,
+    pauseAudio,
+    resumeAudio,
+    stopAudio
   };
 }
-import { useState, useEffect, useRef } from 'react';
 
+/**
+ * Enhanced hook for Quran audio with advanced features
+ */
 export const useQuranAudio = (surahNumber: number, reciter: string) => {
-  const [audioUrl, setAudioUrl] = useState<string>('');
-  const [isPlaying, setIsPlaying] = useState<boolean>(false);
-  const [currentVerse, setCurrentVerse] = useState<number>(1);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [progress, setProgress] = useState(0);
+  const [duration, setDuration] = useState(0);
+  const [currentTime, setCurrentTime] = useState(0);
+  const [error, setError] = useState<string | null>(null);
+  const [volume, setVolume] = useState(1);
 
   useEffect(() => {
-    // Get audio element
-    audioRef.current = document.getElementById('quran-audio') as HTMLAudioElement;
-    
-    // Set up event listeners
-    if (audioRef.current) {
-      audioRef.current.onended = handleVerseEnd;
-    }
-    
+    const audio = new Audio();
+    audioRef.current = audio;
+
+    const handleLoadedMetadata = () => {
+      setDuration(audio.duration);
+      setIsLoading(false);
+    };
+
+    const handleTimeUpdate = () => {
+      setCurrentTime(audio.currentTime);
+      setProgress((audio.currentTime / audio.duration) * 100);
+    };
+
+    const handleEnded = () => {
+      setIsPlaying(false);
+      setProgress(0);
+      setCurrentTime(0);
+    };
+
+    const handleError = () => {
+      setError('حدث خطأ أثناء تحميل الصوت');
+      setIsLoading(false);
+    };
+
+    const handlePlaying = () => {
+      setIsPlaying(true);
+      setIsLoading(false);
+    };
+
+    audio.addEventListener('loadedmetadata', handleLoadedMetadata);
+    audio.addEventListener('timeupdate', handleTimeUpdate);
+    audio.addEventListener('ended', handleEnded);
+    audio.addEventListener('error', handleError);
+    audio.addEventListener('playing', handlePlaying);
+
     return () => {
-      if (audioRef.current) {
-        audioRef.current.onended = null;
-      }
+      audio.pause();
+      audio.src = '';
+      audio.removeEventListener('loadedmetadata', handleLoadedMetadata);
+      audio.removeEventListener('timeupdate', handleTimeUpdate);
+      audio.removeEventListener('ended', handleEnded);
+      audio.removeEventListener('error', handleError);
+      audio.removeEventListener('playing', handlePlaying);
     };
   }, []);
 
   useEffect(() => {
-    // When surah number or reciter changes, reset audio
-    setIsPlaying(false);
-    setCurrentVerse(1);
-    updateAudioSource(1);
+    loadAudio();
   }, [surahNumber, reciter]);
 
   useEffect(() => {
-    // When current verse changes, update audio source
-    updateAudioSource(currentVerse);
-  }, [currentVerse]);
-
-  const updateAudioSource = (verseNumber: number) => {
-    // Format: https://verses.quran.com/[reciter]/[surahNumber]_[verseNumber].mp3
-    // Example: https://verses.quran.com/ar.alafasy/1_1.mp3
-    const newUrl = `https://verses.quran.com/${reciter}/${surahNumber}_${verseNumber}.mp3`;
-    setAudioUrl(newUrl);
-    
     if (audioRef.current) {
-      audioRef.current.src = newUrl;
-      
-      if (isPlaying) {
-        audioRef.current.play().catch(error => {
-          console.error('Error playing audio:', error);
-          setIsPlaying(false);
-        });
-      }
+      audioRef.current.volume = volume;
     }
+  }, [volume]);
+
+  const loadAudio = () => {
+    if (!audioRef.current) return;
+    
+    setIsLoading(true);
+    setError(null);
+    
+    const formattedSurah = surahNumber.toString().padStart(3, '0');
+    const audioUrl = `https://download.quranicaudio.com/quran/${reciter}/${formattedSurah}.mp3`;
+    
+    audioRef.current.src = audioUrl;
+    audioRef.current.load();
   };
 
   const togglePlay = () => {
@@ -226,29 +190,45 @@ export const useQuranAudio = (surahNumber: number, reciter: string) => {
     
     if (isPlaying) {
       audioRef.current.pause();
+      setIsPlaying(false);
     } else {
       audioRef.current.play().catch(error => {
         console.error('Error playing audio:', error);
+        setError('فشل في تشغيل الصوت');
       });
     }
-    
-    setIsPlaying(!isPlaying);
   };
 
-  const handleVerseEnd = () => {
-    // Automatically move to next verse when current verse ends
-    if (currentVerse < 286) { // Arbitrary large number, will be limited by actual surah length
-      setCurrentVerse(currentVerse + 1);
-    } else {
-      setIsPlaying(false);
-    }
+  const seek = (newTime: number) => {
+    if (!audioRef.current) return;
+    
+    audioRef.current.currentTime = newTime;
+    setCurrentTime(newTime);
+    setProgress((newTime / duration) * 100);
+  };
+
+  const seekByPercentage = (percentage: number) => {
+    if (!audioRef.current || !duration) return;
+    
+    const newTime = (percentage / 100) * duration;
+    seek(newTime);
+  };
+
+  const changeVolume = (newVolume: number) => {
+    setVolume(newVolume);
   };
 
   return {
-    audioUrl,
     isPlaying,
+    isLoading,
+    progress,
+    duration,
+    currentTime,
+    error,
+    volume,
     togglePlay,
-    currentVerse,
-    setCurrentVerse
+    seek,
+    seekByPercentage,
+    changeVolume
   };
 };
