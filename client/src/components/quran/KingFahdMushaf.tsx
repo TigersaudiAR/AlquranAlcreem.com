@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { getPage, getAyahAudioUrl } from '../../lib/quran-api';
+import { getPage, getAudioUrl } from '../../lib/quran-api';
 import { useApp } from '../../context/AppContext';
 import HighlightedVerse from './HighlightedVerse';
 import { useToast } from '../../hooks/use-toast';
@@ -32,7 +32,7 @@ const KingFahdMushaf: React.FC<KingFahdMushafProps> = ({
   const { toast } = useToast();
   const pageRef = useRef<HTMLDivElement>(null);
   const mouseMoveTimeout = useRef<number | null>(null);
-  
+
   // استخدام خطاف التلاوة للتحكم في الصوت
   const { 
     play, 
@@ -50,18 +50,18 @@ const KingFahdMushaf: React.FC<KingFahdMushafProps> = ({
       try {
         setLoading(true);
         setError(null);
-        
+
         // جلب نص الصفحة من القرآن
         const data = await getPage(currentPage);
         setPageData(data);
-        
+
         // جلب الترجمة إذا كانت مفعلة في الإعدادات
         if (settings.showTranslation && settings.translation) {
           // هنا يمكن إضافة استدعاء لجلب الترجمة وتخزينها في حالة translations
           // لتبسيط المثال، نستخدم كائن فارغ
           setTranslations({});
         }
-        
+
         // تحديث آخر موقع قراءة
         if (settings.autoSaveLastRead) {
           const firstAyah = data.data.ayahs[0];
@@ -71,7 +71,7 @@ const KingFahdMushaf: React.FC<KingFahdMushafProps> = ({
             pageNumber: currentPage
           });
         }
-        
+
       } catch (err) {
         console.error("Error fetching page data:", err);
         setError("حدث خطأ أثناء تحميل صفحة المصحف. الرجاء المحاولة مرة أخرى.");
@@ -81,7 +81,7 @@ const KingFahdMushaf: React.FC<KingFahdMushafProps> = ({
     };
 
     fetchPageData();
-    
+
     // استدعاء دالة التغيير إذا كانت موجودة
     if (onPageChange) {
       onPageChange(currentPage);
@@ -92,18 +92,18 @@ const KingFahdMushaf: React.FC<KingFahdMushafProps> = ({
   useEffect(() => {
     const handleMouseMove = () => {
       setIsControlsVisible(true);
-      
+
       if (mouseMoveTimeout.current) {
         window.clearTimeout(mouseMoveTimeout.current);
       }
-      
+
       mouseMoveTimeout.current = window.setTimeout(() => {
         setIsControlsVisible(false);
       }, 3000);
     };
-    
+
     window.addEventListener('mousemove', handleMouseMove);
-    
+
     return () => {
       window.removeEventListener('mousemove', handleMouseMove);
       if (mouseMoveTimeout.current) {
@@ -142,26 +142,26 @@ const KingFahdMushaf: React.FC<KingFahdMushafProps> = ({
 
   // تشغيل تلاوة الآية
   const handleVersePlay = (surahNumber: number, verseNumber: number) => {
-    const audioUrl = getAyahAudioUrl(surahNumber, verseNumber, settings.reciter);
+    const audioUrl = getAudioUrl(surahNumber, verseNumber, settings.reciter);
     setAudioSrc(audioUrl, surahNumber, verseNumber);
     setActiveVerse({ surah: surahNumber, verse: verseNumber });
     play();
-    
+
     // تتبع الآية التالية لتشغيلها بعد انتهاء الحالية
     if (pageData && pageData.data.ayahs) {
       const ayahs = pageData.data.ayahs;
       const currentIndex = ayahs.findIndex(
         (ayah: any) => ayah.surah.number === surahNumber && ayah.numberInSurah === verseNumber
       );
-      
+
       if (currentIndex < ayahs.length - 1) {
         const nextAyah = ayahs[currentIndex + 1];
-        const nextAudioUrl = getAyahAudioUrl(
+        const nextAudioUrl = getAudioUrl(
           nextAyah.surah.number,
           nextAyah.numberInSurah,
           settings.reciter
         );
-        
+
         // إضافة معالج انتهاء الصوت الحالي
         if (currentAudioElement) {
           currentAudioElement.onended = () => {
@@ -193,7 +193,7 @@ const KingFahdMushaf: React.FC<KingFahdMushafProps> = ({
   // عند النقر على الآية
   const handleVerseClick = (surahNumber: number, verseNumber: number) => {
     setActiveVerse({ surah: surahNumber, verse: verseNumber });
-    
+
     // تشغيل التلاوة تلقائيًا إذا كان الإعداد مفعلاً
     if (settings.autoPlayAudio) {
       handleVersePlay(surahNumber, verseNumber);
@@ -330,7 +330,7 @@ const KingFahdMushaf: React.FC<KingFahdMushafProps> = ({
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
               </svg>
             </button>
-            
+
             {isPlaying ? (
               <button 
                 onClick={handlePausePlayback}
@@ -353,7 +353,7 @@ const KingFahdMushaf: React.FC<KingFahdMushafProps> = ({
                 </svg>
               </button>
             )}
-            
+
             <button 
               onClick={goToNextPage}
               disabled={currentPage >= 604}
@@ -364,7 +364,7 @@ const KingFahdMushaf: React.FC<KingFahdMushafProps> = ({
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
               </svg>
             </button>
-            
+
             <div className="page-input-container flex items-center gap-2">
               <input
                 type="number"
