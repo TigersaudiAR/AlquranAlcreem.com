@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
 import KingFahdMushaf from '../components/quran/KingFahdMushaf';
+import QuranNavSidebar from '../components/quran/QuranNavSidebar';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useToast } from '../hooks/use-toast';
+import { useParams } from 'wouter';
 
 /**
  * صفحة عرض القرآن الكريم بالنص والتلاوة
@@ -120,45 +122,30 @@ const QuranPage: React.FC = () => {
                 animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, x: -300 }}
                 transition={{ duration: 0.3 }}
-                className="lg:w-1/4 bg-white dark:bg-gray-800 rounded-lg shadow-md p-4 h-[80vh] overflow-y-auto"
+                className="lg:w-1/3 bg-white dark:bg-gray-800 rounded-lg shadow-md h-[85vh] overflow-hidden"
               >
-                <div className="sidebar-content">
-                  <h2 className="text-xl font-bold text-amber-700 dark:text-amber-300 mb-4">الفهرس</h2>
-                  
-                  {/* قسم آخر قراءة */}
-                  {lastRead && (
-                    <div className="last-read-section mb-6 p-3 bg-amber-50 dark:bg-amber-900/20 rounded-md">
-                      <h3 className="text-md font-semibold text-amber-700 dark:text-amber-300 mb-2">آخر قراءة</h3>
-                      <button
-                        onClick={() => setCurrentPage(lastRead.pageNumber)}
-                        className="w-full text-right py-2 px-3 bg-amber-100 dark:bg-amber-800/30 text-amber-800 dark:text-amber-200 rounded hover:bg-amber-200 dark:hover:bg-amber-700/40 transition-colors"
-                      >
-                        صفحة {lastRead.pageNumber}
-                      </button>
-                    </div>
-                  )}
-                  
-                  {/* قسم الإشارات المرجعية */}
-                  <div className="bookmarks-section">
-                    <h3 className="text-md font-semibold text-amber-700 dark:text-amber-300 mb-2">إشاراتي المرجعية</h3>
-                    
-                    {bookmarks.length > 0 ? (
-                      <div className="bookmarks-list space-y-2">
-                        {bookmarks.map((bookmark, index) => (
-                          <button
-                            key={index}
-                            onClick={() => goToBookmark(bookmark)}
-                            className="w-full text-right py-2 px-3 bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
-                          >
-                            صفحة {bookmark.pageNumber}
-                          </button>
-                        ))}
-                      </div>
-                    ) : (
-                      <p className="text-gray-500 dark:text-gray-400 text-sm">لا توجد إشارات مرجعية حالياً</p>
-                    )}
-                  </div>
-                </div>
+                <QuranNavSidebar 
+                  currentPage={currentPage}
+                  onPageSelect={(page) => {
+                    setCurrentPage(page);
+                    setIsSidebarOpen(false);
+                  }}
+                  onSurahSelect={(surah) => {
+                    // تحديد الصفحة بناء على رقم السورة (يمكن استخدام API لتحديد الصفحة الدقيقة)
+                    // هذا تنفيذ مبسط
+                    const estimatedPage = Math.max(1, Math.min(604, Math.floor(surah * 5.3)));
+                    setCurrentPage(estimatedPage);
+                    setIsSidebarOpen(false);
+                  }}
+                  onJuzSelect={(juz) => {
+                    // تحديد الصفحة بناء على رقم الجزء (يمكن استخدام API لتحديد الصفحة الدقيقة)
+                    // تقدير بسيط: كل جزء يمثل حوالي 20 صفحة
+                    const estimatedPage = Math.max(1, Math.min(604, (juz - 1) * 20 + 1));
+                    setCurrentPage(estimatedPage);
+                    setIsSidebarOpen(false);
+                  }}
+                  onClose={() => setIsSidebarOpen(false)}
+                />
               </motion.div>
             )}
           </AnimatePresence>

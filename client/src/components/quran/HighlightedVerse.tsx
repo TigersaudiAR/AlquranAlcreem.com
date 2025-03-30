@@ -1,6 +1,7 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useRef, useEffect, useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Play, Pause, BookmarkPlus, Share2, Info } from 'lucide-react';
 import { useHighlightAnimation } from '../../hooks/useHighlightAnimation';
-import { motion } from 'framer-motion';
 
 interface HighlightedVerseProps {
   verseText: string;
@@ -30,100 +31,125 @@ const HighlightedVerse: React.FC<HighlightedVerseProps> = ({
   onClick,
   onVerseEnter,
   onVerseLeave,
-  fontSize = 24,
-  fontFamily = 'HafsSmart',
+  fontSize = 22,
+  fontFamily = 'Hafs',
   withAnimation = true,
   translation
 }) => {
   const verseRef = useRef<HTMLDivElement>(null);
-  const { highlightElement, clearHighlight } = useHighlightAnimation();
+  const [showActions, setShowActions] = useState(false);
+  const { highlightElement } = useHighlightAnimation();
   
-  // تفعيل تأثير الإبراز عندما تكون الآية نشطة
+  // تطبيق تأثير الإبراز عند تفعيل الآية
   useEffect(() => {
-    if (isActive && withAnimation && verseRef.current) {
+    if (isActive && verseRef.current && withAnimation) {
       highlightElement(verseRef.current, {
-        duration: isPlaying ? 3000 : 1500,
-        highlightColor: isPlaying 
-          ? 'rgba(255, 193, 7, 0.3)' 
-          : 'rgba(255, 193, 7, 0.15)'
+        duration: 2000,
+        highlightColor: 'rgba(255, 193, 7, 0.2)'
       });
-    } else if (!isActive && verseRef.current) {
-      clearHighlight();
     }
-  }, [isActive, isPlaying, withAnimation, highlightElement, clearHighlight]);
-
-  // تأثيرات الرسوم المتحركة باستخدام framer-motion
-  const verseVariants = {
-    normal: { 
-      scale: 1,
-      opacity: 1 
-    },
-    active: { 
-      scale: 1.02,
-      opacity: 1,
-      transition: { duration: 0.3 }
-    },
-    playing: {
-      scale: [1, 1.01, 1],
-      opacity: [1, 1, 1],
-      transition: {
-        repeat: Infinity,
-        repeatType: "reverse" as const,
-        duration: 2
-      }
-    }
+  }, [isActive, highlightElement, withAnimation]);
+  
+  // معالجي الأحداث للتمرير فوق الآية
+  const handleMouseEnter = () => {
+    setShowActions(true);
+    onVerseEnter && onVerseEnter();
   };
-
-  // تحديد الحالة الحالية للرسوم المتحركة
-  const currentState = isPlaying ? 'playing' : isActive ? 'active' : 'normal';
+  
+  const handleMouseLeave = () => {
+    setShowActions(false);
+    onVerseLeave && onVerseLeave();
+  };
   
   return (
-    <motion.div
+    <div 
       ref={verseRef}
-      initial="normal"
-      animate={currentState}
-      variants={verseVariants}
-      className={`verse-container p-4 rounded-lg mb-3 ${
-        isActive ? 'bg-amber-50 dark:bg-amber-900/20' : 'bg-white dark:bg-gray-800'
-      } cursor-pointer transition-all duration-300 ease-in-out hover:bg-amber-50 dark:hover:bg-amber-900/20`}
+      className={`
+        relative group verse-container p-3 rounded-lg transition-colors duration-300
+        ${isActive ? 'bg-amber-50 dark:bg-amber-900/20' : 'hover:bg-gray-50 dark:hover:bg-gray-800/50'}
+      `}
       onClick={onClick}
-      onMouseEnter={onVerseEnter}
-      onMouseLeave={onVerseLeave}
-      data-surah={surahNumber}
-      data-verse={verseNumber}
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={handleMouseLeave}
     >
-      <div className="flex justify-between items-start gap-4">
-        <div className="verse-number w-8 h-8 flex items-center justify-center bg-amber-100 dark:bg-amber-900/50 text-amber-800 dark:text-amber-200 rounded-full text-sm font-bold">
-          {verseNumber}
-        </div>
+      <div className="verse-content relative" dir="rtl">
+        <p 
+          className="verse-text text-right"
+          style={{ 
+            fontSize: `${fontSize}px`,
+            fontFamily: fontFamily,
+            lineHeight: 2.2
+          }}
+        >
+          {verseText}
+          <span className="verse-number inline-block mr-1 text-amber-700 dark:text-amber-400">
+            ﴿{verseNumber}﴾
+          </span>
+        </p>
         
-        <div className="verse-content flex-1">
-          <p 
-            className={`verse-text text-right font-${fontFamily}`}
-            style={{ fontSize: `${fontSize}px`, lineHeight: 1.8 }}
-            dir="rtl"
-          >
-            {verseText}
+        {translation && (
+          <p className="verse-translation text-sm text-gray-600 dark:text-gray-400 mt-2 text-right">
+            {translation}
           </p>
-          
-          {translation && (
-            <p className="verse-translation mt-2 text-gray-600 dark:text-gray-400 text-sm">
-              {translation}
-            </p>
-          )}
-        </div>
+        )}
       </div>
       
-      {isPlaying && (
-        <div className="audio-indicator mt-2 flex justify-end">
-          <div className="flex gap-1 items-center">
-            <span className="audio-dot w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse"></span>
-            <span className="audio-dot w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" style={{ animationDelay: '0.2s' }}></span>
-            <span className="audio-dot w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" style={{ animationDelay: '0.4s' }}></span>
-          </div>
-        </div>
-      )}
-    </motion.div>
+      <AnimatePresence>
+        {(isActive || showActions) && (
+          <motion.div 
+            className="verse-actions absolute left-2 top-2 flex items-center gap-1.5 rounded-full bg-white dark:bg-gray-800 shadow-md p-1"
+            initial={{ opacity: 0, scale: 0.8 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.8 }}
+            transition={{ duration: 0.2 }}
+          >
+            <button 
+              className="action-button p-1.5 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 text-amber-600 dark:text-amber-400" 
+              title={isPlaying ? "إيقاف الاستماع" : "استمع إلى الآية"}
+              onClick={(e) => {
+                e.stopPropagation();
+                // إضافة منطق تشغيل الصوت
+              }}
+            >
+              {isPlaying ? <Pause size={16} /> : <Play size={16} />}
+            </button>
+            
+            <button 
+              className="action-button p-1.5 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 text-amber-600 dark:text-amber-400" 
+              title="إضافة إلى المفضلة"
+              onClick={(e) => {
+                e.stopPropagation();
+                // إضافة منطق الإضافة إلى المفضلة
+              }}
+            >
+              <BookmarkPlus size={16} />
+            </button>
+            
+            <button 
+              className="action-button p-1.5 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 text-amber-600 dark:text-amber-400" 
+              title="عرض التفسير"
+              onClick={(e) => {
+                e.stopPropagation();
+                // إضافة منطق فتح التفسير
+              }}
+            >
+              <Info size={16} />
+            </button>
+            
+            <button 
+              className="action-button p-1.5 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 text-amber-600 dark:text-amber-400" 
+              title="مشاركة الآية"
+              onClick={(e) => {
+                e.stopPropagation();
+                // إضافة منطق المشاركة
+              }}
+            >
+              <Share2 size={16} />
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
   );
 };
 

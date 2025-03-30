@@ -1,156 +1,154 @@
-import React, { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { getTafsir } from '../../lib/quran-api';
+import React, { useEffect } from 'react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { TAFSIR_SOURCES, SURAH_NAMES } from '../../lib/constants';
 import { useTafsir } from '../../hooks/use-tafsir';
-import { TAFSIR_SOURCES } from '../../lib/constants';
+import { Loader2 } from 'lucide-react';
 
 interface TafsirDialogProps {
-  surahNumber: number;
-  ayahNumber: number;
   isOpen: boolean;
   onClose: () => void;
+  surahNumber: number;
+  ayahNumber: number;
+  totalAyahsInSurah: number;
 }
 
 /**
- * مكون لعرض تفسير الآيات في نافذة منبثقة
- * يسمح باختيار مصادر تفسير مختلفة وعرض التفسير بطريقة مريحة
+ * مكون حوار عرض تفسير الآيات
+ * يوفر واجهة لعرض تفسير الآيات من مصادر متعددة مع إمكانية التنقل بين الآيات
  */
 const TafsirDialog: React.FC<TafsirDialogProps> = ({
+  isOpen,
+  onClose,
   surahNumber,
   ayahNumber,
-  isOpen,
-  onClose
+  totalAyahsInSurah
 }) => {
-  const { 
-    tafsirSource, 
-    setTafsirSource, 
-    tafsirText, 
-    isLoading, 
+  const {
+    loading,
     error,
-    fetchTafsir
-  } = useTafsir({ defaultSource: 'ar-tafsir-al-jalalayn' });
-  
-  // معالج النقر خارج النافذة لإغلاقها
-  const handleClickOutside = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (e.target === e.currentTarget) {
-      onClose();
-    }
-  };
+    tafsirData,
+    tafsirSource,
+    fetchTafsir,
+    goToPreviousAyah,
+    goToNextAyah,
+    changeTafsirSource
+  } = useTafsir();
 
-  // جلب التفسير عند تغيير السورة أو الآية
+  // جلب التفسير عند فتح النافذة أو تغيير الآية
   useEffect(() => {
     if (isOpen && surahNumber && ayahNumber) {
       fetchTafsir(surahNumber, ayahNumber);
     }
-  }, [isOpen, surahNumber, ayahNumber, tafsirSource, fetchTafsir]);
+  }, [isOpen, surahNumber, ayahNumber, fetchTafsir]);
+
+  // معالج تغيير مصدر التفسير
+  const handleSourceChange = (value: string) => {
+    changeTafsirSource(value);
+  };
 
   return (
-    <AnimatePresence>
-      {isOpen && (
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          transition={{ duration: 0.2 }}
-          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
-          onClick={handleClickOutside}
-        >
-          <motion.div
-            initial={{ y: 20, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            exit={{ y: 20, opacity: 0 }}
-            transition={{ duration: 0.3 }}
-            className="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-3xl max-h-[80vh] overflow-hidden flex flex-col"
-            onClick={(e) => e.stopPropagation()}
-          >
-            {/* رأس النافذة */}
-            <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center">
-              <h2 className="text-xl font-bold text-gray-800 dark:text-gray-200" dir="rtl">
-                تفسير سورة {surahNumber} آية {ayahNumber}
-              </h2>
-              
-              <button
-                onClick={onClose}
-                className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
-            </div>
-            
-            {/* اختيار مصدر التفسير */}
-            <div className="px-6 py-3 bg-gray-50 dark:bg-gray-700/50 border-b border-gray-200 dark:border-gray-700">
-              <div className="flex flex-wrap gap-2 justify-end" dir="rtl">
-                <span className="text-gray-700 dark:text-gray-300 self-center ml-2">مصدر التفسير:</span>
-                
-                <select
-                  value={tafsirSource}
-                  onChange={(e) => setTafsirSource(e.target.value)}
-                  className="bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md py-1 px-3 text-gray-700 dark:text-gray-300 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent"
-                >
+    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
+      <DialogContent className="max-w-3xl">
+        <DialogHeader>
+          <DialogTitle className="text-xl text-amber-700 dark:text-amber-300 flex items-center justify-between">
+            <span>تفسير</span>
+            {tafsirData && (
+              <span className="text-lg font-medium">
+                سورة {SURAH_NAMES[tafsirData.surahNumber - 1] || tafsirData.surahNumber}، الآية {tafsirData.ayahNumber}
+              </span>
+            )}
+          </DialogTitle>
+          
+          <DialogDescription>
+            <div className="tafsir-select-container mt-2 mb-4">
+              <Select value={tafsirSource} onValueChange={handleSourceChange}>
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="اختر مصدر التفسير" />
+                </SelectTrigger>
+                <SelectContent>
                   {TAFSIR_SOURCES.map((source) => (
-                    <option key={source.id} value={source.id}>
+                    <SelectItem key={source.id} value={source.id}>
                       {source.name}
-                    </option>
+                    </SelectItem>
                   ))}
-                </select>
-              </div>
+                </SelectContent>
+              </Select>
             </div>
-            
-            {/* محتوى التفسير */}
-            <div className="px-6 py-4 flex-1 overflow-y-auto">
-              {isLoading ? (
-                <div className="flex justify-center items-center h-40">
-                  <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-amber-500"></div>
-                </div>
-              ) : error ? (
-                <div className="text-center py-8 text-red-500 dark:text-red-400">
-                  <p>حدث خطأ أثناء تحميل التفسير. يرجى المحاولة مرة أخرى.</p>
-                </div>
-              ) : (
-                <div className="tafsir-content text-right" dir="rtl">
-                  <p className="text-gray-800 dark:text-gray-200 leading-relaxed text-lg">
-                    {tafsirText || 'لا يوجد تفسير متاح لهذه الآية في المصدر المحدد.'}
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="tafsir-content py-2">
+          {loading ? (
+            <div className="flex justify-center items-center p-8">
+              <Loader2 className="h-8 w-8 animate-spin text-amber-500" />
+              <span className="mr-3 text-amber-700 dark:text-amber-300">جارِ تحميل التفسير...</span>
+            </div>
+          ) : error ? (
+            <div className="bg-red-50 dark:bg-red-900/20 p-4 rounded-md border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300">
+              {error}
+            </div>
+          ) : tafsirData ? (
+            <Tabs defaultValue="tafsir" className="w-full">
+              <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="ayah">الآية الكريمة</TabsTrigger>
+                <TabsTrigger value="tafsir">التفسير</TabsTrigger>
+              </TabsList>
+              
+              <TabsContent value="ayah" className="mt-4">
+                <div className="ayah-text-container p-4 bg-amber-50 dark:bg-amber-900/20 rounded-lg">
+                  <p 
+                    className="text-xl font-arabic text-right leading-relaxed" 
+                    dir="rtl"
+                    style={{ lineHeight: 2 }}
+                  >
+                    {tafsirData.ayahText}
                   </p>
                 </div>
-              )}
-            </div>
-            
-            {/* أزرار التنقل بين الآيات */}
-            <div className="px-6 py-3 border-t border-gray-200 dark:border-gray-700 flex justify-between">
-              <button
-                onClick={() => {
-                  if (ayahNumber > 1) {
-                    fetchTafsir(surahNumber, ayahNumber - 1);
-                  }
-                }}
-                className="px-4 py-2 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-md hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors flex items-center"
-                disabled={ayahNumber <= 1}
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                </svg>
-                <span>الآية السابقة</span>
-              </button>
+              </TabsContent>
               
-              <button
-                onClick={() => {
-                  // سنفترض مؤقتًا أن هناك 286 آية كحد أقصى (مثل سورة البقرة)
-                  fetchTafsir(surahNumber, ayahNumber + 1);
-                }}
-                className="px-4 py-2 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-md hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors flex items-center"
-              >
-                <span>الآية التالية</span>
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 ml-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                </svg>
-              </button>
+              <TabsContent value="tafsir" className="mt-4">
+                <div className="tafsir-text-container p-4 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
+                  <p className="text-right text-gray-800 dark:text-gray-200" dir="rtl">
+                    {tafsirData.tafsirText}
+                  </p>
+                </div>
+              </TabsContent>
+            </Tabs>
+          ) : (
+            <div className="text-center p-8 text-gray-500 dark:text-gray-400">
+              اختر آية لعرض تفسيرها
             </div>
-          </motion.div>
-        </motion.div>
-      )}
-    </AnimatePresence>
+          )}
+        </div>
+        
+        <DialogFooter className="flex items-center justify-between sm:justify-between">
+          <div className="navigation-buttons flex items-center gap-2">
+            <Button
+              variant="outline"
+              onClick={goToPreviousAyah}
+              disabled={loading || !tafsirData || tafsirData.ayahNumber <= 1}
+            >
+              الآية السابقة
+            </Button>
+            
+            <Button
+              variant="outline"
+              onClick={() => goToNextAyah(totalAyahsInSurah)}
+              disabled={loading || !tafsirData || tafsirData.ayahNumber >= totalAyahsInSurah}
+            >
+              الآية التالية
+            </Button>
+          </div>
+          
+          <Button variant="default" onClick={onClose}>
+            إغلاق
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 };
 
