@@ -2,392 +2,103 @@
 @tailwind components;
 @tailwind utilities;
 
-/* تعريف خط حفص سمارت من مجمع الملك فهد */
+/* إضافة دعم اللغة العربية عبر خط حفص سمارت */
 @font-face {
   font-family: 'HafsSmart';
-  src: url('/assets/fonts/HafsSmart_08.ttf') format('truetype'),
-       url('/fonts/HafsSmart_08.ttf') format('truetype'),
-       url('/fonts/kfgqpc_hafs_smart_font/HafsSmart_08.ttf') format('truetype');
-  font-weight: normal;
-  font-style: normal;
-  font-display: swap;
-}
-
-@font-face {
-  font-family: 'HafsSmart';
-  src: url('/assets/fonts/HafsSmart_08.ttf') format('truetype'),
-       url('/fonts/HafsSmart_08.ttf') format('truetype'),
-       url('/fonts/kfgqpc_hafs_smart_font/HafsSmart_08.ttf') format('truetype');
-  font-weight: bold;
-  font-style: normal;
-  font-display: swap;
-}
-
-/* نمط عام للنص العربي */
-.arabic-text {
-  font-family: 'HafsSmart', 'Traditional Arabic', 'Scheherazade', serif;
-  line-height: 2;
-  text-align: justify;
-  direction: rtl;
-}
-
-/* ضبط نمط آيات القرآن */
-.quran-text {
-  font-family: 'HafsSmart', 'Traditional Arabic', 'Scheherazade', serif;
-  line-height: 2.5;
-  text-align: justify;
-  direction: rtl;
-  color: #000;
-  padding: 0.5rem;
-}
-
-/* نمط للبسملة */
-.bismillah {
-  font-family: 'HafsSmart', 'Traditional Arabic', 'Scheherazade', serif;
-  font-size: 1.5rem;
-  text-align: center;
-  margin: 1rem 0;
-  line-height: 2;
-}
-
-/* نمط أرقام الآيات */
-.ayah-number {
-  font-family: 'HafsSmart', 'Traditional Arabic', 'Scheherazade', serif;
-  font-size: 0.9rem;
-  color: #1e40af;
-  margin: 0 0.25rem;
-  vertical-align: super;
-}
-
-/* نمط للصفحة القرآنية - تطابق تنسيق المصحف */
-.quran-page {
-  padding: 1rem;
-  direction: rtl;
-  background-color: #fcfcf7;
-  border: 1px solid #e2e8f0;
-  border-radius: 0.5rem;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-}
-
-/* خطوط مصحف المدينة المنورة لعرض القرآن الكريم */
-@font-face {
-  font-family: 'Hafs';
-  src: url('https://qurancomplex.gov.sa/wp-content/themes/mazajitv2/webfonts/hafs/hafs-main.woff2') format('woff2'),
-       url('https://qurancomplex.gov.sa/wp-content/themes/mazajitv2/webfonts/hafs/hafs-main.woff') format('woff');
-  font-weight: normal;
-  font-style: normal;
-  font-display: swap;
-}
-
-@font-face {
-  font-family: 'UthmanicHafs';
-  /* استخدام الخطوط المتوفرة محليًا كخطوط بديلة في حالة عدم توفر الخط الرئيسي */
-  src: local('Hafs'),
-       local('Amiri Quran'),
-       local('Scheherazade New'),
-       local('Amiri');
+  src: url('/assets/quran/fonts/HafsSmart_08.ttf') format('truetype');
   font-weight: normal;
   font-style: normal;
   font-display: swap;
 }
 
 @layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 222.2 47.4% 11.2%;
+    --muted: 210 40% 96.1%;
+    --muted-foreground: 215.4 16.3% 46.9%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 222.2 47.4% 11.2%;
+    --border: 214.3 31.8% 91.4%;
+    --input: 214.3 31.8% 91.4%;
+    --card: 0 0% 100%;
+    --card-foreground: 222.2 47.4% 11.2%;
+    --primary: 32 100% 48%;
+    --primary-foreground: 0 0% 98%;
+    --secondary: 210 40% 96.1%;
+    --secondary-foreground: 222.2 47.4% 11.2%;
+    --accent: 210 40% 96.1%;
+    --accent-foreground: 222.2 47.4% 11.2%;
+    --destructive: 0 100% 50%;
+    --destructive-foreground: 210 40% 98%;
+    --ring: 215 20.2% 65.1%;
+    --radius: 0.5rem;
+  }
+
+  .dark {
+    --background: 224 71% 4%;
+    --foreground: 213 31% 91%;
+    --muted: 223 47% 11%;
+    --muted-foreground: 215.4 16.3% 56.9%;
+    --accent: 216 34% 17%;
+    --accent-foreground: 210 40% 98%;
+    --popover: 224 71% 4%;
+    --popover-foreground: 215 20.2% 65.1%;
+    --border: 216 34% 17%;
+    --input: 216 34% 17%;
+    --card: 224 71% 4%;
+    --card-foreground: 213 31% 91%;
+    --primary: 32 100% 48%;
+    --primary-foreground: 0 0% 98%;
+    --secondary: 222.2 47.4% 11.2%;
+    --secondary-foreground: 210 40% 98%;
+    --destructive: 0 63% 31%;
+    --destructive-foreground: 210 40% 98%;
+    --ring: 216 34% 17%;
+    --radius: 0.5rem;
+  }
+}
+
+@layer base {
   * {
     @apply border-border;
   }
-
   body {
-    @apply font-sans antialiased bg-background text-foreground;
-    font-family: 'Tajawal', sans-serif;
+    @apply bg-background text-foreground;
+    font-feature-settings: "rlig" 1, "calt" 1;
+    direction: rtl;
   }
-
+  
+  /* تنسيق خط النص العربي */
   .arabic-text {
-    font-family: 'Hafs', 'UthmanicHafs', 'Amiri Quran', 'Amiri', serif;
-    line-height: 2.2;
-    letter-spacing: 0.3px;
-  }
-  
-  /* Scrollbar styling */
-  ::-webkit-scrollbar {
-    width: 8px;
-    height: 8px;
-  }
-  
-  ::-webkit-scrollbar-track {
-    background: #f1f1f1;
-  }
-  
-  ::-webkit-scrollbar-thumb {
-    background: #5D5CDE;
-    border-radius: 4px;
-  }
-  
-  .dark ::-webkit-scrollbar-track {
-    background: #2d2d2d;
-  }
-  
-  .dark ::-webkit-scrollbar-thumb {
-    background: #5D5CDE;
-  }
-
-  /* ==== King Fahd Mushaf Styling - Begin ==== */
-  
-  /* Main Mushaf container */
-  .kingfahd-mushaf {
-    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
-    border-radius: 10px;
-  }
-  
-  /* Madina Mushaf style - based on King Fahd Quran Complex */
-  .madina-mushaf {
-    background-color: #FBF8EF;
-    background-image: url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI1IiBoZWlnaHQ9IjUiPgo8cmVjdCB3aWR0aD0iNSIgaGVpZ2h0PSI1IiBmaWxsPSIjZmJmOGVmIj48L3JlY3Q+CjxyZWN0IHdpZHRoPSIxIiBoZWlnaHQ9IjEiIGZpbGw9IiNmNWYwZTIiPjwvcmVjdD4KPC9zdmc+');
-    border: 1px solid #E6DFC8;
-    font-family: 'HafsSmart', 'Hafs', 'UthmanicHafs', 'Amiri Quran', serif;
-    direction: rtl;
-    padding: 1.5rem;
-    position: relative;
-    color: #333;
-    line-height: 2.5;
-    letter-spacing: -0.1px;
-    text-align: justify;
-    text-align-last: center;
-  }
-  
-  .dark .madina-mushaf {
-    background-color: #1E1E1E;
-    background-image: url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI1IiBoZWlnaHQ9IjUiPgo8cmVjdCB3aWR0aD0iNSIgaGVpZ2h0PSI1IiBmaWxsPSIjMWUxZTFlIj48L3JlY3Q+CjxyZWN0IHdpZHRoPSIxIiBoZWlnaHQ9IjEiIGZpbGw9IiMyNjI2MjYiPjwvcmVjdD4KPC9zdmc+');
-    border-color: #444;
-    color: #E0E0E0;
-  }
-  
-  /* Page number badge */
-  .page-number-badge {
-    background-color: #F2ECE0;
-    color: #8A6D3B;
-    border: 1px solid #E3D7BC;
-    border-radius: 50%;
-    width: 40px;
-    height: 40px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-weight: bold;
-    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
-  }
-  
-  .dark .page-number-badge {
-    background-color: #3A3A3A;
-    color: #D3B15E;
-    border-color: #555;
-  }
-  
-  /* Surah header styling - King Fahd Quran Complex style */
-  .surah-header {
-    margin-bottom: 2.5rem;
-  }
-  
-  .surah-decoration {
-    display: flex;
-    justify-content: center;
-    margin-bottom: 1rem;
-  }
-  
-  .surah-title-ornament {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    position: relative;
-    margin-bottom: 1.5rem;
-  }
-  
-  .surah-title-ornament::before,
-  .surah-title-ornament::after {
-    content: '';
-    height: 1px;
-    flex-grow: 1;
-    background-image: linear-gradient(to right, transparent, #D9CAA8, transparent);
-    margin: 0 15px;
-  }
-  
-  .dark .surah-title-ornament::before,
-  .dark .surah-title-ornament::after {
-    background-image: linear-gradient(to right, transparent, #6A5E40, transparent);
-  }
-  
-  .surah-title {
-    position: relative;
-    padding: 10px 20px;
-    border-radius: 8px;
-    background-color: #F8F3E6;
-    border: 1px solid #E3D7BC;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-    z-index: 1;
-    white-space: nowrap;
-  }
-  
-  .dark .surah-title {
-    background-color: #2D2D2D;
-    border-color: #444;
-  }
-  
-  .surah-title h2 {
-    font-size: 1.5rem;
-    font-weight: bold;
-    color: #8A6D3B;
-    margin: 0;
-    text-align: center;
-    font-family: 'Scheherazade New', 'Traditional Arabic', serif;
-  }
-  
-  .dark .surah-title h2 {
-    color: #D3B15E;
-  }
-  
-  /* Bismillah styling - based on King Fahd Quran Complex */
-  .bismillah {
-    text-align: center;
-    margin: 1.5rem 0 2rem;
-    position: relative;
-  }
-  
-  .bismillah::before, 
-  .bismillah::after {
-    content: '';
-    position: absolute;
-    width: 25%;
-    height: 1px;
-    background-image: linear-gradient(to right, transparent, #D9CAA8);
-    bottom: -0.8rem;
-  }
-  
-  .bismillah::before {
-    left: 0;
-  }
-  
-  .bismillah::after {
-    right: 0;
-    transform: scaleX(-1);
-  }
-  
-  .bismillah p {
-    font-size: 1.8rem;
-    color: #705C3B;
-    margin: 0;
-    font-weight: normal;
-    line-height: 1.5;
-    font-family: 'HafsSmart', 'Hafs', 'UthmanicHafs', serif;
-  }
-  
-  .dark .bismillah p {
-    color: #A89062;
-  }
-  
-  .dark .bismillah::before,
-  .dark .bismillah::after {
-    background-image: linear-gradient(to right, transparent, #6A5E40);
-  }
-  
-  /* Ayahs container */
-  .ayahs-container {
-    text-align: right;
-    line-height: 2.5;
-    word-spacing: 0.2em;
-    margin-bottom: 1rem;
-    text-align: justify;
-    text-align-last: center;
-  }
-  
-  /* Ayah text */
-  .ayah-text {
-    position: relative;
-    margin: 0 1px;
-    font-size: inherit;
-    color: inherit;
-  }
-  
-  /* Ayah number - styled like King Fahd Quran Complex */
-  .ayah-number {
-    font-size: 0.65em;
-    display: inline-flex;
-    position: relative;
-    top: -0.2em;
-    margin: 0 0.1em;
-    color: #705C3B;
-    font-weight: normal;
-    font-family: 'Traditional Arabic', 'Hafs', serif;
-    line-height: normal;
-  }
-  
-  .dark .ayah-number {
-    color: #D3B15E;
-  }
-  
-  /* Hizb and Juz markers */
-  .hizb-marker, .sajdah-marker {
-    display: inline-block;
-    margin: 0 0.2em;
-    font-size: 1.2em;
-    color: #8A6D3B;
-    position: relative;
-    top: 0.1em;
-  }
-  
-  .dark .hizb-marker, 
-  .dark .sajdah-marker {
-    color: #D3B15E;
-  }
-  
-  /* Translation section */
-  .translation-section {
-    line-height: 1.6;
-    direction: rtl;
-    text-align: right;
-  }
-  
-  /* ==== King Fahd Mushaf Styling - End ==== */
-  
-  /* Original styles for other components */
-  
-  /* Prayer time display animation */
-  @keyframes prayerPulse {
-    0% { transform: scale(1); }
-    50% { transform: scale(1.05); }
-    100% { transform: scale(1); }
-  }
-  
-  .prayer-active {
-    animation: prayerPulse 2s infinite;
-  }
-  
-  /* Memorization progress */
-  .memorization-progress {
-    transition: width 0.5s ease-in-out;
-  }
-  /* Ottoman Hafs Font */
-  .font-uthmani {
-    font-family: 'HafsSmart', 'UthmanicHafs', 'Traditional Arabic', 'Amiri Quran', serif;
+    font-family: 'HafsSmart', system-ui, sans-serif;
     line-height: 2;
   }
   
-  /* Quran reader styles */
-  .quran-reader-container {
-    @apply pb-20; /* Space for audio player */
+  /* توسيط الآيات في المصحف */
+  .quran-page {
+    text-align: center;
   }
   
-  .verse-container {
-    @apply cursor-pointer transition-colors duration-200;
+  /* تنسيق خاص للآيات */
+  .quran-verse {
+    display: inline-block;
+    padding: 0 2px;
+    transition: background-color 0.3s ease;
   }
   
+  /* تأثير التحديد عند النقر على آية */
+  .quran-verse.selected {
+    background-color: rgba(255, 200, 0, 0.2);
+    border-radius: 4px;
+  }
+  
+  /* تنسيق رقم الآية */
   .verse-number {
-    @apply inline-block text-sm align-top;
-  }
-
-  html {
-    @apply text-black bg-white;
-  }
-
-  html.dark {
-    @apply text-white bg-gray-900;
+    font-family: system-ui, sans-serif;
+    color: #b58900;
+    font-size: 0.75em;
+    vertical-align: top;
+    margin: 0 2px;
   }
 }

@@ -1,82 +1,78 @@
-import React, { createContext, useState, useEffect, useContext, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 
+// واجهة سياق السمة
 interface ThemeContextType {
   theme: 'light' | 'dark';
   toggleTheme: () => void;
   setTheme: (theme: 'light' | 'dark') => void;
 }
 
-// إنشاء سياق المظهر
+// إنشاء سياق السمة
 export const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
-// مزود سياق المظهر
+// مزود سياق السمة
 export const ThemeProvider = ({ children }: { children: ReactNode }) => {
-  // حالة المظهر (فاتح أو داكن)
-  const [theme, setThemeState] = useState<'light' | 'dark'>(() => {
-    // البحث عن المظهر المحفوظ في التخزين المحلي
-    const savedTheme = localStorage.getItem('quranAppTheme');
+  // التعرف على سمة النظام
+  const prefersDarkMode = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+  
+  // تكوين الحالة الداخلية
+  const [theme, setTheme] = useState<'light' | 'dark'>(() => {
+    // جلب السمة من التخزين المحلي
+    const savedTheme = localStorage.getItem('theme');
     
-    if (savedTheme === 'dark' || savedTheme === 'light') {
+    // إذا كانت هناك سمة محفوظة، استخدمها
+    if (savedTheme === 'light' || savedTheme === 'dark') {
       return savedTheme;
     }
     
-    // استخدام تفضيلات النظام إذا لم يكن هناك مظهر محفوظ
-    if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
-      return 'dark';
-    }
-    
-    return 'light';
+    // وإلا، استخدم سمة النظام
+    return prefersDarkMode ? 'dark' : 'light';
   });
-
-  // تبديل المظهر
-  const toggleTheme = () => {
-    setThemeState(prevTheme => (prevTheme === 'light' ? 'dark' : 'light'));
-  };
-
-  // تعيين المظهر بشكل مباشر
-  const setTheme = (newTheme: 'light' | 'dark') => {
-    setThemeState(newTheme);
-  };
-
-  // تطبيق المظهر على العنصر الجذر (html)
+  
+  // تحديث السمة في التخزين المحلي وتوثيق الصفحة عند تغيير السمة
   useEffect(() => {
-    if (theme === 'dark') {
-      document.documentElement.classList.add('dark');
-    } else {
-      document.documentElement.classList.remove('dark');
-    }
+    // تحديث سمة التوثيق
+    document.documentElement.classList.remove('light', 'dark');
+    document.documentElement.classList.add(theme);
     
-    // حفظ المظهر في التخزين المحلي
-    localStorage.setItem('quranAppTheme', theme);
+    // تحديث التخزين المحلي
+    localStorage.setItem('theme', theme);
   }, [theme]);
-
-  // الاستماع لتغييرات تفضيلات النظام
+  
+  // الاستماع إلى تغييرات سمة النظام
   useEffect(() => {
     const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
     
     const handleChange = (e: MediaQueryListEvent) => {
-      const newTheme = e.matches ? 'dark' : 'light';
-      
-      // استخدام تفضيلات النظام فقط إذا لم يكن المستخدم قد اختار مظهرًا
-      if (!localStorage.getItem('quranAppTheme')) {
-        setThemeState(newTheme);
+      // تحقق مما إذا كانت هناك سمة مخصصة محفوظة أم لا
+      const savedTheme = localStorage.getItem('theme');
+      if (!savedTheme) {
+        setTheme(e.matches ? 'dark' : 'light');
       }
     };
     
-    mediaQuery.addEventListener('change', handleChange);
-    
-    return () => {
-      mediaQuery.removeEventListener('change', handleChange);
-    };
+    if (mediaQuery.addEventListener) {
+      mediaQuery.addEventListener('change', handleChange);
+      return () => mediaQuery.removeEventListener('change', handleChange);
+    } else {
+      // البديل القديم لمتصفحات قديمة
+      mediaQuery.addListener(handleChange);
+      return () => mediaQuery.removeListener(handleChange);
+    }
   }, []);
-
+  
+  // تبديل السمة
+  const toggleTheme = () => {
+    setTheme(prevTheme => (prevTheme === 'light' ? 'dark' : 'light'));
+  };
+  
   // قيمة السياق
   const contextValue: ThemeContextType = {
     theme,
     toggleTheme,
-    setTheme
+    setTheme,
   };
-
+  
   return (
     <ThemeContext.Provider value={contextValue}>
       {children}
@@ -84,7 +80,7 @@ export const ThemeProvider = ({ children }: { children: ReactNode }) => {
   );
 };
 
-// خطاف استخدام سياق المظهر
+// خطاف لاستخدام سياق السمة
 export const useTheme = () => {
   const context = useContext(ThemeContext);
   if (context === undefined) {

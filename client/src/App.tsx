@@ -1,37 +1,28 @@
-import { Switch, Route } from "wouter";
-import MainLayout from "./components/layout/MainLayout";
-import Dashboard from "./pages/Dashboard";
-import Quran from "./pages/Quran";
-import Prayer from "./pages/Prayer";
-import Memorization from "./pages/Memorization";
-import Tafsir from "./pages/Tafsir";
-import Hadith from "./pages/Hadith";
-import Duas from "./pages/Duas";
-import Hajj from "./pages/Hajj";
-import Settings from "./pages/Settings";
-import Search from "./pages/Search";
-import NotFound from "./pages/not-found";
+import { Route, Switch } from 'wouter';
+import Quran from './pages/Quran';
+import NotFound from './pages/not-found';
+import { ThemeProvider } from './components/theme-provider';
+import { QueryClientProvider } from '@tanstack/react-query';
+import { queryClient } from './lib/queryClient';
+import { Toaster } from './components/ui/toaster';
 
 function App() {
   return (
-    <MainLayout>
-      <Switch>
-        <Route path="/" component={Dashboard} />
-        <Route path="/quran" component={Quran} />
-        <Route path="/quran/surah/:number" component={Quran} />
-        <Route path="/quran/juz/:number" component={Quran} />
-        <Route path="/quran/page/:number" component={Quran} />
-        <Route path="/prayer" component={Prayer} />
-        <Route path="/memorization" component={Memorization} />
-        <Route path="/tafsir" component={Tafsir} />
-        <Route path="/hadith" component={Hadith} />
-        <Route path="/duas" component={Duas} />
-        <Route path="/hajj" component={Hajj} />
-        <Route path="/search" component={Search} />
-        <Route path="/settings" component={Settings} />
-        <Route component={NotFound} />
-      </Switch>
-    </MainLayout>
+    <QueryClientProvider client={queryClient}>
+      <ThemeProvider defaultTheme="system" storageKey="quran-app-theme">
+        <div className="min-h-screen">
+          <Switch>
+            <Route path="/" component={Quran} />
+            {/* يمكن إضافة المزيد من المسارات هنا */}
+            {/* <Route path="/prayer" component={Prayer} /> */}
+            {/* <Route path="/hadith" component={Hadith} /> */}
+            {/* <Route path="/tafsir" component={Tafsir} /> */}
+            <Route component={NotFound} />
+          </Switch>
+          <Toaster />
+        </div>
+      </ThemeProvider>
+    </QueryClientProvider>
   );
 }
 

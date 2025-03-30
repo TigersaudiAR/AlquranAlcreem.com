@@ -1,195 +1,144 @@
-import React, { useState } from 'react';
-import { X, Search, BookmarkIcon, Clock, MapPin } from 'lucide-react';
-import { useApp } from '../../context/AppContext';
-import { APP_CONFIG, SURAH_NAMES } from '../../lib/constants';
+import { useState, useCallback } from 'react';
+import { SURAH_NAMES, APP_CONFIG } from '../../lib/constants';
+import { toArabicNumbers } from '../../lib/utils';
 
 interface QuranNavSidebarProps {
   currentPage: number;
-  onPageSelect: (page: number) => void;
+  currentSurah?: number;
+  onPageChange: (page: number) => void;
   onSurahSelect: (surahNumber: number) => void;
-  onJuzSelect: (juzNumber: number) => void;
+  isOpen: boolean;
   onClose: () => void;
 }
 
-/**
- * شريط التنقل الجانبي للقرآن الكريم
- * يتيح التنقل بين السور والأجزاء والعلامات المرجعية
- */
-const QuranNavSidebar: React.FC<QuranNavSidebarProps> = ({
+export default function QuranNavSidebar({
   currentPage,
-  onPageSelect,
+  currentSurah,
+  onPageChange,
   onSurahSelect,
-  onJuzSelect,
+  isOpen,
   onClose
-}) => {
-  const { lastRead, bookmarks } = useApp();
-  const [activeTab, setActiveTab] = useState<'surahs' | 'juz' | 'bookmarks' | 'history'>('surahs');
+}: QuranNavSidebarProps) {
+  const [activeTab, setActiveTab] = useState<'surahs' | 'pages' | 'bookmarks'>('surahs');
   const [searchQuery, setSearchQuery] = useState('');
-
+  
+  // معالجة تحديد الصفحة
+  const handlePageSelect = useCallback((page: number) => {
+    onPageChange(page);
+    onClose();
+  }, [onPageChange, onClose]);
+  
+  // معالجة تحديد السورة
+  const handleSurahSelect = useCallback((surahNumber: number) => {
+    onSurahSelect(surahNumber);
+    onClose();
+  }, [onSurahSelect, onClose]);
+  
   // تصفية السور بناءً على البحث
-  const filteredSurahs = SURAH_NAMES.filter(surah => 
-    surah.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    (surah.indexOf('سورة ') === 0 && surah.slice(5).includes(searchQuery))
-  );
-
+  const filteredSurahs = searchQuery 
+    ? SURAH_NAMES.filter(surah => 
+        surah.name.includes(searchQuery) || 
+        surah.transliteration.includes(searchQuery.toLowerCase())
+      )
+    : SURAH_NAMES;
+  
+  // إنشاء قائمة بالصفحات
+  const pages = Array.from({ length: APP_CONFIG.TOTAL_PAGES }, (_, i) => i + 1);
+  
+  // تصفية الصفحات بناءً على البحث
+  const filteredPages = searchQuery 
+    ? pages.filter(page => page.toString().includes(searchQuery))
+    : pages;
+  
+  // رسم الشريط الجانبي
   return (
-    <div className="h-full flex flex-col">
-      {/* رأس شريط التنقل */}
-      <div className="flex justify-between items-center p-4 border-b dark:border-gray-700">
-        <h2 className="text-xl font-bold text-amber-700 dark:text-amber-300">فهرس المصحف</h2>
-        <button 
-          onClick={onClose}
-          className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500 dark:text-gray-400"
-          aria-label="إغلاق"
-        >
-          <X size={20} />
-        </button>
-      </div>
-      
-      {/* شريط البحث */}
-      <div className="px-4 py-3 border-b dark:border-gray-700">
-        <div className="relative">
-          <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
-            <Search size={16} className="text-gray-400" />
-          </div>
+    <div className={`fixed inset-y-0 left-0 w-64 bg-background border-e transform ${isOpen ? 'translate-x-0' : '-translate-x-full'} transition-transform duration-200 ease-in-out overflow-hidden z-50`}>
+      <div className="h-full flex flex-col">
+        {/* رأس الشريط الجانبي */}
+        <div className="p-4 border-b flex justify-between items-center">
+          <h2 className="font-bold text-lg">القرآن الكريم</h2>
+          <button onClick={onClose} className="p-2 rounded-full hover:bg-muted">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="feather feather-x">
+              <line x1="18" y1="6" x2="6" y2="18"></line>
+              <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
+          </button>
+        </div>
+        
+        {/* تبويبات التنقل */}
+        <div className="flex border-b">
+          <button 
+            className={`flex-1 py-2 text-center ${activeTab === 'surahs' ? 'border-b-2 border-primary font-bold' : ''}`}
+            onClick={() => setActiveTab('surahs')}
+          >
+            السور
+          </button>
+          <button 
+            className={`flex-1 py-2 text-center ${activeTab === 'pages' ? 'border-b-2 border-primary font-bold' : ''}`}
+            onClick={() => setActiveTab('pages')}
+          >
+            الصفحات
+          </button>
+          <button 
+            className={`flex-1 py-2 text-center ${activeTab === 'bookmarks' ? 'border-b-2 border-primary font-bold' : ''}`}
+            onClick={() => setActiveTab('bookmarks')}
+          >
+            العلامات
+          </button>
+        </div>
+        
+        {/* مربع البحث */}
+        <div className="p-2 border-b">
           <input
             type="text"
-            className="block w-full p-2 pl-10 text-sm border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-            placeholder="بحث في القرآن الكريم..."
+            placeholder="بحث..."
+            className="w-full p-2 rounded border bg-background"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
           />
         </div>
-      </div>
-      
-      {/* علامات التبويب */}
-      <div className="flex border-b dark:border-gray-700">
-        <button
-          className={`flex-1 py-2 text-center ${activeTab === 'surahs' ? 'text-amber-600 border-b-2 border-amber-500 font-medium' : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'}`}
-          onClick={() => setActiveTab('surahs')}
-        >
-          السور
-        </button>
-        <button
-          className={`flex-1 py-2 text-center ${activeTab === 'juz' ? 'text-amber-600 border-b-2 border-amber-500 font-medium' : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'}`}
-          onClick={() => setActiveTab('juz')}
-        >
-          الأجزاء
-        </button>
-        <button
-          className={`flex-1 py-2 text-center ${activeTab === 'bookmarks' ? 'text-amber-600 border-b-2 border-amber-500 font-medium' : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'}`}
-          onClick={() => setActiveTab('bookmarks')}
-        >
-          <BookmarkIcon size={16} className="inline-block mr-1" />
-        </button>
-        <button
-          className={`flex-1 py-2 text-center ${activeTab === 'history' ? 'text-amber-600 border-b-2 border-amber-500 font-medium' : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'}`}
-          onClick={() => setActiveTab('history')}
-        >
-          <Clock size={16} className="inline-block mr-1" />
-        </button>
-      </div>
-      
-      {/* محتوى التبويب النشط */}
-      <div className="flex-1 overflow-y-auto p-2">
-        {activeTab === 'surahs' && (
-          <div className="grid grid-cols-2 gap-2 p-2">
-            {filteredSurahs.map((surahName, index) => (
-              <button
-                key={index}
-                className="text-right p-3 rounded-lg hover:bg-amber-50 dark:hover:bg-amber-900/20 text-gray-700 dark:text-gray-300"
-                onClick={() => onSurahSelect(index + 1)}
-              >
-                <span className="inline-block w-6 h-6 text-xs text-center leading-6 bg-amber-100 dark:bg-amber-900/50 text-amber-800 dark:text-amber-200 rounded-full ml-2">
-                  {index + 1}
-                </span>
-                {surahName}
-              </button>
-            ))}
-          </div>
-        )}
         
-        {activeTab === 'juz' && (
-          <div className="grid grid-cols-3 gap-2 p-2">
-            {Array.from({ length: 30 }, (_, i) => (
-              <button
-                key={i}
-                className="p-3 rounded-lg hover:bg-amber-50 dark:hover:bg-amber-900/20 text-gray-700 dark:text-gray-300 text-center"
-                onClick={() => onJuzSelect(i + 1)}
-              >
-                الجزء {i + 1}
-              </button>
-            ))}
-          </div>
-        )}
-        
-        {activeTab === 'bookmarks' && (
-          <div className="space-y-2 p-2">
-            {bookmarks && bookmarks.length > 0 ? (
-              bookmarks.map((bookmark, index) => (
-                <div
-                  key={index}
-                  className="p-3 rounded-lg hover:bg-amber-50 dark:hover:bg-amber-900/20 cursor-pointer"
-                  onClick={() => onPageSelect(bookmark.pageNumber)}
+        {/* محتوى التبويب */}
+        <div className="flex-1 overflow-y-auto">
+          {activeTab === 'surahs' && (
+            <div className="divide-y">
+              {filteredSurahs.map((surah) => (
+                <button
+                  key={surah.number}
+                  className={`w-full text-right px-4 py-2 hover:bg-muted flex justify-between items-center ${currentSurah === surah.number ? 'bg-muted' : ''}`}
+                  onClick={() => handleSurahSelect(surah.number)}
                 >
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <div className="text-amber-600 dark:text-amber-400 font-medium">
-                        {SURAH_NAMES[bookmark.surahNumber - 1]} - الآية {bookmark.ayahNumber}
-                      </div>
-                      <div className="text-gray-500 dark:text-gray-400 text-sm">
-                        صفحة {bookmark.pageNumber}
-                      </div>
-                    </div>
-                    <BookmarkIcon size={16} className="text-amber-500" />
-                  </div>
-                </div>
-              ))
-            ) : (
-              <div className="text-center py-8 text-gray-500 dark:text-gray-400">
-                لم تقم بإضافة أي علامات مرجعية بعد
-              </div>
-            )}
-          </div>
-        )}
-        
-        {activeTab === 'history' && (
-          <div className="p-2">
-            {lastRead ? (
-              <div
-                className="p-3 rounded-lg hover:bg-amber-50 dark:hover:bg-amber-900/20 cursor-pointer"
-                onClick={() => onPageSelect(lastRead.pageNumber)}
-              >
-                <div className="flex items-center justify-between">
-                  <div>
-                    <div className="text-amber-600 dark:text-amber-400 font-medium">
-                      آخر قراءة: {SURAH_NAMES[lastRead.surahNumber - 1]} - الآية {lastRead.ayahNumber}
-                    </div>
-                    <div className="text-gray-500 dark:text-gray-400 text-sm">
-                      صفحة {lastRead.pageNumber}
-                    </div>
-                  </div>
-                  <MapPin size={16} className="text-amber-500" />
-                </div>
-              </div>
-            ) : (
-              <div className="text-center py-8 text-gray-500 dark:text-gray-400">
-                لم يتم تسجيل موضع قراءة سابق
-              </div>
-            )}
-          </div>
-        )}
-      </div>
-      
-      {/* زر الصفحة الحالية */}
-      <div className="p-4 border-t dark:border-gray-700">
-        <div className="text-center">
-          <span className="text-sm text-gray-500 dark:text-gray-400">الصفحة الحالية: </span>
-          <span className="font-medium text-amber-600 dark:text-amber-400">{currentPage} من 604</span>
+                  <span>
+                    <span className="ml-2 inline-block w-8 text-center">{toArabicNumbers(surah.number)}</span>
+                    {surah.name}
+                  </span>
+                  <span className="text-xs text-muted-foreground">{toArabicNumbers(surah.totalVerses)}</span>
+                </button>
+              ))}
+            </div>
+          )}
+          
+          {activeTab === 'pages' && (
+            <div className="grid grid-cols-3 gap-2 p-2">
+              {filteredPages.map((page) => (
+                <button
+                  key={page}
+                  className={`p-2 rounded text-center hover:bg-muted ${currentPage === page ? 'bg-primary text-primary-foreground' : ''}`}
+                  onClick={() => handlePageSelect(page)}
+                >
+                  {toArabicNumbers(page)}
+                </button>
+              ))}
+            </div>
+          )}
+          
+          {activeTab === 'bookmarks' && (
+            <div className="p-4 text-center text-muted-foreground">
+              لا توجد علامات مرجعية حتى الآن
+            </div>
+          )}
         </div>
       </div>
     </div>
   );
-};
-
-export default QuranNavSidebar;
+}

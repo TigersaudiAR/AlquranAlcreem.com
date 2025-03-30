@@ -1,187 +1,90 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { motion } from 'framer-motion';
-import { Share2, BookmarkPlus, Info } from 'lucide-react';
-import { useHighlightAnimation } from '../../hooks/useHighlightAnimation';
-import { useApp } from '../../context/AppContext';
+import { useState, useEffect, useCallback } from 'react';
+import { APP_CONFIG } from '../../lib/constants';
+import { getPageImagePath } from '../../lib/utils';
 
-interface KingFahdMushafPageProps {
+interface MushafPageProps {
   pageNumber: number;
-  pageData: any[];
-  onVerseClick?: (surahNumber: number, ayahNumber: number) => void;
-  activeVerse?: { surah: number, verse: number } | null;
-  fontSize?: number;
+  onPageClick?: (event: React.MouseEvent) => void;
+  onVerseClick?: (surahNumber: number, verseNumber: number, verseText: string, event: React.MouseEvent) => void;
+  showControls?: boolean;
+  highlightedVerse?: { surah: number; ayah: number } | null;
 }
 
-/**
- * مكون عرض صفحة المصحف الشريف بتنسيق مجمع الملك فهد
- * يعرض صفحة كاملة من المصحف مع الفواصل وعلامات الترقيم
- */
-const KingFahdMushafPage: React.FC<KingFahdMushafPageProps> = ({
-  pageNumber,
-  pageData,
+export default function KingFahdMushafPage({
+  pageNumber = APP_CONFIG.DEFAULT_PAGE,
+  onPageClick,
   onVerseClick,
-  activeVerse,
-  fontSize = 24
-}) => {
-  const { settings } = useApp();
-  const pageRef = useRef<HTMLDivElement>(null);
-  const [hoveredVerse, setHoveredVerse] = useState<{ surah: number, verse: number } | null>(null);
-  const { highlightElement } = useHighlightAnimation();
-
-  // تنظيم الآيات حسب السطور للعرض المناسب
-  const organizeLinesByPage = () => {
-    // جمع الآيات حسب السطور
-    const lineMap: Record<number, any[]> = {};
-    
-    pageData.forEach(ayah => {
-      // استخدام line_start للتنظيم
-      const lineStart = ayah.line_start;
-      const lineEnd = ayah.line_end;
-      
-      // إنشاء مصفوفة لكل سطر إذا لم تكن موجودة
-      for (let i = lineStart; i <= lineEnd; i++) {
-        if (!lineMap[i]) {
-          lineMap[i] = [];
-        }
-        
-        // إضافة الآية إلى السطر المناسب
-        if (i === lineStart) {
-          lineMap[i].push(ayah);
-        }
-      }
-    });
-    
-    // تحويل الخريطة إلى مصفوفة مرتبة
-    return Object.keys(lineMap)
-      .map(Number)
-      .sort((a, b) => a - b)
-      .map(lineNum => ({
-        lineNumber: lineNum,
-        ayahs: lineMap[lineNum].sort((a: any, b: any) => a.aya_no - b.aya_no)
-      }));
-  };
-
-  const lines = organizeLinesByPage();
-
-  // عند النقر على آية
-  const handleVerseClick = (surahNumber: number, ayahNumber: number) => {
-    if (onVerseClick) {
-      onVerseClick(surahNumber, ayahNumber);
-    }
-  };
-
-  // تأثير اختيار وإبراز الآية
+  showControls = false,
+  highlightedVerse = null,
+}: MushafPageProps) {
+  const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
+  const [isImageLoaded, setIsImageLoaded] = useState<boolean>(false);
+  
+  // التحقق من صحة رقم الصفحة
+  const validatedPageNumber = Math.max(1, Math.min(pageNumber, APP_CONFIG.TOTAL_PAGES));
+  const pagePath = getPageImagePath(validatedPageNumber);
+  
+  // معالج تحميل الصورة
+  const handleImageLoad = useCallback(() => {
+    setLoading(false);
+    setIsImageLoaded(true);
+  }, []);
+  
+  // معالج خطأ تحميل الصورة
+  const handleImageError = useCallback(() => {
+    setLoading(false);
+    setError('لم نتمكن من تحميل صورة الصفحة');
+  }, []);
+  
+  // إعادة تعيين الحالة عند تغيير رقم الصفحة
   useEffect(() => {
-    if (activeVerse && pageRef.current && settings.highlightCurrentVerse) {
-      const activeVerseElement = pageRef.current.querySelector(
-        `[data-surah="${activeVerse.surah}"][data-verse="${activeVerse.verse}"]`
-      ) as HTMLElement;
-
-      if (activeVerseElement) {
-        highlightElement(activeVerseElement, {
-          duration: 2000,
-          highlightColor: 'rgba(255, 193, 7, 0.2)',
-          scrollBehavior: 'smooth'
-        });
-      }
+    setLoading(true);
+    setError(null);
+    setIsImageLoaded(false);
+  }, [pageNumber]);
+  
+  // معالج النقر على الصفحة
+  const handleClick = useCallback((event: React.MouseEvent) => {
+    if (onPageClick) {
+      onPageClick(event);
     }
-  }, [activeVerse, highlightElement, settings.highlightCurrentVerse]);
-
-  // التحقق من خلو الصفحة
-  if (!pageData || pageData.length === 0) {
-    return (
-      <div className="flex items-center justify-center h-[70vh]">
-        <p className="text-amber-600 dark:text-amber-400 text-lg">لا توجد بيانات لهذه الصفحة</p>
-      </div>
-    );
-  }
-
-  // استخراج معلومات السورة للعنوان
-  const firstAyah = pageData[0];
-  const surahName = firstAyah?.sura_name_ar || '';
-
+  }, [onPageClick]);
+  
   return (
-    <div 
-      ref={pageRef}
-      className="mushaf-page relative bg-amber-50 dark:bg-amber-950/20 p-6 rounded-lg shadow-md"
-    >
-      {/* عنوان الصفحة والسورة */}
-      <div className="page-header mb-6 text-center">
-        <h2 className="text-2xl font-bold text-amber-800 dark:text-amber-200">
-          {surahName}
-        </h2>
-        <div className="page-number text-sm text-amber-600 dark:text-amber-400">
-          صفحة {pageNumber} من 604
+    <div className="relative w-full h-full flex justify-center items-center">
+      {loading && !isImageLoaded && (
+        <div className="absolute inset-0 flex items-center justify-center bg-background/80">
+          <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-r-transparent"></div>
         </div>
-      </div>
-
-      {/* عرض السطور والآيات */}
-      <div className="lines-container space-y-6 text-right" dir="rtl">
-        {lines.map(line => (
-          <div key={line.lineNumber} className="line relative">
-            <div 
-              className="line-content"
-              style={{ 
-                fontSize: `${fontSize}px`,
-                fontFamily: '"HafsSmart", "UthmanicHafs", "Amiri Quran", sans-serif',
-                lineHeight: 2.2
-              }}
-            >
-              {line.ayahs.map((ayah: any) => (
-                <span
-                  key={`${ayah.sura_no}-${ayah.aya_no}`}
-                  className={`verse-text inline cursor-pointer
-                    ${(activeVerse?.surah === ayah.sura_no && activeVerse?.verse === ayah.aya_no)
-                      ? 'text-amber-700 dark:text-amber-300 font-bold'
-                      : 'text-gray-900 dark:text-gray-100 hover:text-amber-600 dark:hover:text-amber-400'
-                    }
-                  `}
-                  data-surah={ayah.sura_no}
-                  data-verse={ayah.aya_no}
-                  onClick={() => handleVerseClick(ayah.sura_no, ayah.aya_no)}
-                  onMouseEnter={() => setHoveredVerse({ surah: ayah.sura_no, verse: ayah.aya_no })}
-                  onMouseLeave={() => setHoveredVerse(null)}
-                >
-                  {ayah.aya_text_emlaey + " "}
-                  {hoveredVerse?.surah === ayah.sura_no && hoveredVerse?.verse === ayah.aya_no && (
-                    <motion.span
-                      initial={{ opacity: 0, scale: 0.5 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                      className="verse-number inline-block mr-1 text-amber-500 dark:text-amber-400 text-sm align-super"
-                    >
-                      ﴿{ayah.aya_no}﴾
-                    </motion.span>
-                  )}
-                </span>
-              ))}
-            </div>
+      )}
+      
+      {error && (
+        <div className="absolute inset-0 flex items-center justify-center bg-background/80">
+          <div className="p-4 bg-destructive text-destructive-foreground rounded-md">
+            {error}
           </div>
-        ))}
+        </div>
+      )}
+      
+      <div 
+        className="quran-page max-w-full max-h-full cursor-pointer select-none"
+        onClick={handleClick}
+      >
+        <img
+          src={pagePath}
+          alt={`صفحة ${validatedPageNumber} من المصحف الشريف`}
+          className="max-w-full max-h-full object-contain"
+          onLoad={handleImageLoad}
+          onError={handleImageError}
+        />
       </div>
-
-      {/* شريط أدوات التفاعل مع الصفحة */}
-      <div className="page-actions absolute bottom-4 left-4 flex items-center gap-2">
-        <button 
-          className="p-2 rounded-full bg-amber-100 dark:bg-amber-900/50 text-amber-800 dark:text-amber-200"
-          title="إضافة علامة مرجعية"
-        >
-          <BookmarkPlus size={18} />
-        </button>
-        <button 
-          className="p-2 rounded-full bg-amber-100 dark:bg-amber-900/50 text-amber-800 dark:text-amber-200"
-          title="مشاركة الصفحة"
-        >
-          <Share2 size={18} />
-        </button>
-        <button 
-          className="p-2 rounded-full bg-amber-100 dark:bg-amber-900/50 text-amber-800 dark:text-amber-200"
-          title="معلومات الصفحة"
-        >
-          <Info size={18} />
-        </button>
-      </div>
+      
+      {showControls && isImageLoaded && (
+        <div className="absolute bottom-4 right-4 flex space-x-2">
+          {/* يمكن إضافة أزرار التحكم هنا */}
+        </div>
+      )}
     </div>
   );
-};
-
-export default KingFahdMushafPage;
+}

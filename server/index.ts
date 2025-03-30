@@ -1,58 +1,54 @@
-// Ultra-simplified server that should work with Replit's workflow detection
-import http from "http";
+import express from 'express';
+import { Server } from 'http';
 
-// Create a basic HTTP server with no dependencies
-const server = http.createServer((req, res) => {
-  // CRITICAL: This header is required for Replit to detect that the port is open
-  res.setHeader("X-Replit-Port-Ready", "true");
-  
-  // ROOT ROUTE - Send a basic HTML response
-  if (req.url === '/') {
-    res.writeHead(200, { 'Content-Type': 'text/html' });
-    res.end(`
-      <html>
-        <head>
-          <title>Quran App Server</title>
-          <style>
-            body {
-              font-family: Arial, sans-serif;
-              max-width: 800px;
-              margin: 0 auto;
-              padding: 2rem;
-              direction: rtl;
-              text-align: center;
-            }
-            h1 { color: green; }
-          </style>
-        </head>
-        <body>
-          <h1>✅ الخادم يعمل بنجاح!</h1>
-          <p>هذا خادم بسيط يعمل على المنفذ 5000.</p>
-          <p>وقت الخادم: ${new Date().toISOString()}</p>
-          <hr>
-          <p>بمجرد تجاوز مشكلة اكتشاف تدفق العمل Replit، يمكننا العودة إلى التطبيق الكامل.</p>
-        </body>
-      </html>
-    `);
-    return;
-  }
-  
-  // HEALTH CHECK API
-  if (req.url === '/api/health') {
-    res.writeHead(200, { 'Content-Type': 'application/json' });
-    res.end(JSON.stringify({ status: 'ok', timestamp: new Date().toISOString() }));
-    return;
-  }
-  
-  // 404 FALLBACK
-  res.writeHead(404, { 'Content-Type': 'text/plain' });
-  res.end('Not found');
+const app = express();
+const PORT = Number(process.env.PORT) || 5000;
+
+// Add the critical header
+app.use((req, res, next) => {
+  res.setHeader('X-Replit-Port-Ready', 'true');
+  next();
 });
 
-// Start on port 5000
-const PORT = 5000;
-server.listen(PORT, "0.0.0.0", () => {
-  console.clear();
+// Add route for static files
+app.use(express.static('public'));
+
+// Health check endpoint
+app.get('/api/health', (req, res) => {
+  res.json({ status: 'ok', timestamp: new Date().toISOString() });
+});
+
+// Root route
+app.get('/', (req, res) => {
+  res.send(`
+    <html>
+      <head>
+        <title>Quran App Server</title>
+        <style>
+          body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 2rem;
+            direction: rtl;
+            text-align: center;
+          }
+          h1 { color: green; }
+        </style>
+      </head>
+      <body>
+        <h1>✅ الخادم يعمل بنجاح!</h1>
+        <p>هذا خادم بسيط يعمل على المنفذ ${PORT}.</p>
+        <p>وقت الخادم: ${new Date().toISOString()}</p>
+        <hr>
+        <p>تطبيق القرآن الكريم قيد التطوير</p>
+      </body>
+    </html>
+  `);
+});
+
+// Start the server
+const server = app.listen(PORT, '0.0.0.0', () => {
   console.log(`
 =================================================
 ✅ SERVER RUNNING ON PORT ${PORT}
@@ -61,9 +57,9 @@ server.listen(PORT, "0.0.0.0", () => {
 This server is minimal but should work with Replit's workflow detection.
 Access at http://localhost:${PORT}
   `);
-  
-  // Log that we're alive periodically
-  setInterval(() => {
-    console.log(`Server heartbeat at ${new Date().toISOString()}`);
-  }, 5000);
 });
+
+// Log heartbeat periodically
+setInterval(() => {
+  console.log(`Server heartbeat at ${new Date().toISOString()}`);
+}, 5000);

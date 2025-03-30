@@ -1,18 +1,15 @@
-// use-toast.ts
-import { useState } from "react"
+// مقتبس من shadcn-ui
 
-export type ToastProps = {
-  title?: string
-  description?: string
-  action?: React.ReactNode
-  variant?: "default" | "destructive"
-}
+import { type ToastActionElement, type ToastProps } from "@/components/ui/toast"
+
+const TOAST_LIMIT = 10
+const TOAST_REMOVE_DELAY = 1000
 
 type ToasterToast = ToastProps & {
   id: string
   title?: React.ReactNode
   description?: React.ReactNode
-  action?: React.ReactNode
+  action?: ToastActionElement
 }
 
 const actionTypes = {
@@ -22,8 +19,11 @@ const actionTypes = {
   REMOVE_TOAST: "REMOVE_TOAST",
 } as const
 
+let count = 0
+
 function genId() {
-  return Math.random().toString(36).substring(2, 9)
+  count = (count + 1) % Number.MAX_VALUE
+  return count.toString()
 }
 
 type ActionType = typeof actionTypes
@@ -50,15 +50,33 @@ interface State {
   toasts: ToasterToast[]
 }
 
+const toastTimeouts = new Map<string, ReturnType<typeof setTimeout>>()
+
+const addToRemoveQueue = (toastId: string) => {
+  if (toastTimeouts.has(toastId)) {
+    return
+  }
+
+  const timeout = setTimeout(() => {
+    toastTimeouts.delete(toastId)
+    dispatch({
+      type: "REMOVE_TOAST",
+      toastId: toastId,
+    })
+  }, TOAST_REMOVE_DELAY)
+
+  toastTimeouts.set(toastId, timeout)
+}
+
 export const reducer = (state: State, action: Action): State => {
   switch (action.type) {
-    case actionTypes.ADD_TOAST:
+    case "ADD_TOAST":
       return {
         ...state,
-        toasts: [...state.toasts, action.toast],
+        toasts: [action.toast, ...state.toasts].slice(0, TOAST_LIMIT),
       }
 
-    case actionTypes.UPDATE_TOAST:
+    case "UPDATE_TOAST":
       return {
         ...state,
         toasts: state.toasts.map((t) =>
@@ -66,46 +84,48 @@ export const reducer = (state: State, action: Action): State => {
         ),
       }
 
-    case actionTypes.DISMISS_TOAST: {
+    case "DISMISS_TOAST": {
       const { toastId } = action
 
-      // Dismiss all toasts
+      // يجب إزالة جميع التنبيهات إذا لم يتم تحديد معرف التنبيه
       if (toastId === undefined) {
+        state.toasts.forEach((toast) => {
+          addToRemoveQueue(toast.id)
+        })
         return {
           ...state,
           toasts: state.toasts.map((t) => ({
             ...t,
-            dismissed: true,
+            open: false,
           })),
         }
       }
 
-      // Dismiss specific toast
+      // إزالة تنبيه محدد من المصفوفة
+      addToRemoveQueue(toastId)
       return {
         ...state,
         toasts: state.toasts.map((t) =>
-          t.id === toastId ? { ...t, dismissed: true } : t
+          t.id === toastId
+            ? {
+                ...t,
+                open: false,
+              }
+            : t
         ),
       }
     }
-    
-    case actionTypes.REMOVE_TOAST: {
-      const { toastId } = action
-
-      // Remove all toasts
-      if (toastId === undefined) {
+    case "REMOVE_TOAST":
+      if (action.toastId === undefined) {
         return {
           ...state,
           toasts: [],
         }
       }
-
-      // Remove specific toast
       return {
         ...state,
-        toasts: state.toasts.filter((t) => t.id !== toastId),
+        toasts: state.toasts.filter((t) => t.id !== action.toastId),
       }
-    }
   }
 }
 
@@ -127,18 +147,20 @@ function toast({ ...props }: Toast) {
 
   const update = (props: ToasterToast) =>
     dispatch({
-      type: actionTypes.UPDATE_TOAST,
+      type: "UPDATE_TOAST",
       toast: { ...props, id },
     })
-
-  const dismiss = () => dispatch({ type: actionTypes.DISMISS_TOAST, toastId: id })
+  const dismiss = () => dispatch({ type: "DISMISS_TOAST", toastId: id })
 
   dispatch({
-    type: actionTypes.ADD_TOAST,
+    type: "ADD_TOAST",
     toast: {
       ...props,
       id,
-      action: props.action,
+      open: true,
+      onOpenChange: (open) => {
+        if (!open) dismiss()
+      },
     },
   })
 
@@ -150,13 +172,26 @@ function toast({ ...props }: Toast) {
 }
 
 function useToast() {
-  const [state, setState] = useState<State>(memoryState)
+  const [state, setState] = React.useState<State>(memoryState)
+
+  React.useEffect(() => {
+    listeners.push(setState)
+    return () => {
+      const index = listeners.indexOf(setState)
+      if (index > -1) {
+        listeners.splice(index, 1)
+      }
+    }
+  }, [state])
 
   return {
     ...state,
     toast,
-    dismiss: (toastId?: string) => dispatch({ type: actionTypes.DISMISS_TOAST, toastId }),
+    dismiss: (toastId?: string) => dispatch({ type: "DISMISS_TOAST", toastId }),
   }
 }
 
 export { useToast, toast }
+
+// هذا الاستيراد ضروري لتشغيل هذا الملف في بيئة React
+import * as React from "react"

@@ -1,405 +1,281 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { ChevronRight, ChevronLeft, Settings, Search, Menu, ArrowUpDown, Bookmark } from 'lucide-react';
+import { useState, useCallback, useEffect } from 'react';
+import { useTheme } from '../../components/theme-provider';
+import { SURAH_NAMES, APP_CONFIG } from '../../lib/constants';
+import { useToast } from '../../hooks/use-toast';
 import KingFahdMushafPage from './KingFahdMushafPage';
-import { useApp } from '../../context/AppContext';
-import { useSwipeable } from 'react-swipeable';
+
+// الصفحة الأولى لكل سورة
+const SURAH_FIRST_PAGES: Record<number, number> = {
+  1: 1, 2: 2, 3: 50, 4: 77, 5: 106, 6: 128, 7: 151, 8: 177, 9: 187, 10: 208,
+  11: 221, 12: 235, 13: 249, 14: 255, 15: 262, 16: 267, 17: 282, 18: 293, 19: 305, 20: 312,
+  21: 322, 22: 332, 23: 342, 24: 350, 25: 359, 26: 367, 27: 377, 28: 385, 29: 396, 30: 404,
+  31: 411, 32: 415, 33: 418, 34: 428, 35: 434, 36: 440, 37: 446, 38: 453, 39: 458, 40: 467,
+  41: 477, 42: 483, 43: 489, 44: 496, 45: 499, 46: 502, 47: 507, 48: 511, 49: 515, 50: 518,
+  51: 520, 52: 523, 53: 526, 54: 528, 55: 531, 56: 534, 57: 537, 58: 542, 59: 545, 60: 549,
+  61: 551, 62: 553, 63: 554, 64: 556, 65: 558, 66: 560, 67: 562, 68: 564, 69: 566, 70: 568,
+  71: 570, 72: 572, 73: 574, 74: 575, 75: 577, 76: 578, 77: 580, 78: 582, 79: 583, 80: 585,
+  81: 586, 82: 587, 83: 587, 84: 589, 85: 590, 86: 591, 87: 591, 88: 592, 89: 593, 90: 594,
+  91: 595, 92: 595, 93: 596, 94: 596, 95: 597, 96: 597, 97: 598, 98: 598, 99: 599,
+  100: 599, 101: 600, 102: 600, 103: 601, 104: 601, 105: 601, 106: 602, 107: 602,
+  108: 602, 109: 603, 110: 603, 111: 603, 112: 604, 113: 604, 114: 604
+};
 
 interface KingFahdMushafProps {
   initialPage?: number;
-  onNavigate?: (pageNumber: number) => void;
-  onVerseSelect?: (surahNumber: number, ayahNumber: number) => void;
+  initialSurah?: number;
+  onPageChange?: (page: number) => void;
+  onSurahChange?: (surah: number) => void;
 }
 
-/**
- * مكون المصحف الشريف بتنسيق مجمع الملك فهد
- * يعرض صفحات المصحف ويتيح التنقل بينها
- */
-const KingFahdMushaf: React.FC<KingFahdMushafProps> = ({
-  initialPage = 1,
-  onNavigate,
-  onVerseSelect
-}) => {
-  const { settings, lastRead, updateLastRead } = useApp();
-  const [pageNumber, setPageNumber] = useState(initialPage);
-  const [pageData, setPageData] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [showControls, setShowControls] = useState(false);
-  const [activeVerse, setActiveVerse] = useState<{ surah: number, verse: number } | null>(null);
-  const [inputPage, setInputPage] = useState('');
-  const [showNavigation, setShowNavigation] = useState(false);
-  const controlsTimerRef = useRef<NodeJS.Timeout | null>(null);
+export default function KingFahdMushaf({
+  initialPage = APP_CONFIG.DEFAULT_PAGE,
+  initialSurah = APP_CONFIG.DEFAULT_SURAH,
+  onPageChange,
+  onSurahChange,
+}: KingFahdMushafProps) {
+  const [currentPage, setCurrentPage] = useState<number>(initialPage);
+  const [currentSurah, setCurrentSurah] = useState<number>(initialSurah);
+  const [showControls, setShowControls] = useState<boolean>(false);
+  const [showSidebar, setShowSidebar] = useState<boolean>(false);
+  // استخدام الثيم من سياق التطبيق
+  let theme: 'light' | 'dark' = 'light';
+  try {
+    const themeContext = useTheme();
+    theme = themeContext.theme as 'light' | 'dark';
+  } catch (error) {
+    console.warn("Could not get theme from context, using default light theme");
+  }
+  const { toast } = useToast();
   
-  // تحميل بيانات الصفحة
-  // استخدام مرجع لتخزين بيانات القرآن الكاملة وتخزينها بين عمليات التحميل
-  const quranDataRef = useRef<any[]>([]);
-  
-  // تحميل بيانات الصفحة من بيانات مخزنة مؤقتًا أو من الخادم
+  // تحديث صفحة البداية استنادًا إلى السورة المحددة
   useEffect(() => {
-    const fetchPageData = async () => {
-      setLoading(true);
-      try {
-        // إذا كانت البيانات مخزنة مؤقتًا بالفعل، استخدمها
-        if (quranDataRef.current.length > 0) {
-          console.log('استخدام البيانات المخزنة مؤقتًا، صفحة:', pageNumber);
-          const filteredData = quranDataRef.current.filter((ayah: any) => ayah.page === pageNumber);
-          setPageData(filteredData);
-          
-          // تحديث آخر قراءة إذا كان الإعداد مفعلاً
-          if (settings.autoSaveLastRead && filteredData.length > 0) {
-            const firstAyah = filteredData[0];
-            updateLastRead({
-              surahNumber: firstAyah.sura_no,
-              ayahNumber: firstAyah.aya_no,
-              pageNumber: pageNumber
-            });
-          }
-          
-          setLoading(false);
-          return;
-        }
-        
-        // تحميل البيانات من الخادم
-        console.log('جاري تحميل بيانات القرآن من المسار:', '/assets/quran/hafs_smart_v8.json');
-        
-        // محاولة تحميل البيانات من المسار الصحيح
-        let response;
-        let allData;
-        
-        // جرب المسار الأساسي أولاً
-        try {
-          response = await fetch(`/assets/quran/hafs_smart_v8.json`);
-          if (response.ok) {
-            allData = await response.json();
-          }
-        } catch (e) {
-          console.error('خطأ في تحميل البيانات من المسار الأساسي:', e);
-        }
-        
-        // جرب مسارًا بديلاً إذا فشل المسار الأساسي
-        if (!allData) {
-          try {
-            console.log('محاولة استخدام مسار بديل للبيانات');
-            response = await fetch(`/public/assets/quran/hafs_smart_v8.json`);
-            if (response.ok) {
-              allData = await response.json();
-            }
-          } catch (e) {
-            console.error('خطأ في تحميل البيانات من المسار البديل الأول:', e);
-          }
-        }
-        
-        // جرب مسارًا ثالثًا إذا فشلت المحاولات السابقة
-        if (!allData) {
-          try {
-            console.log('محاولة استخدام مسار بديل ثاني للبيانات');
-            response = await fetch(`/quran/hafs_smart_v8.json`);
-            if (response.ok) {
-              allData = await response.json();
-            }
-          } catch (e) {
-            console.error('خطأ في تحميل البيانات من المسار البديل الثاني:', e);
-          }
-        }
-        
-        // إذا تم الحصول على البيانات
-        if (allData && allData.length > 0) {
-          console.log('تم استلام البيانات بنجاح، عدد الآيات الكلي:', allData.length);
-          
-          // حفظ البيانات في المرجع للاستخدام لاحقًا
-          quranDataRef.current = allData;
-          
-          // تصفية البيانات لصفحة محددة
-          const filteredData = allData.filter((ayah: any) => ayah.page === pageNumber);
-          console.log(`تم تصفية البيانات للصفحة ${pageNumber}، عدد الآيات في الصفحة:`, filteredData.length);
-          
-          setPageData(filteredData);
-          
-          // تحديث آخر قراءة إذا كان الإعداد مفعلاً
-          if (settings.autoSaveLastRead && filteredData.length > 0) {
-            const firstAyah = filteredData[0];
-            console.log('تحديث آخر قراءة:', {
-              surahNumber: firstAyah.sura_no,
-              ayahNumber: firstAyah.aya_no,
-              pageNumber: pageNumber
-            });
-            
-            updateLastRead({
-              surahNumber: firstAyah.sura_no,
-              ayahNumber: firstAyah.aya_no,
-              pageNumber: pageNumber
-            });
-          }
-        } else {
-          console.error('لم يتم العثور على بيانات القرآن من أي مسار');
-          setPageData([]);
-        }
-      } catch (error) {
-        console.error('خطأ في تحميل بيانات الصفحة:', error);
-        setPageData([]);
-      } finally {
-        setLoading(false);
-      }
-    };
-    
-    fetchPageData();
-  }, [pageNumber, settings.autoSaveLastRead, updateLastRead]);
-  
-  // التعامل مع النقر على الآية
-  const handleVerseClick = (surahNumber: number, ayahNumber: number) => {
-    setActiveVerse({ surah: surahNumber, verse: ayahNumber });
-    
-    if (onVerseSelect) {
-      onVerseSelect(surahNumber, ayahNumber);
+    if (initialSurah && SURAH_FIRST_PAGES[initialSurah]) {
+      setCurrentPage(SURAH_FIRST_PAGES[initialSurah]);
     }
-  };
+  }, [initialSurah]);
   
-  // التنقل للصفحة التالية
-  const goToNextPage = () => {
-    if (pageNumber < 604) {
-      setPageNumber(prev => {
-        const newPage = prev + 1;
-        if (onNavigate) onNavigate(newPage);
-        return newPage;
+  // تحديث رقم السورة الحالية استنادًا إلى الصفحة الحالية
+  useEffect(() => {
+    // البحث عن السورة التي تبدأ في هذه الصفحة أو قبلها
+    let foundSurah = 1;
+    for (let i = 1; i <= 114; i++) {
+      if (SURAH_FIRST_PAGES[i] <= currentPage) {
+        foundSurah = i;
+      } else {
+        break;
+      }
+    }
+    
+    if (foundSurah !== currentSurah) {
+      setCurrentSurah(foundSurah);
+      if (onSurahChange) {
+        onSurahChange(foundSurah);
+      }
+    }
+    
+    if (onPageChange) {
+      onPageChange(currentPage);
+    }
+  }, [currentPage, currentSurah, onPageChange, onSurahChange]);
+  
+  // التنقل إلى الصفحة التالية
+  const goToNextPage = useCallback(() => {
+    if (currentPage < APP_CONFIG.TOTAL_PAGES) {
+      setCurrentPage(prevPage => prevPage + 1);
+    }
+  }, [currentPage]);
+  
+  // التنقل إلى الصفحة السابقة
+  const goToPrevPage = useCallback(() => {
+    if (currentPage > 1) {
+      setCurrentPage(prevPage => prevPage - 1);
+    }
+  }, [currentPage]);
+  
+  // التنقل إلى صفحة محددة
+  const goToPage = useCallback((page: number) => {
+    if (page >= 1 && page <= APP_CONFIG.TOTAL_PAGES) {
+      setCurrentPage(page);
+    }
+  }, []);
+  
+  // التنقل إلى سورة محددة
+  const goToSurah = useCallback((surahNumber: number) => {
+    if (surahNumber >= 1 && surahNumber <= 114 && SURAH_FIRST_PAGES[surahNumber]) {
+      setCurrentPage(SURAH_FIRST_PAGES[surahNumber]);
+      setCurrentSurah(surahNumber);
+      toast({
+        title: `سورة ${SURAH_NAMES[surahNumber - 1].name}`,
+        description: "تم الانتقال إلى بداية السورة",
+        duration: 2000,
       });
     }
-  };
+  }, [toast]);
   
-  // التنقل للصفحة السابقة
-  const goToPrevPage = () => {
-    if (pageNumber > 1) {
-      setPageNumber(prev => {
-        const newPage = prev - 1;
-        if (onNavigate) onNavigate(newPage);
-        return newPage;
-      });
-    }
-  };
-  
-  // الانتقال إلى صفحة محددة
-  const goToPage = (page: number) => {
-    if (page >= 1 && page <= 604) {
-      setPageNumber(page);
-      if (onNavigate) onNavigate(page);
-    }
-  };
-  
-  // إعداد إخفاء أزرار التحكم بعد فترة من عدم التفاعل
-  useEffect(() => {
-    if (showControls && controlsTimerRef.current === null) {
-      controlsTimerRef.current = setTimeout(() => {
-        setShowControls(false);
-        controlsTimerRef.current = null;
-      }, 3000);
-    }
-    
-    return () => {
-      if (controlsTimerRef.current) {
-        clearTimeout(controlsTimerRef.current);
-        controlsTimerRef.current = null;
-      }
-    };
-  }, [showControls]);
-  
-  // إعداد التمرير بالسحب للجوال
-  const swipeHandlers = useSwipeable({
-    onSwipedLeft: () => goToNextPage(),
-    onSwipedRight: () => goToPrevPage(),
-    onTap: () => setShowControls(prev => !prev),
-    trackMouse: true
-  });
-  
-  // معالجة تغيير إدخال رقم الصفحة
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value;
-    // السماح فقط بالأرقام
-    if (/^\d*$/.test(value)) {
-      setInputPage(value);
-    }
-  };
-  
-  // معالجة الانتقال إلى الصفحة المدخلة
-  const handleGoToInputPage = () => {
-    const pageNum = parseInt(inputPage);
-    if (!isNaN(pageNum) && pageNum >= 1 && pageNum <= 604) {
-      goToPage(pageNum);
-      setShowNavigation(false);
-    }
-  };
-  
-  // معالجة النقر داخل المصحف
-  const handleMushafClick = () => {
+  // التحكم في عرض أدوات التحكم
+  const toggleControls = useCallback(() => {
     setShowControls(prev => !prev);
-  };
-
+  }, []);
+  
+  // فتح الشريط الجانبي
+  const openSidebar = useCallback(() => {
+    setShowSidebar(true);
+  }, []);
+  
+  // إغلاق الشريط الجانبي
+  const closeSidebar = useCallback(() => {
+    setShowSidebar(false);
+  }, []);
+  
+  // معالج النقر على الصفحة
+  const handlePageClick = useCallback(() => {
+    toggleControls();
+  }, [toggleControls]);
+  
+  // معالج النقر على الآية
+  const handleVerseClick = useCallback((surahNumber: number, verseNumber: number, verseText: string, event: React.MouseEvent) => {
+    // منع انتشار الحدث لتجنب تفعيل toggleControls
+    event.stopPropagation();
+    
+    // هنا يمكن تنفيذ منطق عرض تفسير الآية أو تشغيل الصوت
+    toast({
+      title: `${SURAH_NAMES[surahNumber - 1].name} - الآية ${verseNumber}`,
+      description: verseText.substring(0, 50) + (verseText.length > 50 ? '...' : ''),
+      duration: 3000,
+    });
+  }, [toast]);
+  
   return (
-    <div 
-      className="king-fahd-mushaf relative h-full overflow-hidden"
-      {...swipeHandlers}
-    >
-      {/* صفحة المصحف الحالية */}
-      <div onClick={handleMushafClick} className="page-container min-h-[80vh]">
-        {loading ? (
-          <div className="flex items-center justify-center h-[70vh]">
-            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-amber-500"></div>
+    <div className="relative w-full h-screen bg-background flex flex-col overflow-hidden">
+      {/* شريط التنقل العلوي - يظهر فقط عند تفعيل أدوات التحكم */}
+      {showControls && (
+        <div className="absolute top-0 right-0 left-0 bg-background/90 backdrop-blur z-10 p-2 flex justify-between items-center transition-opacity duration-300">
+          <button onClick={openSidebar} className="p-2 rounded-full hover:bg-muted">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <line x1="3" y1="12" x2="21" y2="12"></line>
+              <line x1="3" y1="6" x2="21" y2="6"></line>
+              <line x1="3" y1="18" x2="21" y2="18"></line>
+            </svg>
+          </button>
+          
+          <div className="flex items-center">
+            <span className="font-semibold">{SURAH_NAMES[currentSurah - 1].name}</span>
+            <span className="mx-2">|</span>
+            <span>الصفحة {currentPage}</span>
           </div>
-        ) : (
-          <KingFahdMushafPage
-            pageNumber={pageNumber}
-            pageData={pageData}
-            onVerseClick={handleVerseClick}
-            activeVerse={activeVerse}
-            fontSize={settings.fontSize}
-          />
-        )}
+          
+          <div className="flex space-x-2">
+            <button 
+              onClick={goToPrevPage} 
+              disabled={currentPage <= 1}
+              className="p-2 rounded-full hover:bg-muted disabled:opacity-50"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="9 18 15 12 9 6"></polyline>
+              </svg>
+            </button>
+            
+            <button 
+              onClick={goToNextPage} 
+              disabled={currentPage >= APP_CONFIG.TOTAL_PAGES}
+              className="p-2 rounded-full hover:bg-muted disabled:opacity-50"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="15 18 9 12 15 6"></polyline>
+              </svg>
+            </button>
+          </div>
+        </div>
+      )}
+      
+      {/* عرض صفحة المصحف */}
+      <div className="flex-1 overflow-hidden" onClick={handlePageClick}>
+        <KingFahdMushafPage 
+          pageNumber={currentPage}
+          onPageClick={handlePageClick}
+          onVerseClick={handleVerseClick}
+        />
       </div>
       
-      {/* أزرار التنقل */}
-      <AnimatePresence>
-        {showControls && (
-          <>
-            {/* زر الصفحة السابقة */}
-            <motion.button
-              className="absolute left-4 top-1/2 transform -translate-y-1/2 p-3 rounded-full bg-white dark:bg-gray-800 shadow-lg text-amber-600 dark:text-amber-400"
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -20 }}
-              onClick={goToPrevPage}
-              disabled={pageNumber <= 1}
-            >
-              <ChevronLeft size={24} />
-            </motion.button>
+      {/* شريط الخيارات السفلي - يظهر فقط عند تفعيل أدوات التحكم */}
+      {showControls && (
+        <div className="absolute bottom-0 right-0 left-0 bg-background/90 backdrop-blur z-10 p-2 flex justify-center items-center space-x-4 transition-opacity duration-300">
+          <button className="p-2 rounded-full hover:bg-muted">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M3 18v-6a9 9 0 0 1 18 0v6"></path>
+              <path d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3zM3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z"></path>
+            </svg>
+          </button>
+          
+          <button className="p-2 rounded-full hover:bg-muted">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path>
+            </svg>
+          </button>
+          
+          <button className="p-2 rounded-full hover:bg-muted">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="18" cy="5" r="3"></circle>
+              <circle cx="6" cy="12" r="3"></circle>
+              <circle cx="18" cy="19" r="3"></circle>
+              <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line>
+              <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line>
+            </svg>
+          </button>
+          
+          <button className="p-2 rounded-full hover:bg-muted">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"></path>
+              <polyline points="16 6 12 2 8 6"></polyline>
+              <line x1="12" y1="2" x2="12" y2="15"></line>
+            </svg>
+          </button>
+        </div>
+      )}
+      
+      {/* شريط التنقل الجانبي */}
+      {/* سيتم استبداله بمكون QuranNavSidebar */}
+      {showSidebar && (
+        <div className="absolute top-0 right-0 left-0 bottom-0 z-50 bg-background/60" onClick={closeSidebar}>
+          <div 
+            className="absolute top-0 right-0 bottom-0 w-64 bg-background shadow-lg overflow-auto"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="p-4 border-b flex justify-between items-center">
+              <h2 className="font-bold">القرآن الكريم</h2>
+              <button onClick={closeSidebar} className="p-2 rounded-full hover:bg-muted">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <line x1="18" y1="6" x2="6" y2="18"></line>
+                  <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+              </button>
+            </div>
             
-            {/* زر الصفحة التالية */}
-            <motion.button
-              className="absolute right-4 top-1/2 transform -translate-y-1/2 p-3 rounded-full bg-white dark:bg-gray-800 shadow-lg text-amber-600 dark:text-amber-400"
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: 20 }}
-              onClick={goToNextPage}
-              disabled={pageNumber >= 604}
-            >
-              <ChevronRight size={24} />
-            </motion.button>
-            
-            {/* شريط الأدوات العلوي */}
-            <motion.div
-              className="absolute top-4 right-4 left-4 flex items-center justify-between"
-              initial={{ opacity: 0, y: -20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
-            >
-              <div className="flex items-center gap-2">
-                <button
-                  className="p-2 rounded-full bg-white dark:bg-gray-800 shadow-lg text-amber-600 dark:text-amber-400"
-                  onClick={() => setShowNavigation(prev => !prev)}
-                >
-                  <Menu size={20} />
-                </button>
-                <button
-                  className="p-2 rounded-full bg-white dark:bg-gray-800 shadow-lg text-amber-600 dark:text-amber-400"
-                >
-                  <Search size={20} />
-                </button>
-              </div>
-              
-              <div className="page-info text-center p-2 rounded-full bg-white dark:bg-gray-800 shadow-lg text-amber-600 dark:text-amber-400">
-                <span>{pageNumber} / 604</span>
-              </div>
-              
-              <div className="flex items-center gap-2">
-                <button
-                  className="p-2 rounded-full bg-white dark:bg-gray-800 shadow-lg text-amber-600 dark:text-amber-400"
-                >
-                  <Bookmark size={20} />
-                </button>
-                <button
-                  className="p-2 rounded-full bg-white dark:bg-gray-800 shadow-lg text-amber-600 dark:text-amber-400"
-                >
-                  <Settings size={20} />
-                </button>
-              </div>
-            </motion.div>
-            
-            {/* قائمة التنقل */}
-            <AnimatePresence>
-              {showNavigation && (
-                <motion.div
-                  className="navigation-panel absolute top-16 left-4 right-4 bg-white dark:bg-gray-800 shadow-lg rounded-lg p-4"
-                  initial={{ opacity: 0, y: -10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -10 }}
-                >
-                  <div className="flex flex-col gap-4">
-                    <div className="flex items-center gap-2 justify-between">
-                      <label className="text-amber-600 dark:text-amber-400">الصفحة:</label>
-                      <div className="flex items-center gap-2">
-                        <input
-                          type="text"
-                          value={inputPage}
-                          onChange={handleInputChange}
-                          className="w-16 p-2 border rounded-lg dark:bg-gray-700 dark:text-white"
-                          placeholder={String(pageNumber)}
-                        />
-                        <button
-                          className="px-3 py-2 bg-amber-500 text-white rounded-lg"
-                          onClick={handleGoToInputPage}
-                        >
-                          انتقال
-                        </button>
-                      </div>
-                    </div>
-                    
-                    <div className="flex items-center gap-2 justify-between">
-                      <label className="text-amber-600 dark:text-amber-400">الجزء:</label>
-                      <div className="flex items-center gap-2">
-                        <select
-                          className="p-2 border rounded-lg dark:bg-gray-700 dark:text-white"
-                          onChange={(e) => {
-                            // تنفيذ المنطق للانتقال إلى الجزء
-                          }}
-                        >
-                          {Array.from({ length: 30 }, (_, i) => (
-                            <option key={i + 1} value={i + 1}>
-                              {i + 1}
-                            </option>
-                          ))}
-                        </select>
-                        <button className="p-2 rounded-full bg-amber-100 dark:bg-amber-800 text-amber-700 dark:text-amber-300">
-                          <ArrowUpDown size={18} />
-                        </button>
-                      </div>
-                    </div>
-                    
-                    <div className="flex items-center gap-2 justify-between">
-                      <label className="text-amber-600 dark:text-amber-400">السورة:</label>
-                      <div className="flex items-center gap-2">
-                        <select
-                          className="p-2 border rounded-lg dark:bg-gray-700 dark:text-white"
-                          onChange={(e) => {
-                            // تنفيذ المنطق للانتقال إلى السورة
-                          }}
-                        >
-                          {/* ستتم إضافة قائمة السور لاحقاً */}
-                          <option value="1">الفاتحة</option>
-                          <option value="2">البقرة</option>
-                          <option value="3">آل عمران</option>
-                          {/* ... المزيد من السور */}
-                        </select>
-                        <button className="p-2 rounded-full bg-amber-100 dark:bg-amber-800 text-amber-700 dark:text-amber-300">
-                          <ArrowUpDown size={18} />
-                        </button>
-                      </div>
-                    </div>
+            <div className="p-4">
+              <h3 className="font-semibold mb-2">السور</h3>
+              <div className="divide-y">
+                {SURAH_NAMES.slice(0, 10).map((surah) => (
+                  <button
+                    key={surah.number}
+                    className="w-full text-right py-2 hover:bg-muted"
+                    onClick={() => {
+                      goToSurah(surah.number);
+                      closeSidebar();
+                    }}
+                  >
+                    {surah.number}. {surah.name}
+                  </button>
+                ))}
+                {SURAH_NAMES.length > 10 && (
+                  <div className="py-2 text-center text-muted-foreground">
+                    ... وغيرها من السور
                   </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </>
-        )}
-      </AnimatePresence>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
-};
-
-export default KingFahdMushaf;
+}
