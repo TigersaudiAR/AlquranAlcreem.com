@@ -1,15 +1,32 @@
-import { Link } from "wouter";
+import { useLocation } from 'wouter';
+import { Button } from '../components/ui/button';
 
-export default function NotFound() {
+/**
+ * صفحة 404 - الصفحة غير موجودة
+ */
+const NotFound = () => {
+  const [, navigate] = useLocation();
+  
   return (
-    <div className="flex flex-col items-center justify-center h-screen">
-      <h1 className="text-4xl font-bold mb-4">404</h1>
-      <p className="text-xl mb-8">الصفحة غير موجودة</p>
-      <Link href="/">
-        <a className="px-4 py-2 bg-primary text-primary-foreground rounded hover:bg-primary/90">
-          العودة إلى الصفحة الرئيسية
-        </a>
-      </Link>
+    <div className="flex flex-col items-center justify-center min-h-screen p-4 text-center">
+      <h1 className="text-6xl font-bold text-primary mb-4">404</h1>
+      <h2 className="text-2xl font-semibold mb-6">الصفحة غير موجودة</h2>
+      
+      <p className="text-gray-600 dark:text-gray-400 max-w-md mb-8">
+        عذراً، لم نتمكن من العثور على الصفحة التي تبحث عنها. قد يكون الرابط خاطئ أو قد تكون الصفحة قد تم نقلها.
+      </p>
+      
+      <div className="flex gap-4">
+        <Button onClick={() => navigate('/')}>
+          العودة للصفحة الرئيسية
+        </Button>
+        
+        <Button variant="outline" onClick={() => window.history.back()}>
+          الرجوع للصفحة السابقة
+        </Button>
+      </div>
     </div>
   );
-}
+};
+
+export default NotFound;

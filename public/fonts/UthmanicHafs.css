@@ -8,19 +8,18 @@
   font-weight: normal;
   font-style: normal;
 }
+
 @font-face {
-  font-family: UthmanicHafs;
+  font-family: 'UthmanicHafs';
   src: url("/fonts/UthmanicHafs1_Ver17.ttf") format("truetype");
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
 }
 
 @font-face {
-  font-family: UthmanTN1B;
+  font-family: 'UthmanTN1B';
   src: url("/fonts/UthmanTN1B.ttf") format("truetype");
-}
-@font-face {
-  font-family: 'UthmanicHafs';
-  src: url('./UthmanicHafs.woff2') format('woff2'),
-       url('./UthmanicHafs.woff') format('woff');
   font-weight: normal;
   font-style: normal;
   font-display: swap;
@@ -28,7 +27,7 @@
 
 @font-face {
   font-family: 'HafsSmart';
-  src: url('/fonts/kfgqpc_hafs_smart_font/HafsSmart_08.ttf') format('truetype');
+  src: url('/assets/quran/fonts/HafsSmart_08.ttf') format('truetype');
   font-weight: normal;
   font-style: normal;
   font-display: swap;

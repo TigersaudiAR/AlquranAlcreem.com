@@ -1,90 +1,169 @@
-import { useState, useEffect, useCallback } from 'react';
-import { APP_CONFIG } from '../../lib/constants';
-import { getPageImagePath } from '../../lib/utils';
+import { useEffect, useRef, useState } from 'react';
+import { cn } from '../../lib/utils';
+import { useApp } from '../../context/AppContext';
 
-interface MushafPageProps {
+interface KingFahdMushafPageProps {
   pageNumber: number;
-  onPageClick?: (event: React.MouseEvent) => void;
-  onVerseClick?: (surahNumber: number, verseNumber: number, verseText: string, event: React.MouseEvent) => void;
-  showControls?: boolean;
-  highlightedVerse?: { surah: number; ayah: number } | null;
+  onVerseSelect?: (surahNumber: number, verseNumber: number, pageNumber: number) => void;
+  highlightedVerse?: { surahNumber: number; verseNumber: number };
+  className?: string;
 }
 
-export default function KingFahdMushafPage({
-  pageNumber = APP_CONFIG.DEFAULT_PAGE,
-  onPageClick,
-  onVerseClick,
-  showControls = false,
-  highlightedVerse = null,
-}: MushafPageProps) {
-  const [loading, setLoading] = useState<boolean>(true);
+/**
+ * مكون عرض صفحة من المصحف الشريف - إصدار مجمع الملك فهد
+ */
+const KingFahdMushafPage = ({
+  pageNumber,
+  onVerseSelect,
+  highlightedVerse,
+  className
+}: KingFahdMushafPageProps) => {
+  const { settings } = useApp();
+  const [pageData, setPageData] = useState<any | null>(null);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [isImageLoaded, setIsImageLoaded] = useState<boolean>(false);
-  
-  // التحقق من صحة رقم الصفحة
-  const validatedPageNumber = Math.max(1, Math.min(pageNumber, APP_CONFIG.TOTAL_PAGES));
-  const pagePath = getPageImagePath(validatedPageNumber);
-  
-  // معالج تحميل الصورة
-  const handleImageLoad = useCallback(() => {
-    setLoading(false);
-    setIsImageLoaded(true);
-  }, []);
-  
-  // معالج خطأ تحميل الصورة
-  const handleImageError = useCallback(() => {
-    setLoading(false);
-    setError('لم نتمكن من تحميل صورة الصفحة');
-  }, []);
-  
-  // إعادة تعيين الحالة عند تغيير رقم الصفحة
+  const imgRef = useRef<HTMLImageElement>(null);
+
+  // تحميل بيانات الصفحة من ملف JSON
   useEffect(() => {
-    setLoading(true);
-    setError(null);
-    setIsImageLoaded(false);
+    const fetchPageData = async () => {
+      try {
+        setLoading(true);
+        
+        // جلب البيانات من ملف JSON في مجلد الأصول العامة
+        const response = await fetch(`/assets/quran/hafs_smart_v8.json`);
+        
+        if (!response.ok) {
+          throw new Error('فشل في تحميل بيانات المصحف');
+        }
+        
+        const allData = await response.json();
+        
+        // تصفية البيانات للحصول على آيات الصفحة المطلوبة فقط
+        const filteredData = allData.filter((item: any) => item.page === pageNumber);
+        
+        setPageData(filteredData);
+        setLoading(false);
+      } catch (err) {
+        console.error('خطأ في تحميل بيانات الصفحة:', err);
+        setError('حدث خطأ أثناء تحميل بيانات الصفحة، يرجى المحاولة مرة أخرى');
+        setLoading(false);
+      }
+    };
+
+    fetchPageData();
   }, [pageNumber]);
-  
-  // معالج النقر على الصفحة
-  const handleClick = useCallback((event: React.MouseEvent) => {
-    if (onPageClick) {
-      onPageClick(event);
+
+  // التعامل مع النقر على الآية
+  const handleVerseClick = (surahNumber: number, verseNumber: number) => {
+    if (onVerseSelect) {
+      onVerseSelect(surahNumber, verseNumber, pageNumber);
     }
-  }, [onPageClick]);
+  };
+
+  if (loading) {
+    return (
+      <div className={cn("min-h-[600px] flex items-center justify-center", className)}>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className={cn("min-h-[600px] flex items-center justify-center", className)}>
+        <div className="text-center text-red-500">
+          <div className="text-2xl mb-2">⚠️</div>
+          <p>{error}</p>
+        </div>
+      </div>
+    );
+  }
+
+  // تقسيم الآيات حسب السطور للعرض بشكل صحيح
+  const groupedByLine: Record<number, any[]> = {};
   
+  if (pageData) {
+    pageData.forEach((verse: any) => {
+      for (let line = verse.line_start; line <= verse.line_end; line++) {
+        if (!groupedByLine[line]) {
+          groupedByLine[line] = [];
+        }
+        
+        groupedByLine[line].push(verse);
+      }
+    });
+  }
+
+  // عرض الصفحة باستخدام بيانات الآيات المجمعة
   return (
-    <div className="relative w-full h-full flex justify-center items-center">
-      {loading && !isImageLoaded && (
-        <div className="absolute inset-0 flex items-center justify-center bg-background/80">
-          <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-r-transparent"></div>
-        </div>
+    <div 
+      className={cn(
+        "quran-page relative bg-white max-w-4xl mx-auto p-8 rounded-lg shadow-md",
+        "font-quran", // استخدام خط المصحف الخاص
+        className
       )}
-      
-      {error && (
-        <div className="absolute inset-0 flex items-center justify-center bg-background/80">
-          <div className="p-4 bg-destructive text-destructive-foreground rounded-md">
-            {error}
-          </div>
+      dir="rtl"
+    >
+      <div className="page-header flex justify-between items-center mb-6 border-b pb-2">
+        <div className="page-number text-sm">
+          صفحة {pageNumber} من 604
         </div>
-      )}
-      
-      <div 
-        className="quran-page max-w-full max-h-full cursor-pointer select-none"
-        onClick={handleClick}
-      >
-        <img
-          src={pagePath}
-          alt={`صفحة ${validatedPageNumber} من المصحف الشريف`}
-          className="max-w-full max-h-full object-contain"
-          onLoad={handleImageLoad}
-          onError={handleImageError}
-        />
+        <div className="surah-name text-lg font-bold">
+          {pageData && pageData.length > 0 && pageData[0].sura_name_ar}
+        </div>
       </div>
       
-      {showControls && isImageLoaded && (
-        <div className="absolute bottom-4 right-4 flex space-x-2">
-          {/* يمكن إضافة أزرار التحكم هنا */}
+      <div className="page-content">
+        {Object.keys(groupedByLine).map((lineNumber) => {
+          const verses = groupedByLine[Number(lineNumber)];
+          
+          return (
+            <div key={lineNumber} className="line flex justify-center my-4">
+              {verses.map((verse: any) => {
+                const isHighlighted = 
+                  highlightedVerse && 
+                  highlightedVerse.surahNumber === verse.sura_no && 
+                  highlightedVerse.verseNumber === verse.aya_no;
+                
+                return (
+                  <span 
+                    key={`${verse.sura_no}-${verse.aya_no}-${lineNumber}`}
+                    className={cn(
+                      "verse px-1 cursor-pointer text-right", 
+                      {
+                        "bg-yellow-100 rounded": isHighlighted,
+                        "hover:bg-gray-100": !isHighlighted
+                      },
+                      `font-size-${settings.fontSize || 20}`
+                    )}
+                    onClick={() => handleVerseClick(verse.sura_no, verse.aya_no)}
+                    data-surah={verse.sura_no}
+                    data-verse={verse.aya_no}
+                    data-page={verse.page}
+                  >
+                    {verse.aya_text_emlaey}
+                    <span className="verse-number inline-block mx-1 text-xs bg-gray-200 rounded-full w-5 h-5 leading-5 text-center">
+                      {verse.aya_no}
+                    </span>
+                  </span>
+                );
+              })}
+            </div>
+          );
+        })}
+      </div>
+      
+      <div className="page-footer flex justify-between items-center mt-6 border-t pt-2 text-xs text-gray-500">
+        <div>
+          مصحف المدينة المنورة - مجمع الملك فهد لطباعة المصحف الشريف
         </div>
-      )}
+        <div>
+          جزء {pageData && pageData.length > 0 ? pageData[0].jozz : ''}
+        </div>
+      </div>
     </div>
   );
-}
+};
+
+export default KingFahdMushafPage;

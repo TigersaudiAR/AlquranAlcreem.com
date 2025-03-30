@@ -1,234 +1,275 @@
-
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 
 /**
- * Hook for basic Quran audio functionality with a simple reciter ID
+ * خطاف أساسي لتشغيل صوت القرآن مع معرف القارئ البسيط
  */
 export function useQuranAudioBasic(reciterId: string) {
   const [isPlaying, setIsPlaying] = useState(false);
-  const [currentAudio, setCurrentAudio] = useState<HTMLAudioElement | null>(null);
-  const [currentSurah, setCurrentSurah] = useState<number | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  // Clean up audio when component unmounts
+  const [currentVerse, setCurrentVerse] = useState<{ surahNumber: number; verseNumber: number } | null>(null);
+  
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  
   useEffect(() => {
+    // إنشاء عنصر الصوت
+    audioRef.current = new Audio();
+    
+    // تنظيف المصادر عند تفكيك المكون
     return () => {
-      if (currentAudio) {
-        currentAudio.pause();
-        currentAudio.src = '';
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current.src = '';
       }
     };
-  }, [currentAudio]);
-
-  const playAudio = (surahNumber: number) => {
+  }, []);
+  
+  // التنقل بين حالات التشغيل والإيقاف
+  const togglePlay = useCallback(() => {
+    if (isPlaying) {
+      pauseAudio();
+    } else {
+      if (currentVerse) {
+        playVerse(currentVerse.surahNumber, currentVerse.verseNumber);
+      }
+    }
+  }, [isPlaying, currentVerse]);
+  
+  // تشغيل الصوت لآية محددة
+  const playVerse = useCallback((surahNumber: number, verseNumber: number) => {
+    if (!audioRef.current) return;
+    
     setIsLoading(true);
     setError(null);
-
-    // Stop current audio if playing
-    if (currentAudio) {
-      currentAudio.pause();
-      currentAudio.src = '';
-    }
-
-    // Format surah number with leading zeros
-    const formattedSurah = surahNumber.toString().padStart(3, '0');
-    const audioUrl = `https://download.quranicaudio.com/quran/${reciterId}/${formattedSurah}.mp3`;
-
-    const audio = new Audio(audioUrl);
-    audio.onloadeddata = () => {
-      setIsLoading(false);
-      audio.play().catch(err => {
-        console.error('Error playing audio:', err);
-        setError('فشل في تشغيل الصوت. يرجى المحاولة مرة أخرى.');
+    
+    try {
+      // إيقاف أي تشغيل حالي
+      audioRef.current.pause();
+      
+      // تحديث الآية الحالية
+      setCurrentVerse({ surahNumber, verseNumber });
+      
+      // تكوين رابط الصوت - هذا مثال ويجب تعديله حسب API المستخدمة
+      // مثال: https://api.alquran.cloud/v1/surah/[surahNumber]/[reciterId]
+      const audioUrl = `https://verse.mp3.cdn.qurancdn.com/${reciterId}/${surahNumber}/${verseNumber}.mp3`;
+      
+      audioRef.current.src = audioUrl;
+      
+      // عند جاهزية الملف الصوتي
+      audioRef.current.oncanplaythrough = () => {
         setIsLoading(false);
-      });
-    };
-
-    audio.onerror = () => {
-      setError('فشل في تحميل الصوت. يرجى التحقق من اتصالك بالإنترنت والمحاولة مرة أخرى.');
+        audioRef.current?.play();
+        setIsPlaying(true);
+      };
+      
+      // في حالة الخطأ
+      audioRef.current.onerror = () => {
+        setError('حدث خطأ أثناء تحميل ملف الصوت');
+        setIsLoading(false);
+        setIsPlaying(false);
+      };
+      
+      // عند انتهاء التشغيل
+      audioRef.current.onended = () => {
+        setIsPlaying(false);
+        
+        // انتقل تلقائيًا إلى الآية التالية (اختياري)
+        // playVerse(surahNumber, verseNumber + 1);
+      };
+    } catch (err) {
+      console.error('خطأ في تشغيل الصوت:', err);
+      setError('حدث خطأ أثناء محاولة تشغيل الصوت');
       setIsLoading(false);
-    };
-
-    audio.onplaying = () => {
+      setIsPlaying(false);
+    }
+  }, [reciterId]);
+  
+  // إيقاف مؤقت للصوت
+  const pauseAudio = useCallback(() => {
+    if (audioRef.current) {
+      audioRef.current.pause();
+      setIsPlaying(false);
+    }
+  }, []);
+  
+  // استئناف التشغيل
+  const resumeAudio = useCallback(() => {
+    if (audioRef.current) {
+      audioRef.current.play();
       setIsPlaying(true);
-      setCurrentSurah(surahNumber);
-    };
-
-    audio.onpause = () => {
+    }
+  }, []);
+  
+  // إيقاف كامل للصوت
+  const stopAudio = useCallback(() => {
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current.currentTime = 0;
       setIsPlaying(false);
-    };
-
-    audio.onended = () => {
-      setIsPlaying(false);
-      setCurrentSurah(null);
-    };
-
-    setCurrentAudio(audio);
-  };
-
-  const pauseAudio = () => {
-    if (currentAudio) {
-      currentAudio.pause();
     }
-  };
-
-  const resumeAudio = () => {
-    if (currentAudio) {
-      currentAudio.play().catch(err => {
-        console.error('Error resuming audio:', err);
-        setError('فشل في استئناف التشغيل.');
-      });
-    }
-  };
-
-  const stopAudio = () => {
-    if (currentAudio) {
-      currentAudio.pause();
-      currentAudio.currentTime = 0;
-      setCurrentSurah(null);
-    }
-  };
-
+  }, []);
+  
   return {
     isPlaying,
     isLoading,
     error,
-    currentSurah,
-    playAudio,
+    currentVerse,
+    playVerse,
     pauseAudio,
     resumeAudio,
-    stopAudio
+    stopAudio,
+    togglePlay
   };
 }
 
 /**
- * Enhanced hook for Quran audio with advanced features
+ * خطاف متقدم لتشغيل القرآن مع ميزات إضافية
  */
 export const useQuranAudio = (surahNumber: number, reciter: string) => {
-  const audioRef = useRef<HTMLAudioElement | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [progress, setProgress] = useState(0);
-  const [duration, setDuration] = useState(0);
-  const [currentTime, setCurrentTime] = useState(0);
+  const [currentAyah, setCurrentAyah] = useState(1);
+  const [totalAyahs, setTotalAyahs] = useState(0);
+  const [autoPlay, setAutoPlay] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [volume, setVolume] = useState(1);
-
+  
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  
+  // تهيئة مشغل الصوت
   useEffect(() => {
-    const audio = new Audio();
-    audioRef.current = audio;
-
-    const handleLoadedMetadata = () => {
-      setDuration(audio.duration);
-      setIsLoading(false);
+    audioRef.current = new Audio();
+    
+    // جلب عدد الآيات في السورة المحددة
+    const fetchSurahInfo = async () => {
+      try {
+        // هنا يمكن جلب معلومات السورة من API أو استخدام البيانات المحلية
+        // كمثال بسيط، نستخدم قيمة ثابتة
+        const total = surahNumber === 1 ? 7 : 286; // مثال بسيط
+        setTotalAyahs(total);
+      } catch (err) {
+        console.error('خطأ في جلب معلومات السورة:', err);
+      }
     };
-
-    const handleTimeUpdate = () => {
-      setCurrentTime(audio.currentTime);
-      setProgress((audio.currentTime / audio.duration) * 100);
-    };
-
-    const handleEnded = () => {
-      setIsPlaying(false);
-      setProgress(0);
-      setCurrentTime(0);
-    };
-
-    const handleError = () => {
-      setError('حدث خطأ أثناء تحميل الصوت');
-      setIsLoading(false);
-    };
-
-    const handlePlaying = () => {
-      setIsPlaying(true);
-      setIsLoading(false);
-    };
-
-    audio.addEventListener('loadedmetadata', handleLoadedMetadata);
-    audio.addEventListener('timeupdate', handleTimeUpdate);
-    audio.addEventListener('ended', handleEnded);
-    audio.addEventListener('error', handleError);
-    audio.addEventListener('playing', handlePlaying);
-
+    
+    fetchSurahInfo();
+    
     return () => {
-      audio.pause();
-      audio.src = '';
-      audio.removeEventListener('loadedmetadata', handleLoadedMetadata);
-      audio.removeEventListener('timeupdate', handleTimeUpdate);
-      audio.removeEventListener('ended', handleEnded);
-      audio.removeEventListener('error', handleError);
-      audio.removeEventListener('playing', handlePlaying);
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current.src = '';
+      }
     };
-  }, []);
-
-  useEffect(() => {
-    loadAudio();
-  }, [surahNumber, reciter]);
-
-  useEffect(() => {
-    if (audioRef.current) {
-      audioRef.current.volume = volume;
-    }
-  }, [volume]);
-
-  const loadAudio = () => {
-    if (!audioRef.current) return;
+  }, [surahNumber]);
+  
+  // تشغيل آية محددة
+  const playAyah = useCallback((ayahNumber: number) => {
+    if (!audioRef.current || ayahNumber > totalAyahs) return;
     
     setIsLoading(true);
     setError(null);
     
-    const formattedSurah = surahNumber.toString().padStart(3, '0');
-    const audioUrl = `https://download.quranicaudio.com/quran/${reciter}/${formattedSurah}.mp3`;
-    
-    audioRef.current.src = audioUrl;
-    audioRef.current.load();
-  };
-
-  const togglePlay = () => {
-    if (!audioRef.current) return;
-    
-    if (isPlaying) {
+    try {
+      // إيقاف أي تشغيل حالي
+      audioRef.current.pause();
+      
+      setCurrentAyah(ayahNumber);
+      
+      // تكوين رابط الصوت - هذا مثال ويجب تعديله حسب API المستخدمة
+      const audioUrl = `https://verse.mp3.cdn.qurancdn.com/${reciter}/${surahNumber}/${ayahNumber}.mp3`;
+      
+      audioRef.current.src = audioUrl;
+      
+      audioRef.current.oncanplaythrough = () => {
+        setIsLoading(false);
+        audioRef.current?.play();
+        setIsPlaying(true);
+      };
+      
+      audioRef.current.onerror = () => {
+        setError('حدث خطأ أثناء تحميل ملف الصوت');
+        setIsLoading(false);
+        setIsPlaying(false);
+      };
+      
+      audioRef.current.onended = () => {
+        setIsPlaying(false);
+        
+        // التشغيل التلقائي للآية التالية
+        if (autoPlay && ayahNumber < totalAyahs) {
+          playAyah(ayahNumber + 1);
+        }
+      };
+    } catch (err) {
+      console.error('خطأ في تشغيل الصوت:', err);
+      setError('حدث خطأ أثناء محاولة تشغيل الصوت');
+      setIsLoading(false);
+      setIsPlaying(false);
+    }
+  }, [surahNumber, reciter, totalAyahs, autoPlay]);
+  
+  // تشغيل السورة كاملة
+  const playFullSurah = useCallback(() => {
+    playAyah(1);
+  }, [playAyah]);
+  
+  // الانتقال إلى الآية التالية
+  const playNextAyah = useCallback(() => {
+    if (currentAyah < totalAyahs) {
+      playAyah(currentAyah + 1);
+    }
+  }, [currentAyah, totalAyahs, playAyah]);
+  
+  // الانتقال إلى الآية السابقة
+  const playPreviousAyah = useCallback(() => {
+    if (currentAyah > 1) {
+      playAyah(currentAyah - 1);
+    }
+  }, [currentAyah, playAyah]);
+  
+  // إيقاف مؤقت للصوت
+  const pauseAudio = useCallback(() => {
+    if (audioRef.current) {
       audioRef.current.pause();
       setIsPlaying(false);
-    } else {
-      audioRef.current.play().catch(error => {
-        console.error('Error playing audio:', error);
-        setError('فشل في تشغيل الصوت');
-      });
     }
-  };
-
-  const seek = (newTime: number) => {
-    if (!audioRef.current) return;
-    
-    audioRef.current.currentTime = newTime;
-    setCurrentTime(newTime);
-    setProgress((newTime / duration) * 100);
-  };
-
-  const seekByPercentage = (percentage: number) => {
-    if (!audioRef.current || !duration) return;
-    
-    const newTime = (percentage / 100) * duration;
-    seek(newTime);
-  };
-
-  const changeVolume = (newVolume: number) => {
-    setVolume(newVolume);
-  };
-
+  }, []);
+  
+  // استئناف التشغيل
+  const resumeAudio = useCallback(() => {
+    if (audioRef.current) {
+      audioRef.current.play();
+      setIsPlaying(true);
+    }
+  }, []);
+  
+  // التنقل بين التشغيل والإيقاف
+  const togglePlay = useCallback(() => {
+    if (isPlaying) {
+      pauseAudio();
+    } else {
+      resumeAudio();
+    }
+  }, [isPlaying, pauseAudio, resumeAudio]);
+  
+  // تبديل التشغيل التلقائي
+  const toggleAutoPlay = useCallback(() => {
+    setAutoPlay(prev => !prev);
+  }, []);
+  
   return {
     isPlaying,
     isLoading,
-    progress,
-    duration,
-    currentTime,
     error,
-    volume,
+    currentAyah,
+    totalAyahs,
+    autoPlay,
+    playAyah,
+    playFullSurah,
+    playNextAyah,
+    playPreviousAyah,
+    pauseAudio,
+    resumeAudio,
     togglePlay,
-    seek,
-    seekByPercentage,
-    changeVolume
+    toggleAutoPlay
   };
 };
