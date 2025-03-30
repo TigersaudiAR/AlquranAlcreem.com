@@ -7,6 +7,9 @@ import { APP_CONFIG } from '../lib/constants';
 /**
  * صفحة القرآن الكريم الرئيسية
  * تعرض المصحف بتنسيق مجمع الملك فهد
+ * 
+ * تخطيط خاص: لاحظ أننا لا نستخدم MainLayout هنا للحصول على واجهة كاملة الشاشة للمصحف
+ * مع إظهار أدوات التحكم فقط عند التفاعل مع الصفحة.
  */
 const Quran = () => {
   const params = useParams();
@@ -17,6 +20,8 @@ const Quran = () => {
   
   // تحديد الصفحة الأولية استنادًا إلى المعلمات أو آخر قراءة
   useEffect(() => {
+    console.log('تحديث معلمات القرآن:', { params, lastRead });
+    
     // نستخدم متغيراً مؤقتاً لتخزين الصفحة/السورة/الآية لمنع التحديثات المتكررة
     let newPage = APP_CONFIG.DEFAULT_PAGE;
     let newSurah = undefined;
@@ -47,6 +52,8 @@ const Quran = () => {
     
     // نقوم بالتحديث فقط إذا كانت القيم الجديدة مختلفة
     if (shouldUpdate) {
+      console.log('تحديث قيم القرآن:', { newPage, newSurah, newAyah });
+      
       if (newSurah !== undefined) {
         setInitialSurah(newSurah);
         if (newAyah !== undefined) {
@@ -58,6 +65,7 @@ const Quran = () => {
     }
   }, [params.pageNumber, params.surahNumber, params.ayahNumber, lastRead, settings.autoSaveLastRead, initialPage, initialSurah, initialAyah]);
   
+  // نعرض المصحف مباشرة بدون تخطيط إضافي للحصول على تجربة غامرة كاملة الشاشة
   return (
     <KingFahdMushaf 
       initialPage={initialPage}

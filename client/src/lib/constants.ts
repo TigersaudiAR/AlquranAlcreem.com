@@ -33,16 +33,16 @@ export const RECITERS = [
 
 // قائمة اللغات المدعومة للترجمة
 export const LANGUAGES = [
-  { id: 'ar', name: 'العربية' },
-  { id: 'en', name: 'الإنجليزية' },
-  { id: 'fr', name: 'الفرنسية' },
-  { id: 'tr', name: 'التركية' },
-  { id: 'ur', name: 'الأردية' },
-  { id: 'id', name: 'الإندونيسية' },
-  { id: 'ru', name: 'الروسية' },
-  { id: 'es', name: 'الإسبانية' },
-  { id: 'bn', name: 'البنغالية' },
-  { id: 'zh', name: 'الصينية' },
+  { id: 'ar', name: 'العربية', english_name: 'Arabic' },
+  { id: 'en', name: 'الإنجليزية', english_name: 'English' },
+  { id: 'fr', name: 'الفرنسية', english_name: 'French' },
+  { id: 'tr', name: 'التركية', english_name: 'Turkish' },
+  { id: 'ur', name: 'الأردية', english_name: 'Urdu' },
+  { id: 'id', name: 'الإندونيسية', english_name: 'Indonesian' },
+  { id: 'ru', name: 'الروسية', english_name: 'Russian' },
+  { id: 'es', name: 'الإسبانية', english_name: 'Spanish' },
+  { id: 'bn', name: 'البنغالية', english_name: 'Bengali' },
+  { id: 'zh', name: 'الصينية', english_name: 'Chinese' },
 ];
 
 // قائمة كتب الحديث
