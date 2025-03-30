@@ -5,7 +5,7 @@
 /* إضافة دعم اللغة العربية عبر خط حفص سمارت */
 @font-face {
   font-family: 'HafsSmart';
-  src: url('/assets/fonts/HafsSmart_08.ttf') format('truetype');
+  src: url('/assets/quran/fonts/HafsSmart_08.ttf') format('truetype');
   font-weight: normal;
   font-style: normal;
   font-display: swap;

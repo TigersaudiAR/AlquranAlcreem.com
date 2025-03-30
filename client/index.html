@@ -13,6 +13,32 @@
       href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css"
     />
     <link rel="stylesheet" href="/fonts/UthmanicHafs.css" />
+    <!-- استخدام نسخة احتياطية مباشرة في حالة عدم تحميل الملف الرئيسي -->
+    <style>
+      @font-face {
+        font-family: 'UthmanicHafs';
+        src: url('/fonts/UthmanicHafs1_Ver17.ttf') format('truetype');
+        font-weight: normal;
+        font-style: normal;
+        font-display: swap;
+      }
+      
+      @font-face {
+        font-family: 'UthmanTN1B';
+        src: url('/fonts/UthmanTN1B.ttf') format('truetype');
+        font-weight: normal;
+        font-style: normal;
+        font-display: swap;
+      }
+      
+      @font-face {
+        font-family: 'HafsSmart';
+        src: url('/assets/quran/fonts/HafsSmart_08.ttf') format('truetype');
+        font-weight: normal;
+        font-style: normal;
+        font-display: swap;
+      }
+    </style>
     <!-- إضافة سمة البيانات لاسم موضوع التطبيق -->
     <meta name="theme-color" content="#ffffff" />
     <meta name="color-scheme" content="light dark" />

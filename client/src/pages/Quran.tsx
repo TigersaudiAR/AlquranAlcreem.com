@@ -17,27 +17,46 @@ const Quran = () => {
   
   // تحديد الصفحة الأولية استنادًا إلى المعلمات أو آخر قراءة
   useEffect(() => {
+    // نستخدم متغيراً مؤقتاً لتخزين الصفحة/السورة/الآية لمنع التحديثات المتكررة
+    let newPage = APP_CONFIG.DEFAULT_PAGE;
+    let newSurah = undefined;
+    let newAyah = undefined;
+    let shouldUpdate = false;
+    
     // إذا كان هناك رقم صفحة في المعلمات
     if (params.pageNumber) {
-      const pageNum = parseInt(params.pageNumber, 10);
-      setInitialPage(pageNum);
+      newPage = parseInt(params.pageNumber, 10);
+      shouldUpdate = newPage !== initialPage;
     } 
     // إذا كان هناك رقم سورة في المعلمات
     else if (params.surahNumber) {
-      const surahNum = parseInt(params.surahNumber, 10);
-      setInitialSurah(surahNum);
+      newSurah = parseInt(params.surahNumber, 10);
+      shouldUpdate = newSurah !== initialSurah;
       
       // إذا كان هناك رقم آية أيضًا
       if (params.ayahNumber) {
-        const ayahNum = parseInt(params.ayahNumber, 10);
-        setInitialAyah(ayahNum);
+        newAyah = parseInt(params.ayahNumber, 10);
+        shouldUpdate = shouldUpdate || newAyah !== initialAyah;
       }
     } 
     // إذا كان هناك آخر قراءة محفوظة وتم تفعيل خيار "حفظ آخر قراءة"
     else if (lastRead && settings.autoSaveLastRead) {
-      setInitialPage(lastRead.pageNumber);
+      newPage = lastRead.pageNumber;
+      shouldUpdate = newPage !== initialPage;
     }
-  }, [params.pageNumber, params.surahNumber, params.ayahNumber, lastRead, settings.autoSaveLastRead]);
+    
+    // نقوم بالتحديث فقط إذا كانت القيم الجديدة مختلفة
+    if (shouldUpdate) {
+      if (newSurah !== undefined) {
+        setInitialSurah(newSurah);
+        if (newAyah !== undefined) {
+          setInitialAyah(newAyah);
+        }
+      } else {
+        setInitialPage(newPage);
+      }
+    }
+  }, [params.pageNumber, params.surahNumber, params.ayahNumber, lastRead, settings.autoSaveLastRead, initialPage, initialSurah, initialAyah]);
   
   return (
     <KingFahdMushaf 

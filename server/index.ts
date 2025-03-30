@@ -2,13 +2,18 @@ import express from 'express';
 import { createServer } from 'http';
 import { registerRoutes } from './routes';
 import { setupVite } from './vite';
+import path from 'path';
 
 // Create Express application with JSON support
 const app = express();
 app.use(express.json());
 
-// Define port - use 4000 for Cloud Run as it's mapped to external port 80
-const PORT = Number(process.env.PORT) || 4000;
+// Serve static files from the public directory
+app.use('/assets', express.static(path.join(process.cwd(), 'public/assets')));
+app.use('/fonts', express.static(path.join(process.cwd(), 'public/fonts')));
+
+// Define port - use 5000 for Replit
+const PORT = Number(process.env.PORT) || 5000;
 
 // Set up the header for all responses
 app.use((req, res, next) => {
@@ -16,8 +21,8 @@ app.use((req, res, next) => {
   next();
 });
 
-// Respond immediately to root requests to show the server is running
-app.get('/', (req, res) => {
+// مسار الـ API الرئيسي - سيتم التعامل مع مسار الصفحة الرئيسية من قِبل Vite
+app.get('/api', (req, res) => {
   res.send('Quran Application API is running');
 });
 
@@ -40,8 +45,12 @@ server.listen(PORT, '0.0.0.0', () => {
   console.log(`✅ SERVER RUNNING ON PORT ${PORT}`);
   console.log(`🚀 Server available at http://localhost:${PORT}`);
 
-  // Log port ready indicator
+  // Log port ready indicator for Replit
+  console.log('X-Replit-Port-Ready: true');
   console.log('X-Replit-Port-Ready header added to all responses');
+  
+  // Additional logging to indicate Replit port-ready status
+  console.log(`Server is listening on port ${PORT} and ready for connections`);
 });
 
 // Log heartbeat every 3 seconds to keep console active

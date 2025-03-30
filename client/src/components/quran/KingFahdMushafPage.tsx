@@ -30,14 +30,20 @@ const KingFahdMushafPage = ({
       try {
         setLoading(true);
         
+        console.log('بدء تحميل بيانات القرآن من:', `${window.location.origin}/assets/quran/hafs_smart_v8.json`);
+        
         // جلب البيانات من ملف JSON في مجلد الأصول العامة
-        const response = await fetch(`/assets/quran/hafs_smart_v8.json`);
+        // استخدام مسار مطلق لتجنب مشاكل التوجيه
+        const response = await fetch(`${window.location.origin}/assets/quran/hafs_smart_v8.json`);
         
         if (!response.ok) {
+          console.error('فشل في تحميل الملف:', response.status, response.statusText);
           throw new Error('فشل في تحميل بيانات المصحف');
         }
         
+        console.log('تم تحميل البيانات بنجاح، جارٍ تحليل JSON...');
         const allData = await response.json();
+        console.log('تم تحليل البيانات، عدد السجلات:', allData.length);
         
         // تصفية البيانات للحصول على آيات الصفحة المطلوبة فقط
         const filteredData = allData.filter((item: any) => item.page === pageNumber);

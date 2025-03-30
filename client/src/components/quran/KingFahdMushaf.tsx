@@ -65,31 +65,41 @@ const KingFahdMushaf = ({
     
     // إذا كان هناك معلمات من الرابط، استخدمها
     if (params.pageNumber) {
-      targetPage = parseInt(params.pageNumber, 10);
+      const pageNum = parseInt(params.pageNumber, 10);
+      // نتحقق من صحة الرقم
+      if (!isNaN(pageNum)) {
+        targetPage = pageNum;
+      }
     } else if (params.surahNumber) {
       // إذا كان هناك رقم سورة، ابحث عن الصفحة المناسبة
       const surahNumber = parseInt(params.surahNumber, 10);
       
-      // بحث في قائمة السور عن الصفحة المناسبة (نحتاج لإضافة هذه المعلومات في SURAH_NAMES)
-      // هذا تنفيذ مبسط، قد نحتاج لتحسينه لاحقاً بمعلومات أكثر دقة
-      targetPage = surahNumber * 3; // تقدير مؤقت
+      // نتحقق من صحة الرقم
+      if (!isNaN(surahNumber) && surahNumber >= 1 && surahNumber <= 114) {
+        // نستخدم تقدير مؤقت لأرقام الصفحات
+        // في التطبيق النهائي، يجب أن تكون هذه البيانات دقيقة من مصدر موثوق
+        targetPage = Math.min(surahNumber * 5, APP_CONFIG.TOTAL_PAGES);
+      }
     }
     
     // التأكد من أن رقم الصفحة ضمن النطاق الصحيح
     if (targetPage < 1) targetPage = 1;
     if (targetPage > APP_CONFIG.TOTAL_PAGES) targetPage = APP_CONFIG.TOTAL_PAGES;
     
-    setCurrentPage(targetPage);
-    
-    // تحديث آخر صفحة مقروءة
-    if (settings.autoSaveLastRead) {
-      updateLastRead({
-        surahNumber: 1, // سيتم تحديثه عند معرفة رقم السورة بشكل صحيح
-        ayahNumber: 1, // سيتم تحديثه عند معرفة رقم الآية بشكل صحيح
-        pageNumber: targetPage
-      });
+    // نمنع الحلقة اللانهائية من خلال التحقق من تغير الصفحة فعلياً
+    if (currentPage !== targetPage) {
+      setCurrentPage(targetPage);
+      
+      // تحديث آخر صفحة مقروءة
+      if (settings.autoSaveLastRead) {
+        updateLastRead({
+          surahNumber: 1, // سيتم تحديثه عند معرفة رقم السورة بشكل صحيح
+          ayahNumber: 1, // سيتم تحديثه عند معرفة رقم الآية بشكل صحيح
+          pageNumber: targetPage
+        });
+      }
     }
-  }, [params.pageNumber, params.surahNumber, initialPage, settings.autoSaveLastRead, updateLastRead]);
+  }, [params.pageNumber, params.surahNumber, initialPage, settings.autoSaveLastRead, updateLastRead, currentPage]);
   
   // التنقل إلى الصفحة التالية
   const goToNextPage = () => {
