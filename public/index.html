@@ -1,184 +1,113 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>القرآن الكريم</title>
-    <style>
-        @font-face {
-            font-family: 'HafsSmart';
-            src: url('/assets/quran/fonts/HafsSmart_08.ttf') format('truetype');
-            font-weight: normal;
-            font-style: normal;
-            font-display: swap;
-        }
-
-        body {
-            font-family: 'Tahoma', 'Arial', sans-serif;
-            background-color: #f8f8f8;
-            margin: 0;
-            padding: 0;
-            color: #333;
-            text-align: center;
-        }
-
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 2rem;
-        }
-
-        header {
-            margin-bottom: 2rem;
-        }
-
-        h1 {
-            color: #b58900;
-            font-size: 2.5rem;
-            margin-bottom: 0.5rem;
-        }
-
-        p {
-            font-size: 1.2rem;
-            margin-bottom: 1.5rem;
-        }
-
-        .quran-container {
-            background-color: #fff;
-            border-radius: 8px;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-            padding: 2rem;
-            margin-bottom: 2rem;
-        }
-
-        .page-display {
-            margin: 2rem 0;
-        }
-
-        .page-image {
-            max-width: 100%;
-            height: auto;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-        }
-
-        .controls {
-            display: flex;
-            justify-content: center;
-            gap: 1rem;
-            margin: 1rem 0;
-        }
-
-        button {
-            background-color: #b58900;
-            color: white;
-            border: none;
-            border-radius: 4px;
-            padding: 0.5rem 1rem;
-            font-size: 1rem;
-            cursor: pointer;
-            transition: background-color 0.3s;
-        }
-
-        button:hover {
-            background-color: #8a6700;
-        }
-
-        button:disabled {
-            background-color: #ddd;
-            cursor: not-allowed;
-        }
-
-        .arabic-text {
-            font-family: 'HafsSmart', 'Traditional Arabic', sans-serif;
-            font-size: 1.5rem;
-            line-height: 2;
-        }
-
-        footer {
-            margin-top: 4rem;
-            color: #666;
-            font-size: 0.9rem;
-        }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>تطبيق القرآن التعليمي</title>
+  <style>
+    @font-face {
+      font-family: 'HafsSmart';
+      src: url('/assets/fonts/HafsSmart_08.ttf') format('truetype');
+      font-weight: normal;
+      font-style: normal;
+      font-display: swap;
+    }
+    
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      margin: 0;
+      padding: 0;
+      background-color: #f8f8f8;
+      direction: rtl;
+    }
+    
+    .quran-text {
+      font-family: 'HafsSmart', serif;
+    }
+    
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 2rem;
+      text-align: center;
+    }
+    
+    h1 {
+      color: #1e3a8a;
+      font-size: 2.5rem;
+      margin-bottom: 1rem;
+    }
+    
+    p {
+      font-size: 1.2rem;
+      line-height: 1.6;
+      color: #333;
+    }
+    
+    .quran-sample {
+      font-family: 'HafsSmart', serif;
+      font-size: 2rem;
+      margin: 2rem 0;
+      line-height: 2;
+      color: #1e3a8a;
+    }
+    
+    .loading {
+      display: inline-block;
+      width: 80px;
+      height: 80px;
+      margin: 2rem auto;
+    }
+    
+    .loading:after {
+      content: " ";
+      display: block;
+      width: 64px;
+      height: 64px;
+      margin: 8px;
+      border-radius: 50%;
+      border: 6px solid #1e3a8a;
+      border-color: #1e3a8a transparent #1e3a8a transparent;
+      animation: loading 1.2s linear infinite;
+    }
+    
+    @keyframes loading {
+      0% {
+        transform: rotate(0deg);
+      }
+      100% {
+        transform: rotate(360deg);
+      }
+    }
+  </style>
 </head>
 <body>
-    <div class="container">
-        <header>
-            <h1>القرآن الكريم</h1>
-            <p>مشروع تطبيق القرآن الكريم التعليمي</p>
-        </header>
-
-        <div class="quran-container">
-            <div class="controls">
-                <button id="prev-page" disabled>السابق</button>
-                <span id="page-indicator">الصفحة 1 من 604</span>
-                <button id="next-page">التالي</button>
-            </div>
-
-            <div class="page-display">
-                <img id="page-image" src="https://mushaf.quranksu.sa/Quran/assets/Page1.bmp" alt="صفحة المصحف" class="page-image">
-            </div>
-
-            <div class="controls">
-                <button id="goto-surah">اختر سورة</button>
-                <button id="bookmark">إضافة إشارة</button>
-                <button id="recite">استماع</button>
-            </div>
-        </div>
-
-        <div class="info-section">
-            <h2>مميزات التطبيق</h2>
-            <ul style="text-align: right; list-style-position: inside;">
-                <li>عرض المصحف بتنسيق مجمع الملك فهد</li>
-                <li>التنقل بين الصفحات والسور بسهولة</li>
-                <li>إمكانية الاستماع إلى التلاوة</li>
-                <li>إضافة إشارات مرجعية</li>
-                <li>البحث في القرآن الكريم</li>
-            </ul>
-        </div>
-
-        <footer>
-            <p>تطبيق القرآن الكريم © 2025 - جميع الحقوق محفوظة</p>
-        </footer>
+  <div class="container">
+    <h1>تطبيق القرآن التعليمي</h1>
+    <p>جاري تحميل التطبيق...</p>
+    <div class="loading"></div>
+    <div class="quran-sample">
+      بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ
     </div>
+    <p>إذا استمر التحميل لفترة طويلة، يرجى تحديث الصفحة</p>
+  </div>
 
-    <script>
-        let currentPage = 1;
-        const totalPages = 604;
-
-        const pageImage = document.getElementById('page-image');
-        const prevButton = document.getElementById('prev-page');
-        const nextButton = document.getElementById('next-page');
-        const pageIndicator = document.getElementById('page-indicator');
-
-        // تحديث عرض الصفحة
-        function updatePage() {
-            pageImage.src = `https://mushaf.quranksu.sa/Quran/assets/Page${currentPage}.bmp`;
-            pageIndicator.textContent = `الصفحة ${currentPage} من ${totalPages}`;
-            
-            prevButton.disabled = currentPage <= 1;
-            nextButton.disabled = currentPage >= totalPages;
+  <script>
+    // يمكننا استخدام هذا الملف كصفحة مؤقتة للخادم الأساسي
+    // في التطبيق الكامل، سيقوم Vite بتحميل تطبيق React
+    
+    // إظهار رسالة في حالة عدم وجود ملفات JavaScript الأساسية
+    window.addEventListener('load', function() {
+      setTimeout(function() {
+        const loadingElement = document.querySelector('.loading');
+        if (loadingElement) {
+          const errorMessage = document.createElement('p');
+          errorMessage.style.color = 'red';
+          errorMessage.textContent = 'لم يتم تحميل التطبيق بشكل صحيح. يرجى التحقق من الاتصال بالخادم.';
+          loadingElement.parentNode.insertBefore(errorMessage, loadingElement.nextSibling);
         }
-
-        // الانتقال إلى الصفحة السابقة
-        prevButton.addEventListener('click', () => {
-            if (currentPage > 1) {
-                currentPage--;
-                updatePage();
-            }
-        });
-
-        // الانتقال إلى الصفحة التالية
-        nextButton.addEventListener('click', () => {
-            if (currentPage < totalPages) {
-                currentPage++;
-                updatePage();
-            }
-        });
-        
-        // استدعاء تحديث الصفحة مرة واحدة عند تحميل الصفحة
-        updatePage();
-    </script>
+      }, 10000); // بعد 10 ثوانٍ، نفترض أن هناك مشكلة في التحميل
+    });
+  </script>
 </body>
 </html>

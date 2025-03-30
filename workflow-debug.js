@@ -1,49 +1,70 @@
-// A simple script to debug why the workflow is failing
-// Run with: node workflow-debug.js
-
-// Create a simple HTTP server
 import http from 'http';
+import net from 'net';
 
-// Handle the debug process
 async function debugWorkflow() {
+  console.log('====== WORKFLOW DEBUGGING INFO ======');
+  console.log(`Date/Time: ${new Date().toISOString()}`);
+  console.log('Checking port 5000...');
+  
+  // Check if port 5000 is open
+  const isPortOpen = await checkPort(5000);
+  console.log(`Port 5000 is ${isPortOpen ? 'OPEN' : 'CLOSED'}`);
+  
+  // Check if HTTP server is responding
+  console.log('Attempting to connect to HTTP server on port 5000...');
   try {
-    console.log('=== Workflow Debugging Script ===');
-    console.log('Starting debug server on port 5000...');
-    
-    // Open the port immediately
-    const server = http.createServer((req, res) => {
-      // Add the critical header
-      res.setHeader('X-Replit-Port-Ready', 'true');
-      
-      // Respond with a simple HTML page
-      res.writeHead(200, { 'Content-Type': 'text/html' });
-      res.end('<html><body><h1>Debug server running</h1></body></html>');
-    });
-    
-    // Start the server
-    await new Promise((resolve) => {
-      server.listen(5000, '0.0.0.0', () => {
-        console.log('Debug server started on port 5000');
-        resolve();
-      });
-    });
-    
-    // Log heartbeat periodically
-    let heartbeats = 0;
-    const interval = setInterval(() => {
-      heartbeats++;
-      console.log(`Heartbeat ${heartbeats}: Server is still running at ${new Date().toISOString()}`);
-      
-      if (heartbeats >= 10) {
-        clearInterval(interval);
-        console.log('Debug server stopping after 10 heartbeats');
-        server.close();
-      }
-    }, 1000);
-    
+    const response = await httpRequest('http://localhost:5000/api/health');
+    console.log('HTTP Server responded with:');
+    console.log(`Status: ${response.statusCode}`);
+    console.log(`Headers: ${JSON.stringify(response.headers, null, 2)}`);
+    console.log(`Body: ${response.body}`);
   } catch (error) {
-    console.error('Debug server error:', error);
+    console.error('Error connecting to HTTP server:', error.message);
   }
+  
+  console.log('====== END DEBUGGING INFO ======');
+}
+
+// Helper function to check if a port is open
+function checkPort(port) {
+  return new Promise((resolve) => {
+    const socket = new net.Socket();
+    
+    const onError = () => {
+      socket.destroy();
+      resolve(false);
+    };
+    
+    socket.setTimeout(1000);
+    socket.once('error', onError);
+    socket.once('timeout', onError);
+    
+    socket.connect(port, '127.0.0.1', () => {
+      socket.end();
+      resolve(true);
+    });
+  });
+}
+
+// Helper function to make HTTP request
+function httpRequest(url) {
+  return new Promise((resolve, reject) => {
+    http.get(url, (res) => {
+      let body = '';
+      res.on('data', (chunk) => {
+        body += chunk;
+      });
+      res.on('end', () => {
+        resolve({ 
+          statusCode: res.statusCode,
+          headers: res.headers,
+          body
+        });
+      });
+    }).on('error', (err) => {
+      reject(err);
+    });
+  });
 }
 
 // Run the debug function

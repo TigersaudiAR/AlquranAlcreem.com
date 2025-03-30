@@ -1,44 +1,56 @@
-// Simple Express server to get past port detection
 import express from 'express';
-import { fileURLToPath } from 'url';
-import { dirname, join } from 'path';
 import { createServer } from 'http';
+import { fileURLToPath } from 'url';
+import path from 'path';
+import fs from 'fs';
 
+// Get directory name
 const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
+const __dirname = path.dirname(__filename);
 
-// Create express app
 const app = express();
 const server = createServer(app);
-
-// Serve static client files
-app.use(express.static(join(__dirname, 'client')));
-
-// Root route with critical header
-app.get('/', (req, res) => {
-  res.setHeader('X-Replit-Port-Ready', 'true');
-  res.sendFile(join(__dirname, 'client/index.html'));
-});
-
-// Health check
-app.get('/api/health', (req, res) => {
-  res.json({ status: 'ok', time: new Date().toISOString() });
-});
-
-// Start server
 const PORT = 5000;
-server.listen(PORT, '0.0.0.0', () => {
-  console.clear();
-  console.log(`
-=================================================
-✅ ULTRA SIMPLE SERVER RUNNING ON PORT ${PORT}
-=================================================
-  `);
-  
-  console.log(`Server is listening at http://0.0.0.0:${PORT}`);
-  
-  // Log heartbeat
-  setInterval(() => {
-    console.log(`Server heartbeat at ${new Date().toISOString()}`);
-  }, 5000);
+
+// Critical: Add Replit port ready header
+app.use((req, res, next) => {
+  res.setHeader('X-Replit-Port-Ready', 'true');
+  next();
 });
+
+// Serve static files from public directory
+const publicPath = path.join(__dirname, 'public');
+app.use(express.static(publicPath));
+console.log(`Serving static files from: ${publicPath}`);
+
+// Check if index.html exists
+const indexPath = path.join(publicPath, 'index.html');
+if (fs.existsSync(indexPath)) {
+  console.log(`Found index.html at: ${indexPath}`);
+} else {
+  console.log(`WARNING: index.html not found at: ${indexPath}`);
+}
+
+// Simple route to test the server
+app.get('/api/test', (req, res) => {
+  res.json({ status: 'ok', message: 'API is working' });
+});
+
+// Catch-all route to serve index.html
+app.get('*', (req, res) => {
+  res.sendFile(indexPath);
+});
+
+// Start listening
+server.listen(PORT, '0.0.0.0', () => {
+  console.log(`Server is running on port ${PORT}`);
+  console.log(`X-Replit-Port-Ready header is set on all responses`);
+  console.log(`Visit http://localhost:${PORT} to see the app`);
+});
+
+// Log periodically to show server is running
+let count = 0;
+setInterval(() => {
+  count++;
+  console.log(`Server heartbeat ${count} at ${new Date().toISOString()}`);
+}, 1000);
