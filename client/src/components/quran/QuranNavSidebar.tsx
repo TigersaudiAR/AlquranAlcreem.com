@@ -1,241 +1,194 @@
 import React, { useState } from 'react';
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetFooter } from '@/components/ui/sheet';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
-import { SURAH_NAMES } from '../../lib/constants';
-import { Clock, Search, BookMarked, Folder, Settings, ArrowRight } from 'lucide-react';
+import { X, Search, BookmarkIcon, Clock, MapPin } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
+import { APP_CONFIG, SURAH_NAMES } from '../../lib/constants';
 
 interface QuranNavSidebarProps {
-  isOpen: boolean;
+  currentPage: number;
+  onPageSelect: (page: number) => void;
+  onSurahSelect: (surahNumber: number) => void;
+  onJuzSelect: (juzNumber: number) => void;
   onClose: () => void;
-  onSelectSurah: (surahNumber: number) => void;
-  onSelectJuz: (juzNumber: number) => void;
-  onSelectPage: (pageNumber: number) => void;
-  onSelectBookmark: (surahNumber: number, ayahNumber: number, pageNumber: number) => void;
-  onSelectLastRead: () => void;
 }
 
+/**
+ * شريط التنقل الجانبي للقرآن الكريم
+ * يتيح التنقل بين السور والأجزاء والعلامات المرجعية
+ */
 const QuranNavSidebar: React.FC<QuranNavSidebarProps> = ({
-  isOpen,
-  onClose,
-  onSelectSurah,
-  onSelectJuz,
-  onSelectPage,
-  onSelectBookmark,
-  onSelectLastRead
+  currentPage,
+  onPageSelect,
+  onSurahSelect,
+  onJuzSelect,
+  onClose
 }) => {
-  const [searchTerm, setSearchTerm] = useState('');
-  const [selectedTab, setSelectedTab] = useState('surahs');
-  const { bookmarks, lastRead } = useApp();
-  
-  // تصفية السور بناءً على مصطلح البحث
-  const filteredSurahs = searchTerm
-    ? SURAH_NAMES.map((name, index) => ({ name, number: index + 1 })).filter(
-        surah => surah.name.includes(searchTerm) || surah.number.toString().includes(searchTerm)
-      )
-    : SURAH_NAMES.map((name, index) => ({ name, number: index + 1 }));
-    
-  // إنشاء مصفوفة للأجزاء 1-30
-  const juzs = Array.from({ length: 30 }, (_, i) => i + 1);
-  
-  // معالج النقر على سورة
-  const handleSurahClick = (surahNumber: number) => {
-    onSelectSurah(surahNumber);
-    onClose();
-  };
-  
-  // معالج النقر على جزء
-  const handleJuzClick = (juzNumber: number) => {
-    onSelectJuz(juzNumber);
-    onClose();
-  };
-  
-  // معالج النقر على علامة مرجعية
-  const handleBookmarkClick = (bookmark: { surahNumber: number; ayahNumber: number; pageNumber: number }) => {
-    onSelectBookmark(bookmark.surahNumber, bookmark.ayahNumber, bookmark.pageNumber);
-    onClose();
-  };
-  
-  // معالج النقر على آخر قراءة
-  const handleLastReadClick = () => {
-    onSelectLastRead();
-    onClose();
-  };
-  
-  // معالج تغيير علامة التبويب
-  const handleTabChange = (value: string) => {
-    setSelectedTab(value);
-    setSearchTerm('');
-  };
-  
-  // تنسيق التاريخ
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return new Intl.DateTimeFormat('ar-SA', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    }).format(date);
-  };
-  
+  const { lastRead, bookmarks } = useApp();
+  const [activeTab, setActiveTab] = useState<'surahs' | 'juz' | 'bookmarks' | 'history'>('surahs');
+  const [searchQuery, setSearchQuery] = useState('');
+
+  // تصفية السور بناءً على البحث
+  const filteredSurahs = SURAH_NAMES.filter(surah => 
+    surah.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    (surah.indexOf('سورة ') === 0 && surah.slice(5).includes(searchQuery))
+  );
+
   return (
-    <Sheet open={isOpen} onOpenChange={(open) => !open && onClose()} side="right">
-      <SheetContent className="h-[100vh] max-h-[100vh] overflow-y-auto">
-        <SheetHeader>
-          <SheetTitle className="text-xl text-amber-700 dark:text-amber-300 text-right">
-            القرآن الكريم
-          </SheetTitle>
-          <SheetDescription className="text-right">
-            تصفح السور والأجزاء والعلامات المرجعية
-          </SheetDescription>
-        </SheetHeader>
+    <div className="h-full flex flex-col">
+      {/* رأس شريط التنقل */}
+      <div className="flex justify-between items-center p-4 border-b dark:border-gray-700">
+        <h2 className="text-xl font-bold text-amber-700 dark:text-amber-300">فهرس المصحف</h2>
+        <button 
+          onClick={onClose}
+          className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500 dark:text-gray-400"
+          aria-label="إغلاق"
+        >
+          <X size={20} />
+        </button>
+      </div>
+      
+      {/* شريط البحث */}
+      <div className="px-4 py-3 border-b dark:border-gray-700">
+        <div className="relative">
+          <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+            <Search size={16} className="text-gray-400" />
+          </div>
+          <input
+            type="text"
+            className="block w-full p-2 pl-10 text-sm border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+            placeholder="بحث في القرآن الكريم..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
+        </div>
+      </div>
+      
+      {/* علامات التبويب */}
+      <div className="flex border-b dark:border-gray-700">
+        <button
+          className={`flex-1 py-2 text-center ${activeTab === 'surahs' ? 'text-amber-600 border-b-2 border-amber-500 font-medium' : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'}`}
+          onClick={() => setActiveTab('surahs')}
+        >
+          السور
+        </button>
+        <button
+          className={`flex-1 py-2 text-center ${activeTab === 'juz' ? 'text-amber-600 border-b-2 border-amber-500 font-medium' : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'}`}
+          onClick={() => setActiveTab('juz')}
+        >
+          الأجزاء
+        </button>
+        <button
+          className={`flex-1 py-2 text-center ${activeTab === 'bookmarks' ? 'text-amber-600 border-b-2 border-amber-500 font-medium' : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'}`}
+          onClick={() => setActiveTab('bookmarks')}
+        >
+          <BookmarkIcon size={16} className="inline-block mr-1" />
+        </button>
+        <button
+          className={`flex-1 py-2 text-center ${activeTab === 'history' ? 'text-amber-600 border-b-2 border-amber-500 font-medium' : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'}`}
+          onClick={() => setActiveTab('history')}
+        >
+          <Clock size={16} className="inline-block mr-1" />
+        </button>
+      </div>
+      
+      {/* محتوى التبويب النشط */}
+      <div className="flex-1 overflow-y-auto p-2">
+        {activeTab === 'surahs' && (
+          <div className="grid grid-cols-2 gap-2 p-2">
+            {filteredSurahs.map((surahName, index) => (
+              <button
+                key={index}
+                className="text-right p-3 rounded-lg hover:bg-amber-50 dark:hover:bg-amber-900/20 text-gray-700 dark:text-gray-300"
+                onClick={() => onSurahSelect(index + 1)}
+              >
+                <span className="inline-block w-6 h-6 text-xs text-center leading-6 bg-amber-100 dark:bg-amber-900/50 text-amber-800 dark:text-amber-200 rounded-full ml-2">
+                  {index + 1}
+                </span>
+                {surahName}
+              </button>
+            ))}
+          </div>
+        )}
         
-        <div className="px-2 py-4">
-          <Tabs defaultValue="surahs" value={selectedTab} onValueChange={handleTabChange}>
-            <TabsList className="grid grid-cols-4 mb-4">
-              <TabsTrigger value="surahs" className="text-xs sm:text-sm">
-                <Folder className="h-4 w-4 ml-1.5" />
-                <span className="hidden sm:inline">السور</span>
-              </TabsTrigger>
-              <TabsTrigger value="juz" className="text-xs sm:text-sm">
-                <div className="ml-1.5 h-4 w-4 flex items-center justify-center rounded-full bg-amber-100 dark:bg-amber-900 text-amber-800 dark:text-amber-200 text-[10px] font-bold">٣٠</div>
-                <span className="hidden sm:inline">الأجزاء</span>
-              </TabsTrigger>
-              <TabsTrigger value="bookmarks" className="text-xs sm:text-sm">
-                <BookMarked className="h-4 w-4 ml-1.5" />
-                <span className="hidden sm:inline">المرجعيات</span>
-              </TabsTrigger>
-              <TabsTrigger value="history" className="text-xs sm:text-sm">
-                <Clock className="h-4 w-4 ml-1.5" />
-                <span className="hidden sm:inline">آخر قراءة</span>
-              </TabsTrigger>
-            </TabsList>
-            
-            {(selectedTab === 'surahs' || selectedTab === 'juz') && (
-              <div className="relative mb-4">
-                <Search className="absolute right-3 top-2.5 h-4 w-4 text-gray-400" />
-                <Input
-                  placeholder="بحث..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-3 pr-9 text-right"
-                  dir="rtl"
-                />
+        {activeTab === 'juz' && (
+          <div className="grid grid-cols-3 gap-2 p-2">
+            {Array.from({ length: 30 }, (_, i) => (
+              <button
+                key={i}
+                className="p-3 rounded-lg hover:bg-amber-50 dark:hover:bg-amber-900/20 text-gray-700 dark:text-gray-300 text-center"
+                onClick={() => onJuzSelect(i + 1)}
+              >
+                الجزء {i + 1}
+              </button>
+            ))}
+          </div>
+        )}
+        
+        {activeTab === 'bookmarks' && (
+          <div className="space-y-2 p-2">
+            {bookmarks && bookmarks.length > 0 ? (
+              bookmarks.map((bookmark, index) => (
+                <div
+                  key={index}
+                  className="p-3 rounded-lg hover:bg-amber-50 dark:hover:bg-amber-900/20 cursor-pointer"
+                  onClick={() => onPageSelect(bookmark.pageNumber)}
+                >
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <div className="text-amber-600 dark:text-amber-400 font-medium">
+                        {SURAH_NAMES[bookmark.surahNumber - 1]} - الآية {bookmark.ayahNumber}
+                      </div>
+                      <div className="text-gray-500 dark:text-gray-400 text-sm">
+                        صفحة {bookmark.pageNumber}
+                      </div>
+                    </div>
+                    <BookmarkIcon size={16} className="text-amber-500" />
+                  </div>
+                </div>
+              ))
+            ) : (
+              <div className="text-center py-8 text-gray-500 dark:text-gray-400">
+                لم تقم بإضافة أي علامات مرجعية بعد
               </div>
             )}
-            
-            <TabsContent value="surahs" className="mt-0">
-              <ScrollArea className="h-[50vh]">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                  {filteredSurahs.map((surah) => (
-                    <Button
-                      key={surah.number}
-                      variant="ghost"
-                      className="justify-between h-auto py-2 text-right"
-                      onClick={() => handleSurahClick(surah.number)}
-                    >
-                      <span className="flex items-center text-amber-700 dark:text-amber-300">
-                        <ArrowRight className="h-4 w-4" />
-                      </span>
-                      <span>
-                        <span className="inline-block ml-2 bg-amber-100 dark:bg-amber-900/50 text-amber-800 dark:text-amber-200 rounded-full w-6 h-6 text-xs flex items-center justify-center">
-                          {surah.number}
-                        </span>
-                        {surah.name}
-                      </span>
-                    </Button>
-                  ))}
-                </div>
-              </ScrollArea>
-            </TabsContent>
-            
-            <TabsContent value="juz" className="mt-0">
-              <ScrollArea className="h-[50vh]">
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                  {juzs
-                    .filter(juz => searchTerm ? juz.toString().includes(searchTerm) : true)
-                    .map((juz) => (
-                      <Button
-                        key={juz}
-                        variant="outline"
-                        className="h-16 flex flex-col items-center justify-center gap-1"
-                        onClick={() => handleJuzClick(juz)}
-                      >
-                        <span className="text-sm font-medium">الجزء</span>
-                        <span className="text-lg font-bold text-amber-700 dark:text-amber-300">{juz}</span>
-                      </Button>
-                    ))}
-                </div>
-              </ScrollArea>
-            </TabsContent>
-            
-            <TabsContent value="bookmarks" className="mt-0">
-              <ScrollArea className="h-[50vh]">
-                {bookmarks.length > 0 ? (
-                  <div className="space-y-3">
-                    {bookmarks.map((bookmark, index) => (
-                      <Card key={index} className="cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
-                        <CardHeader className="p-3" onClick={() => handleBookmarkClick(bookmark)}>
-                          <CardTitle className="text-base flex items-center justify-between">
-                            <span className="text-sm text-gray-500 dark:text-gray-400">
-                              {formatDate(bookmark.timestamp)}
-                            </span>
-                            <span>
-                              سورة {SURAH_NAMES[bookmark.surahNumber - 1]}، الآية {bookmark.ayahNumber}
-                            </span>
-                          </CardTitle>
-                        </CardHeader>
-                      </Card>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="flex flex-col items-center justify-center h-full py-8 text-gray-500 dark:text-gray-400">
-                    <BookMarked className="h-12 w-12 mb-2 text-gray-300 dark:text-gray-600" />
-                    <p>لا توجد علامات مرجعية حتى الآن</p>
-                    <p className="text-sm mt-1">اضغط على زر الإشارة المرجعية أثناء القراءة لحفظ الموقع</p>
-                  </div>
-                )}
-              </ScrollArea>
-            </TabsContent>
-            
-            <TabsContent value="history" className="mt-0">
-              <div className="flex flex-col items-center justify-center py-4">
-                {lastRead ? (
-                  <Card className="w-full cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
-                    <CardHeader className="p-4" onClick={handleLastReadClick}>
-                      <CardTitle className="text-base text-right">
-                        آخر قراءة: سورة {SURAH_NAMES[lastRead.surahNumber - 1]}، الآية {lastRead.ayahNumber}
-                      </CardTitle>
-                      <CardContent className="p-0 pt-2 text-sm text-gray-500 dark:text-gray-400 text-right">
-                        {formatDate(lastRead.timestamp)}
-                      </CardContent>
-                    </CardHeader>
-                  </Card>
-                ) : (
-                  <div className="flex flex-col items-center justify-center h-full py-8 text-gray-500 dark:text-gray-400">
-                    <Clock className="h-12 w-12 mb-2 text-gray-300 dark:text-gray-600" />
-                    <p>لا توجد تاريخ قراءة حتى الآن</p>
-                    <p className="text-sm mt-1">سيتم حفظ موقع آخر قراءة تلقائياً</p>
-                  </div>
-                )}
-              </div>
-            </TabsContent>
-          </Tabs>
-        </div>
+          </div>
+        )}
         
-        <SheetFooter className="pt-2">
-          <Button variant="outline" onClick={onClose}>
-            إغلاق
-          </Button>
-        </SheetFooter>
-      </SheetContent>
-    </Sheet>
+        {activeTab === 'history' && (
+          <div className="p-2">
+            {lastRead ? (
+              <div
+                className="p-3 rounded-lg hover:bg-amber-50 dark:hover:bg-amber-900/20 cursor-pointer"
+                onClick={() => onPageSelect(lastRead.pageNumber)}
+              >
+                <div className="flex items-center justify-between">
+                  <div>
+                    <div className="text-amber-600 dark:text-amber-400 font-medium">
+                      آخر قراءة: {SURAH_NAMES[lastRead.surahNumber - 1]} - الآية {lastRead.ayahNumber}
+                    </div>
+                    <div className="text-gray-500 dark:text-gray-400 text-sm">
+                      صفحة {lastRead.pageNumber}
+                    </div>
+                  </div>
+                  <MapPin size={16} className="text-amber-500" />
+                </div>
+              </div>
+            ) : (
+              <div className="text-center py-8 text-gray-500 dark:text-gray-400">
+                لم يتم تسجيل موضع قراءة سابق
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+      
+      {/* زر الصفحة الحالية */}
+      <div className="p-4 border-t dark:border-gray-700">
+        <div className="text-center">
+          <span className="text-sm text-gray-500 dark:text-gray-400">الصفحة الحالية: </span>
+          <span className="font-medium text-amber-600 dark:text-amber-400">{currentPage} من 604</span>
+        </div>
+      </div>
+    </div>
   );
 };
 

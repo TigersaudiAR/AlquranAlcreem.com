@@ -126,18 +126,18 @@ const QuranPage: React.FC = () => {
               >
                 <QuranNavSidebar 
                   currentPage={currentPage}
-                  onPageSelect={(page) => {
+                  onPageSelect={(page: number) => {
                     setCurrentPage(page);
                     setIsSidebarOpen(false);
                   }}
-                  onSurahSelect={(surah) => {
+                  onSurahSelect={(surah: number) => {
                     // تحديد الصفحة بناء على رقم السورة (يمكن استخدام API لتحديد الصفحة الدقيقة)
                     // هذا تنفيذ مبسط
                     const estimatedPage = Math.max(1, Math.min(604, Math.floor(surah * 5.3)));
                     setCurrentPage(estimatedPage);
                     setIsSidebarOpen(false);
                   }}
-                  onJuzSelect={(juz) => {
+                  onJuzSelect={(juz: number) => {
                     // تحديد الصفحة بناء على رقم الجزء (يمكن استخدام API لتحديد الصفحة الدقيقة)
                     // تقدير بسيط: كل جزء يمثل حوالي 20 صفحة
                     const estimatedPage = Math.max(1, Math.min(604, (juz - 1) * 20 + 1));
@@ -154,8 +154,11 @@ const QuranPage: React.FC = () => {
           <div className={`mushaf-container ${isSidebarOpen ? 'lg:w-3/4' : 'w-full'}`}>
             <KingFahdMushaf 
               initialPage={currentPage} 
-              showControls={true}
-              onPageChange={handlePageChange}
+              onNavigate={handlePageChange}
+              onVerseSelect={(surahNumber, ayahNumber) => {
+                // يمكن تنفيذ منطق إضافي هنا - مثلاً: تشغيل الصوت لهذه الآية
+                console.log(`Verse selected: Surah ${surahNumber}, Ayah ${ayahNumber}`);
+              }}
             />
           </div>
         </div>
