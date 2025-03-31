@@ -6,93 +6,116 @@
   <title>اختبار عرض صفحة المصحف</title>
   <style>
     body {
-      font-family: Arial, sans-serif;
-      background-color: #f5f5f5;
-      padding: 20px;
+      font-family: -apple-system, BlinkMacSystemFont, Arial, sans-serif;
       text-align: center;
+      margin: 0;
+      padding: 20px;
+      direction: rtl;
     }
-    img {
-      max-width: 100%;
-      height: auto;
-      margin: 10px;
-      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-    }
-    .page-container {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      margin-bottom: 20px;
+    .container {
+      max-width: 800px;
+      margin: 0 auto;
+      background-color: #fff9e6;
+      padding: 20px;
+      border-radius: 10px;
+      box-shadow: 0 0 15px rgba(0,0,0,0.1);
+      border: 2px solid #d4b668;
     }
     h1 {
-      color: #8b6b1f;
+      color: #8b5a2b;
+      font-weight: bold;
+      margin-bottom: 20px;
     }
-    button {
-      margin: 10px;
-      padding: 8px 16px;
-      background-color: #8b6b1f;
+    .quran-page {
+      width: 100%;
+      max-width: 500px;
+      height: auto;
+      margin: 20px auto;
+      border: 1px solid #d4b668;
+    }
+    .controls {
+      display: flex;
+      justify-content: center;
+      margin-top: 20px;
+      gap: 10px;
+    }
+    .btn {
+      padding: 10px 20px;
+      background-color: #d4b668;
       color: white;
       border: none;
-      border-radius: 4px;
+      border-radius: 5px;
       cursor: pointer;
+      font-weight: bold;
     }
-    button:hover {
-      background-color: #a88527;
+    .btn:hover {
+      background-color: #c0a55c;
+    }
+    .page-number {
+      font-size: 18px;
+      margin: 0 15px;
+      padding: 10px;
+      font-weight: bold;
     }
   </style>
 </head>
 <body>
-  <h1>اختبار عرض صفحة المصحف</h1>
-  
-  <div>
-    <button onclick="loadImage(1)">عرض الصفحة 1</button>
-    <button onclick="loadImage(2)">عرض الصفحة 2</button>
-    <button onclick="loadImage(3)">عرض الصفحة 3</button>
-  </div>
-  
-  <div class="page-container">
-    <h2 id="page-title">صفحة المصحف</h2>
-    <img id="quran-page" src="" alt="صفحة المصحف" style="display: none;">
-    <div id="loading" style="display: none;">جاري التحميل...</div>
-    <div id="error" style="color: red; display: none;">حدث خطأ في تحميل الصفحة</div>
+  <div class="container">
+    <h1>اختبار عرض صفحات المصحف الشريف</h1>
+    
+    <img id="quranPage" class="quran-page" src="/images/quran_pages/page_1.webp" alt="صفحة من المصحف الشريف">
+    
+    <div class="controls">
+      <button id="prevBtn" class="btn">الصفحة السابقة</button>
+      <span id="pageDisplay" class="page-number">الصفحة: 1 / 604</span>
+      <button id="nextBtn" class="btn">الصفحة التالية</button>
+    </div>
   </div>
 
   <script>
-    function loadImage(pageNumber) {
-      const img = document.getElementById('quran-page');
-      const loadingEl = document.getElementById('loading');
-      const errorEl = document.getElementById('error');
-      const pageTitleEl = document.getElementById('page-title');
+    document.addEventListener('DOMContentLoaded', function() {
+      const quranPage = document.getElementById('quranPage');
+      const pageDisplay = document.getElementById('pageDisplay');
+      const prevBtn = document.getElementById('prevBtn');
+      const nextBtn = document.getElementById('nextBtn');
       
-      // عرض حالة التحميل
-      img.style.display = 'none';
-      loadingEl.style.display = 'block';
-      errorEl.style.display = 'none';
-      pageTitleEl.textContent = `صفحة المصحف ${pageNumber}`;
+      let currentPage = 1;
+      const totalPages = 604;
       
-      // تحديث مسار الصورة
-      const imagePath = `/images/quran_pages/page_${pageNumber}.png`;
-      img.src = imagePath;
+      // تحديث عرض الصفحة
+      function updatePage() {
+        quranPage.src = `/images/quran_pages/page_${currentPage}.webp`;
+        pageDisplay.textContent = `الصفحة: ${currentPage} / ${totalPages}`;
+        
+        // تعطيل الأزرار عند الوصول للحدود
+        prevBtn.disabled = currentPage <= 1;
+        nextBtn.disabled = currentPage >= totalPages;
+      }
       
-      // معالجة حدث التحميل
-      img.onload = function() {
-        loadingEl.style.display = 'none';
-        img.style.display = 'block';
-        console.log(`تم تحميل الصورة بنجاح: ${imagePath}`);
-      };
+      // التنقل بين الصفحات
+      prevBtn.addEventListener('click', function() {
+        if (currentPage > 1) {
+          currentPage--;
+          updatePage();
+        }
+      });
       
-      // معالجة حدث الخطأ
-      img.onerror = function() {
-        loadingEl.style.display = 'none';
-        errorEl.style.display = 'block';
-        errorEl.textContent = `تعذر تحميل الصفحة ${pageNumber}. تحقق من المسار: ${imagePath}`;
-        console.error(`فشل تحميل الصورة: ${imagePath}`);
-      };
-    }
-    
-    // تحميل الصفحة الأولى افتراضيًا عند فتح الصفحة
-    window.onload = function() {
-      loadImage(1);
-    };
+      nextBtn.addEventListener('click', function() {
+        if (currentPage < totalPages) {
+          currentPage++;
+          updatePage();
+        }
+      });
+      
+      // معالجة الخطأ في حالة عدم توفر الصورة
+      quranPage.addEventListener('error', function() {
+        // استبدال بصورة بديلة أو رسالة
+        quranPage.src = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="500" height="700" viewBox="0 0 500 700"><rect width="100%" height="100%" fill="%23f8f8f8"/><text x="50%" y="50%" font-family="Arial" font-size="20" text-anchor="middle" fill="%23999">لم يتم العثور على الصفحة</text></svg>';
+      });
+      
+      // تحديث الصفحة عند البدء
+      updatePage();
+    });
   </script>
 </body>
 </html>

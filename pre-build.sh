@@ -44,11 +44,21 @@ if [ ! -d "client" ]; then
   exit 1
 fi
 
+# إضافة صفحة الاختبار
+cp deploy_solution.sh dist/
+chmod +x dist/deploy_solution.sh
+echo "تم نسخ ملف الحل للتوزيع"
+
 # Verify client/src/main.tsx exists
 if [ ! -f "client/src/main.tsx" ]; then
   echo "ERROR: client/src/main.tsx not found!"
   exit 1
 fi
+
+# إضافة صفحة الاختبار
+cp deploy_solution.sh dist/
+chmod +x dist/deploy_solution.sh
+echo "تم نسخ ملف الحل للتوزيع"
 
 # Verify client/index.html exists
 if [ ! -f "client/index.html" ]; then

@@ -1,40 +1,42 @@
 <!DOCTYPE html>
-<html>
+<html lang="ar" dir="rtl">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>تطبيق القرآن الكريم - اختبار النشر</title>
+  <title>فحص النشر</title>
   <style>
     body {
-      font-family: 'Arial', sans-serif;
+      font-family: Arial, sans-serif;
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 20px;
       text-align: center;
-      margin: 50px;
       direction: rtl;
     }
     .success {
       color: green;
-      font-size: 24px;
-      margin: 20px 0;
+      font-weight: bold;
     }
-    .container {
-      max-width: 800px;
-      margin: 0 auto;
-      padding: 20px;
-      border: 1px solid #ccc;
+    .btn {
+      display: inline-block;
+      margin: 10px;
+      padding: 10px 20px;
+      background-color: #d4b668;
+      color: white;
+      text-decoration: none;
       border-radius: 5px;
     }
   </style>
 </head>
 <body>
-  <div class="container">
-    <h1>اختبار النشر</h1>
-    <p class="success">✓ تم تحميل الصفحة بنجاح!</p>
-    <p>إذا كنت ترى هذه الصفحة، فهذا يعني أن خادم الويب يعمل بشكل صحيح ويمكن الوصول إلى الملفات الثابتة.</p>
-    <p>الوقت الحالي: <span id="current-time"></span></p>
+  <h1>نجاح النشر!</h1>
+  <p class="success">✓ تم نشر التطبيق بنجاح</p>
+  <p>الخادم يعمل بشكل صحيح ويمكن الوصول إلى الصفحات الثابتة.</p>
+  
+  <div>
+    <a href="/" class="btn">الصفحة الرئيسية</a>
+    <a href="/test.html" class="btn">صفحة الاختبار</a>
+    <a href="/api/health" class="btn">فحص الـ API</a>
   </div>
-
-  <script>
-    document.getElementById('current-time').textContent = new Date().toLocaleString('ar-SA');
-  </script>
 </body>
 </html>

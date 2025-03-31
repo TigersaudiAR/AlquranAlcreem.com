@@ -9,15 +9,7 @@
 
 @font-face {
   font-family: 'UthmanTN1B';
-  src: url("/fonts/UthmanTN1B.ttf") format("truetype");
-  font-weight: normal;
-  font-style: normal;
-  font-display: swap;
-}
-
-@font-face {
-  font-family: 'HafsSmart';
-  src: url('/assets/quran/fonts/HafsSmart_08.ttf') format('truetype');
+  src: url('UthmanTN1B.ttf') format('truetype');
   font-weight: normal;
   font-style: normal;
   font-display: swap;
