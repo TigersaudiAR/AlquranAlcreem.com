@@ -9,10 +9,17 @@ import fs from 'fs';
 const app = express();
 app.use(express.json());
 
-// يصرح لجميع المسارات (CORS)
+// يصرح لجميع المسارات (CORS) مع إعدادات موسعة
 app.use((req, res, next) => {
   res.header('Access-Control-Allow-Origin', '*');
-  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept');
+  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+  
+  // معالجة طلبات OPTIONS قبل الطلبات الفعلية
+  if (req.method === 'OPTIONS') {
+    return res.status(200).end();
+  }
+  
   next();
 });
 
