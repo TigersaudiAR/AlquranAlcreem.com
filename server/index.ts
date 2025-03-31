@@ -23,7 +23,7 @@ app.use((req, res, next) => {
   next();
 });
 
-// Define port - use the PORT env var or default to 4000 for production, 5000 for development
+// Define port - we need to use port 5000 for Replit workflows to work correctly
 const isDev = process.env.NODE_ENV !== 'production';
 const PORT = Number(process.env.PORT) || (isDev ? 5000 : 4000);
 
