@@ -3,6 +3,7 @@ import type { Server } from "http";
 import { storage } from "./storage";
 import * as os from 'os';
 import { execSync } from 'child_process';
+import fetch from 'node-fetch';
 
 export async function registerRoutes(app: Express): Promise<void> {
   console.log('Registering API routes...');
