@@ -27,16 +27,13 @@ const KingFahdMushafPage: React.FC<KingFahdMushafPageProps> = ({
 }) => {
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
-  const [apiAvailable, setApiAvailable] = useState<boolean>(false); // بدء بالصور المحلية
   
-  // استخدم مسار مباشر لملفات الصور الثابتة
-  const fallbackImagePath = getLocalQuranPageUrl(pageNumber);
+  // استخدم مسار مباشر لملفات الصور الثابتة - نختار دائمًا المسار المحلي
+  const imageSource = getLocalQuranPageUrl(pageNumber);
 
-  // التحقق من توفر واجهة برمجة التطبيقات
+  // التحقق من توفر الصورة
   useEffect(() => {
-    // استخدم الصور المحلية فقط
-    setApiAvailable(false);
-    setLoading(false);
+    setLoading(true);
     
     // التحقق من وجود ملف الصورة محليًا
     const img = new Image();
@@ -45,12 +42,12 @@ const KingFahdMushafPage: React.FC<KingFahdMushafPageProps> = ({
       setError(null);
     };
     img.onerror = () => {
-      console.error(`فشل تحميل الصورة: ${fallbackImagePath}`);
+      console.error(`فشل تحميل الصورة: ${imageSource}`);
       setError('تعذر تحميل صفحة المصحف');
       setLoading(false);
     };
-    img.src = fallbackImagePath;
-  }, [fallbackImagePath]);
+    img.src = imageSource;
+  }, [pageNumber, imageSource]);
   
   // التعامل مع تحميل الصورة
   const handleImageLoad = useCallback(() => {
@@ -75,11 +72,8 @@ const KingFahdMushafPage: React.FC<KingFahdMushafPageProps> = ({
     }
   }, [onVerseSelect, pageNumber]);
 
-  // تحديد مصدر الصورة - نستخدم المسار المحلي دائمًا
-  const imageSource = getLocalQuranPageUrl(pageNumber);
-    
   // تسجيل مصدر الصورة للتصحيح
-  console.log('مسار الصورة:', { imageSource, apiAvailable, pageNumber });
+  console.log('مسار الصورة:', { imageSource, pageNumber });
 
   return (
     <div

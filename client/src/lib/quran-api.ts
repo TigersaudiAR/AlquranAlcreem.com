@@ -43,7 +43,7 @@ export interface AvailableResources {
  */
 export async function getAvailableResources(): Promise<AvailableResources> {
   try {
-    const response = await fetch(`${API_BASE_URL}/available`);
+    const response = await fetch(`${API_BASE_URL}/quran/available`);
     if (!response.ok) {
       throw new Error(`Error fetching resources: ${response.statusText}`);
     }
@@ -60,7 +60,7 @@ export async function getAvailableResources(): Promise<AvailableResources> {
  */
 export async function getTafsir(tafsirId: string, sura: number, ayah: number): Promise<TafsirData> {
   try {
-    const response = await fetch(`${API_BASE_URL}/tafsir/${tafsirId}/${sura}/${ayah}`);
+    const response = await fetch(`${API_BASE_URL}/quran/tafsir/${tafsirId}/${sura}/${ayah}`);
     if (!response.ok) {
       throw new Error(`Error fetching tafsir: ${response.statusText}`);
     }
@@ -76,7 +76,7 @@ export async function getTafsir(tafsirId: string, sura: number, ayah: number): P
  */
 export async function getTranslation(translationId: string, sura: number, ayah: number): Promise<TranslationData> {
   try {
-    const response = await fetch(`${API_BASE_URL}/translation/${translationId}/${sura}/${ayah}`);
+    const response = await fetch(`${API_BASE_URL}/quran/translation/${translationId}/${sura}/${ayah}`);
     if (!response.ok) {
       throw new Error(`Error fetching translation: ${response.statusText}`);
     }
@@ -91,15 +91,54 @@ export async function getTranslation(translationId: string, sura: number, ayah: 
  * الحصول على URL لصورة صفحة القرآن
  */
 export function getQuranPageUrl(pageNumber: number): string {
-  return `${API_BASE_URL}/page/${pageNumber}`;
+  return `${API_BASE_URL}/quran/page/${pageNumber}`;
 }
 
 /**
  * الحصول على URL لملف الصورة المحلي كنسخة احتياطية
  */
 export function getLocalQuranPageUrl(pageNumber: number): string {
-  // استخدام المسار الصحيح نسبة إلى المجلد العام
-  return `/images/quran_pages/page${pageNumber.toString().padStart(3, '0')}.png`;
+  // استخدام المسارين المتاحين مع إعطاء الأولوية للمسار الأول
+  // سنقوم بمحاولة التحقق من وجود الصور مسبقًا إذا أمكن
+  
+  // لتبسيط العملية، سنقدم كلا المسارين في مصفوفة
+  const paths = [
+    `/images/quran_pages/page_${pageNumber}.png`,
+    `/images/quran/page_${pageNumber}.png`
+  ];
+  
+  // سنختار المسار الأول افتراضيًا، ويمكن إضافة منطق إضافي للتحقق
+  return paths[0];
+}
+
+/**
+ * محاولة تحميل صورة من مسار معين
+ * يمكن استخدامها للتحقق من توفر الصور عند الحاجة
+ */
+export function preloadQuranImage(pageNumber: number): Promise<string> {
+  // هذه الدالة تقوم بمحاولة تحميل الصورة وإرجاع المسار الصحيح
+  return new Promise((resolve, reject) => {
+    const paths = [
+      `/images/quran_pages/page_${pageNumber}.png`,
+      `/images/quran/page_${pageNumber}.png`
+    ];
+    
+    const img = new Image();
+    
+    // عند نجاح التحميل
+    img.onload = () => resolve(paths[0]);
+    
+    // عند فشل التحميل نجرب المسار الثاني
+    img.onerror = () => {
+      const fallbackImg = new Image();
+      fallbackImg.onload = () => resolve(paths[1]);
+      fallbackImg.onerror = () => reject(new Error(`Could not load Quran page ${pageNumber} from any path`));
+      fallbackImg.src = paths[1];
+    };
+    
+    // ابدأ بتحميل الصورة من المسار الأول
+    img.src = paths[0];
+  });
 }
 
 /**
@@ -107,12 +146,18 @@ export function getLocalQuranPageUrl(pageNumber: number): string {
  */
 export async function checkQuranApiAvailability(): Promise<boolean> {
   try {
-    const response = await fetch(API_BASE_URL, { 
+    // استخدام نقطة نهاية الفحص الصحيح
+    const response = await fetch(`${API_BASE_URL}/health`, { 
       method: 'GET',
       headers: { 'Accept': 'application/json' },
       signal: AbortSignal.timeout(3000) // timeout after 3 seconds
     });
-    return response.ok;
+    
+    if (response.ok) {
+      console.log("Quran API is available");
+      return true;
+    }
+    return false;
   } catch (error) {
     console.error("Quran API is not available:", error);
     return false;

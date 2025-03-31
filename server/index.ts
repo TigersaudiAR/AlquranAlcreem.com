@@ -8,10 +8,25 @@ import path from 'path';
 const app = express();
 app.use(express.json());
 
+// يصرح لجميع المسارات (CORS)
+app.use((req, res, next) => {
+  res.header('Access-Control-Allow-Origin', '*');
+  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept');
+  next();
+});
+
 // Serve static files from the public directory
 app.use('/assets', express.static(path.join(process.cwd(), 'public/assets')));
 app.use('/fonts', express.static(path.join(process.cwd(), 'public/fonts')));
 app.use('/images', express.static(path.join(process.cwd(), 'public/images')));
+app.use('/test.html', express.static(path.join(process.cwd(), 'public/test.html')));
+
+// سجل المسارات الإضافية للتصحيح
+console.log('Static paths:');
+console.log(`- Assets path: ${path.join(process.cwd(), 'public/assets')}`);
+console.log(`- Fonts path: ${path.join(process.cwd(), 'public/fonts')}`);
+console.log(`- Images path: ${path.join(process.cwd(), 'public/images')}`);
+console.log(`- Test path: ${path.join(process.cwd(), 'public/test.html')}`);
 
 // Define port - use 5000 for Replit
 const PORT = Number(process.env.PORT) || 5000;
