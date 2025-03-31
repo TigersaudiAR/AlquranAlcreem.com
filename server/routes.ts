@@ -1,6 +1,8 @@
 import type { Express } from "express";
 import type { Server } from "http";
 import { storage } from "./storage";
+import * as os from 'os';
+import { execSync } from 'child_process';
 
 export async function registerRoutes(app: Express): Promise<void> {
   console.log('Registering API routes...');
@@ -19,7 +21,6 @@ export async function registerRoutes(app: Express): Promise<void> {
   
   // Cleanup endpoint for running the cleanup script
   app.post(`${API_PREFIX}/cleanup`, (req, res) => {
-    const { execSync } = require('child_process');
     try {
       // Make the script executable
       execSync('chmod +x cleanup.sh');
@@ -195,8 +196,7 @@ export async function registerRoutes(app: Express): Promise<void> {
 
   // نقطة وصول لفحص الاتصال
   app.get(`${API_PREFIX}/connection-test`, (req, res) => {
-    const os = require('os');
-    const networkInterfaces = os.networkInterfaces();
+    const networkInterfaces = os.networkInterfaces() || {};
     const interfaces: Record<string, Array<{
       address: string;
       family: string;
@@ -205,13 +205,16 @@ export async function registerRoutes(app: Express): Promise<void> {
     
     // استخراج معلومات الواجهات الشبكية
     Object.keys(networkInterfaces).forEach(ifname => {
-      interfaces[ifname] = networkInterfaces[ifname]
-        .filter((iface: any) => !iface.internal) // استبعاد الواجهات الداخلية
-        .map((iface: any) => ({
-          address: iface.address,
-          family: iface.family,
-          netmask: iface.netmask
-        }));
+      const networkInterface = networkInterfaces[ifname];
+      if (networkInterface) {
+        interfaces[ifname] = networkInterface
+          .filter((iface: any) => !iface.internal) // استبعاد الواجهات الداخلية
+          .map((iface: any) => ({
+            address: iface.address,
+            family: iface.family,
+            netmask: iface.netmask
+          }));
+      }
     });
     
     res.status(200).json({
