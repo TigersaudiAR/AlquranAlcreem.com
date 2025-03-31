@@ -16,6 +16,29 @@ export async function registerRoutes(app: Express): Promise<void> {
   app.get(`${API_PREFIX}/health`, (req, res) => {
     res.status(200).json({ status: 'ok', timestamp: new Date().toISOString() });
   });
+  
+  // Cleanup endpoint for running the cleanup script
+  app.post(`${API_PREFIX}/cleanup`, (req, res) => {
+    const { execSync } = require('child_process');
+    try {
+      // Make the script executable
+      execSync('chmod +x cleanup.sh');
+      // Run the cleanup script
+      const output = execSync('./cleanup.sh').toString();
+      res.status(200).json({ 
+        success: true, 
+        message: 'تم تنفيذ سكريبت التنظيف بنجاح', 
+        output 
+      });
+    } catch (error) {
+      console.error('Error executing cleanup script:', error);
+      res.status(500).json({ 
+        success: false, 
+        message: `فشل تنفيذ سكريبت التنظيف: ${error.message}`,
+        error: error.toString()
+      });
+    }
+  });
 
   // تسجيل مستخدم جديد
   app.post(`${API_PREFIX}/register`, async (req, res) => {
