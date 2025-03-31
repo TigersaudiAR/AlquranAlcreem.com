@@ -194,6 +194,16 @@ export async function registerRoutes(app: Express): Promise<void> {
       version: "1.0.0"
     });
   });
+  
+  // روت الرئيسية بدون البادئة (أساسية للاختبار)
+  app.get("/api", (req, res) => {
+    res.status(200).json({
+      message: "Quran Application API is running",
+      status: "available",
+      version: "1.0.0",
+      timestamp: new Date().toISOString()
+    });
+  });
 
   // نقطة وصول لفحص الاتصال
   app.get(`${API_PREFIX}/connection-test`, (req, res) => {

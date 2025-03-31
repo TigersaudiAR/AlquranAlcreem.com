@@ -61,7 +61,12 @@ app.use((req, res, next) => {
 
 // مسار الـ API الرئيسي - سيتم التعامل مع مسار الصفحة الرئيسية من قِبل Vite
 app.get('/api', (req, res) => {
-  res.send('Quran Application API is running');
+  res.json({
+    message: 'Quran Application API is running',
+    status: 'available',
+    version: '1.0.0',
+    timestamp: new Date().toISOString()
+  });
 });
 
 // Basic health check endpoint
