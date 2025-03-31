@@ -28,18 +28,18 @@ const KingFahdMushafPage: React.FC<KingFahdMushafPageProps> = ({
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   
-  // استخدم مسار مباشر لملفات الصور الثابتة - نختار دائمًا المسار المحلي
+  // استخدم مسار مباشر لملفات الصور الثابتة - نختار المسار المحلي الموحد
   const imageSource = getLocalQuranPageUrl(pageNumber);
 
   // التحقق من توفر الصورة
   useEffect(() => {
     setLoading(true);
+    setError(null);
     
     // التحقق من وجود ملف الصورة محليًا
     const img = new Image();
     img.onload = () => {
       setLoading(false);
-      setError(null);
     };
     img.onerror = () => {
       console.error(`فشل تحميل الصورة: ${imageSource}`);
@@ -47,20 +47,14 @@ const KingFahdMushafPage: React.FC<KingFahdMushafPageProps> = ({
       setLoading(false);
     };
     img.src = imageSource;
+    
+    // تنظيف عند إلغاء تحميل المكون
+    return () => {
+      img.onload = null;
+      img.onerror = null;
+    };
   }, [pageNumber, imageSource]);
   
-  // التعامل مع تحميل الصورة
-  const handleImageLoad = useCallback(() => {
-    setLoading(false);
-  }, []);
-  
-  // التعامل مع حدوث خطأ
-  const handleImageError = useCallback((e: React.SyntheticEvent<HTMLImageElement, Event>) => {
-    console.error('Error loading Quran page:', e);
-    setError('تعذر تحميل صفحة المصحف');
-    setLoading(false);
-  }, []);
-
   // معالجة النقر على صفحة المصحف
   const handlePageClick = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
     if (onVerseSelect) {
@@ -72,8 +66,10 @@ const KingFahdMushafPage: React.FC<KingFahdMushafPageProps> = ({
     }
   }, [onVerseSelect, pageNumber]);
 
-  // تسجيل مصدر الصورة للتصحيح
-  console.log('مسار الصورة:', { imageSource, pageNumber });
+  // تسجيل مسار الصورة للتصحيح (فقط في بيئة التطوير)
+  useEffect(() => {
+    console.log('مسار الصورة:', { imageSource, pageNumber });
+  }, [imageSource, pageNumber]);
 
   return (
     <div
@@ -94,21 +90,18 @@ const KingFahdMushafPage: React.FC<KingFahdMushafPageProps> = ({
         </div>
       )}
 
-      {!error && (
+      {!loading && !error && (
         <img
           src={imageSource}
           alt={`صفحة القرآن رقم ${pageNumber}`}
           className={cn(
             'w-full h-auto object-contain mushaf-page-image',
-            loading ? 'opacity-0' : 'opacity-100 transition-opacity duration-500',
+            'opacity-100 transition-opacity duration-500',
             highlightedVerse && highlightedVerse.pageNumber === pageNumber ? 'highlighted-page' : ''
           )}
-          onLoad={handleImageLoad}
-          onError={handleImageError}
+          loading="eager"
         />
       )}
-      
-      {/* طبقة تفاعلية للكشف عن النقر على الآيات - ستضاف في المستقبل */}
     </div>
   );
 };

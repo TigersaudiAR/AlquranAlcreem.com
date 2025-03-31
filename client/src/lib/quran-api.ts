@@ -98,17 +98,14 @@ export function getQuranPageUrl(pageNumber: number): string {
  * الحصول على URL لملف الصورة المحلي كنسخة احتياطية
  */
 export function getLocalQuranPageUrl(pageNumber: number): string {
-  // استخدام المسارين المتاحين مع إعطاء الأولوية للمسار الأول
-  // سنقوم بمحاولة التحقق من وجود الصور مسبقًا إذا أمكن
+  // استخدام مسار واحد فقط لتجنب المشاكل وتكرار الصور
+  // استخدام امتداد webp الصحيح للملفات
   
-  // لتبسيط العملية، سنقدم كلا المسارين في مصفوفة
-  const paths = [
-    `/images/quran_pages/page_${pageNumber}.png`,
-    `/images/quran/page_${pageNumber}.png`
-  ];
+  // بما أننا نمتلك 7 صفحات فقط للعرض التجريبي، سنقوم بالتأكد من أن رقم الصفحة
+  // يكون بين 1 و 7 فقط
+  const safePageNumber = Math.max(1, Math.min(7, pageNumber));
   
-  // سنختار المسار الأول افتراضيًا، ويمكن إضافة منطق إضافي للتحقق
-  return paths[0];
+  return `/images/quran_pages/page_${safePageNumber}.webp`;
 }
 
 /**
@@ -118,26 +115,26 @@ export function getLocalQuranPageUrl(pageNumber: number): string {
 export function preloadQuranImage(pageNumber: number): Promise<string> {
   // هذه الدالة تقوم بمحاولة تحميل الصورة وإرجاع المسار الصحيح
   return new Promise((resolve, reject) => {
-    const paths = [
-      `/images/quran_pages/page_${pageNumber}.png`,
-      `/images/quran/page_${pageNumber}.png`
-    ];
+    // بما أننا نمتلك 7 صفحات فقط للعرض التجريبي، سنقوم بالتأكد من أن رقم الصفحة
+    // يكون بين 1 و 7 فقط
+    const safePageNumber = Math.max(1, Math.min(7, pageNumber));
+    
+    if (pageNumber !== safePageNumber) {
+      console.log(`تم طلب الصفحة ${pageNumber} ولكن تم استخدام الصفحة ${safePageNumber} بدلاً منها.`);
+    }
+    
+    const imagePath = `/images/quran_pages/page_${safePageNumber}.webp`;
     
     const img = new Image();
     
     // عند نجاح التحميل
-    img.onload = () => resolve(paths[0]);
+    img.onload = () => resolve(imagePath);
     
-    // عند فشل التحميل نجرب المسار الثاني
-    img.onerror = () => {
-      const fallbackImg = new Image();
-      fallbackImg.onload = () => resolve(paths[1]);
-      fallbackImg.onerror = () => reject(new Error(`Could not load Quran page ${pageNumber} from any path`));
-      fallbackImg.src = paths[1];
-    };
+    // عند فشل التحميل
+    img.onerror = () => reject(new Error(`Could not load Quran page ${safePageNumber}`));
     
-    // ابدأ بتحميل الصورة من المسار الأول
-    img.src = paths[0];
+    // ابدأ بتحميل الصورة
+    img.src = imagePath;
   });
 }
 

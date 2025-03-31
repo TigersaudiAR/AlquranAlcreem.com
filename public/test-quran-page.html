@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>اختبار عرض صفحة المصحف</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f5f5f5;
+      padding: 20px;
+      text-align: center;
+    }
+    img {
+      max-width: 100%;
+      height: auto;
+      margin: 10px;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    }
+    .page-container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      margin-bottom: 20px;
+    }
+    h1 {
+      color: #8b6b1f;
+    }
+    button {
+      margin: 10px;
+      padding: 8px 16px;
+      background-color: #8b6b1f;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    button:hover {
+      background-color: #a88527;
+    }
+  </style>
+</head>
+<body>
+  <h1>اختبار عرض صفحة المصحف</h1>
+  
+  <div>
+    <button onclick="loadImage(1)">عرض الصفحة 1</button>
+    <button onclick="loadImage(2)">عرض الصفحة 2</button>
+    <button onclick="loadImage(3)">عرض الصفحة 3</button>
+  </div>
+  
+  <div class="page-container">
+    <h2 id="page-title">صفحة المصحف</h2>
+    <img id="quran-page" src="" alt="صفحة المصحف" style="display: none;">
+    <div id="loading" style="display: none;">جاري التحميل...</div>
+    <div id="error" style="color: red; display: none;">حدث خطأ في تحميل الصفحة</div>
+  </div>
+
+  <script>
+    function loadImage(pageNumber) {
+      const img = document.getElementById('quran-page');
+      const loadingEl = document.getElementById('loading');
+      const errorEl = document.getElementById('error');
+      const pageTitleEl = document.getElementById('page-title');
+      
+      // عرض حالة التحميل
+      img.style.display = 'none';
+      loadingEl.style.display = 'block';
+      errorEl.style.display = 'none';
+      pageTitleEl.textContent = `صفحة المصحف ${pageNumber}`;
+      
+      // تحديث مسار الصورة
+      const imagePath = `/images/quran_pages/page_${pageNumber}.png`;
+      img.src = imagePath;
+      
+      // معالجة حدث التحميل
+      img.onload = function() {
+        loadingEl.style.display = 'none';
+        img.style.display = 'block';
+        console.log(`تم تحميل الصورة بنجاح: ${imagePath}`);
+      };
+      
+      // معالجة حدث الخطأ
+      img.onerror = function() {
+        loadingEl.style.display = 'none';
+        errorEl.style.display = 'block';
+        errorEl.textContent = `تعذر تحميل الصفحة ${pageNumber}. تحقق من المسار: ${imagePath}`;
+        console.error(`فشل تحميل الصورة: ${imagePath}`);
+      };
+    }
+    
+    // تحميل الصفحة الأولى افتراضيًا عند فتح الصفحة
+    window.onload = function() {
+      loadImage(1);
+    };
+  </script>
+</body>
+</html>

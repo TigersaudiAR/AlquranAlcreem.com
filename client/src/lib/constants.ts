@@ -1,13 +1,14 @@
 // ثوابت التطبيق
 
 // إجمالي عدد صفحات المصحف
-export const TOTAL_PAGES = 604;
+// في الإصدار النهائي سيكون 604، ولكن للعرض التجريبي نستخدم 7 صفحات فقط
+export const TOTAL_PAGES = 7;
 
 export const APP_CONFIG = {
   NAME: 'القرآن الكريم',
   VERSION: '1.0.0',
   DEFAULT_PAGE: 1,
-  TOTAL_PAGES: 604,
+  TOTAL_PAGES: 7, // للعرض التجريبي فقط
   DEFAULT_SURAH: 1,
   TOTAL_SURAHS: 114,
   DEFAULT_JUZ: 1,

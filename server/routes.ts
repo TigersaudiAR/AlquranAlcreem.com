@@ -7,6 +7,11 @@ export async function registerRoutes(app: Express): Promise<void> {
   // API routes prefix
   const API_PREFIX = '/api';
   
+  // نقطة نهاية اختبار بسيطة
+  app.get("/test-endpoint", (req, res) => {
+    res.json({ success: true, message: "Test endpoint is working!" });
+  });
+  
   // Health check endpoint
   app.get(`${API_PREFIX}/health`, (req, res) => {
     res.status(200).json({ status: 'ok', timestamp: new Date().toISOString() });
