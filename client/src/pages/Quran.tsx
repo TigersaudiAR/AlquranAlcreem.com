@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'wouter';
-import FullScreenMushaf from '../components/quran/FullScreenMushaf';
+import { FullScreenMushaf } from '../components/quran/FullScreenMushaf';
 import { useApp } from '../context/AppContext';
 import { APP_CONFIG } from '../lib/constants';
 
