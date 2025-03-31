@@ -120,7 +120,7 @@ setupVite(app, server);
 // Start server explicitly on 0.0.0.0 to make it externally accessible
 server.listen(PORT, '0.0.0.0', () => {
   console.log(`✅ SERVER RUNNING ON PORT ${PORT}`);
-  console.log(`🚀 Server available at http://localhost:${PORT}`);
+  console.log(`🚀 Server available at http://0.0.0.0:${PORT}`);
 
   // Log port ready indicator for Replit
   console.log('X-Replit-Port-Ready: true');
