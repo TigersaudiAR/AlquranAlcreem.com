@@ -65,8 +65,16 @@ mode = "sequential"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "chmod +x start.sh"
+args = "chmod +x run.sh"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "./start.sh"
+args = "chmod +x cleanup.sh"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "./cleanup.sh"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "./run.sh"
