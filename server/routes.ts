@@ -555,4 +555,17 @@ export async function registerRoutes(app: Express): Promise<void> {
       res.status(500).json({ message: 'Failed to update last read', error: (error as Error).message });
     }
   });
+
+  // إضافة نقطة نهاية خاصة للاختبار والتشخيص
+  app.get(`${API_PREFIX}/server-test`, (req, res) => {
+    res.status(200).json({
+      status: "success",
+      message: "نقطة الاختبار تعمل بشكل صحيح",
+      time: new Date().toISOString(),
+      environment: process.env.NODE_ENV || 'development',
+      node_version: process.version,
+      memory_usage: process.memoryUsage(),
+      uptime: process.uptime()
+    });
+  });
 }
