@@ -105,27 +105,54 @@ const KingFahdMushafPage = ({
   return (
     <div 
       className={cn(
-        "quran-page relative bg-white max-w-4xl mx-auto p-8 rounded-lg shadow-md",
-        "font-quran", // استخدام خط المصحف الخاص
+        "quran-page relative mx-auto p-8 rounded-lg",
+        "islamic-pattern bg-warmth font-quran",
+        "border border-gold/20 shadow-decorative overflow-hidden",
         className
       )}
       dir="rtl"
     >
-      <div className="page-header flex justify-between items-center mb-6 border-b pb-2">
-        <div className="page-number text-sm">
-          صفحة {pageNumber} من 604
+      {/* زخرفة الزوايا */}
+      <div className="absolute top-0 right-0 w-16 h-16 opacity-30">
+        <svg viewBox="0 0 100 100" className="w-full h-full text-gold">
+          <path d="M100,0 C100,50 50,100 0,100 C50,100 100,50 100,0" fill="currentColor" />
+        </svg>
+      </div>
+      <div className="absolute top-0 left-0 w-16 h-16 opacity-30 transform scale-x-[-1]">
+        <svg viewBox="0 0 100 100" className="w-full h-full text-gold">
+          <path d="M100,0 C100,50 50,100 0,100 C50,100 100,50 100,0" fill="currentColor" />
+        </svg>
+      </div>
+      <div className="absolute bottom-0 right-0 w-16 h-16 opacity-30 transform scale-y-[-1]">
+        <svg viewBox="0 0 100 100" className="w-full h-full text-gold">
+          <path d="M100,0 C100,50 50,100 0,100 C50,100 100,50 100,0" fill="currentColor" />
+        </svg>
+      </div>
+      <div className="absolute bottom-0 left-0 w-16 h-16 opacity-30 transform scale-x-[-1] scale-y-[-1]">
+        <svg viewBox="0 0 100 100" className="w-full h-full text-gold">
+          <path d="M100,0 C100,50 50,100 0,100 C50,100 100,50 100,0" fill="currentColor" />
+        </svg>
+      </div>
+      
+      {/* ترويسة الصفحة */}
+      <div className="page-header flex justify-between items-center mb-8 pb-3 border-b border-gold/30">
+        <div className="page-number font-heading-arabic text-sm flex items-center">
+          <div className="bg-gold/10 px-3 py-1 rounded-full border border-gold/20 text-navy/80">
+            صفحة {pageNumber} من 604
+          </div>
         </div>
-        <div className="surah-name text-lg font-bold">
+        <div className="surah-name text-xl font-bold font-heading-arabic text-emerald-dark">
           {pageData && pageData.length > 0 && pageData[0].sura_name_ar}
         </div>
       </div>
       
-      <div className="page-content">
+      {/* محتوى الآيات */}
+      <div className="page-content px-2 sm:px-6">
         {Object.keys(groupedByLine).map((lineNumber) => {
           const verses = groupedByLine[Number(lineNumber)];
           
           return (
-            <div key={lineNumber} className="line flex justify-center my-4">
+            <div key={lineNumber} className="line flex flex-wrap justify-center my-5 text-center">
               {verses.map((verse: any) => {
                 const isHighlighted = 
                   highlightedVerse && 
@@ -136,12 +163,12 @@ const KingFahdMushafPage = ({
                   <span 
                     key={`${verse.sura_no}-${verse.aya_no}-${lineNumber}`}
                     className={cn(
-                      "verse px-1 cursor-pointer text-right", 
+                      "quran-verse px-1 cursor-pointer text-right transition-all duration-300", 
                       {
-                        "bg-yellow-100 rounded": isHighlighted,
-                        "hover:bg-gray-100": !isHighlighted
+                        "selected": isHighlighted,
+                        "hover:bg-gold/5 hover:rounded": !isHighlighted
                       },
-                      `font-size-${settings.fontSize || 20}`
+                      `font-size-${settings.fontSize || 24}`
                     )}
                     onClick={() => handleVerseClick(verse.sura_no, verse.aya_no)}
                     data-surah={verse.sura_no}
@@ -149,7 +176,7 @@ const KingFahdMushafPage = ({
                     data-page={verse.page}
                   >
                     {verse.aya_text_emlaey}
-                    <span className="verse-number inline-block mx-1 text-xs bg-gray-200 rounded-full w-5 h-5 leading-5 text-center">
+                    <span className="verse-number mx-1">
                       {verse.aya_no}
                     </span>
                   </span>
@@ -160,12 +187,15 @@ const KingFahdMushafPage = ({
         })}
       </div>
       
-      <div className="page-footer flex justify-between items-center mt-6 border-t pt-2 text-xs text-gray-500">
-        <div>
+      {/* تذييل الصفحة */}
+      <div className="page-footer flex justify-between items-center mt-8 pt-3 border-t border-gold/30 text-xs text-gray-600">
+        <div className="font-arabic">
           مصحف المدينة المنورة - مجمع الملك فهد لطباعة المصحف الشريف
         </div>
-        <div>
-          جزء {pageData && pageData.length > 0 ? pageData[0].jozz : ''}
+        <div className="flex items-center">
+          <div className="bg-gold/10 px-3 py-1 rounded-full border border-gold/20 text-navy/80">
+            جزء {pageData && pageData.length > 0 ? pageData[0].jozz : ''}
+          </div>
         </div>
       </div>
     </div>

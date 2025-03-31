@@ -5,6 +5,7 @@ import Prayer from './pages/Prayer';
 import Settings from './pages/Settings';
 import NotFound from './pages/not-found';
 import DebugPage from './pages/DebugPage';
+import FontsTest from './pages/FontsTest';
 import { ThemeProvider } from './components/theme-provider';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { queryClient } from './lib/queryClient';
@@ -33,6 +34,7 @@ function App() {
                 <Route path="/prayer" component={Prayer} />
                 <Route path="/settings" component={Settings} />
                 <Route path="/debug" component={DebugPage} />
+                <Route path="/fonts" component={FontsTest} />
                 
                 {/* مسارات أخرى في المستقبل */}
                 {/* <Route path="/hadith" component={Hadith} /> */}

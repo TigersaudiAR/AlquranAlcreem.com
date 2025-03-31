@@ -47,8 +47,9 @@ const KingFahdMushaf = ({
   // حالة المصحف
   const [currentPage, setCurrentPage] = useState(initialPage);
   const [selectedVerse, setSelectedVerse] = useState<{ surahNumber: number; verseNumber: number; pageNumber: number } | null>(null);
-  const [showControls, setShowControls] = useState(true);
+  const [showControls, setShowControls] = useState(false); // إخفاء عناصر التحكم في البداية
   const [isNavbarOpen, setIsNavbarOpen] = useState(false);
+  const [lastInteraction, setLastInteraction] = useState<number>(Date.now());
   
   // خطاف تشغيل صوت القرآن
   const {
@@ -182,8 +183,21 @@ const KingFahdMushaf = ({
   
   // التبديل بين إظهار وإخفاء أدوات التحكم
   const toggleControls = () => {
+    // تحديث وقت آخر تفاعل
+    setLastInteraction(Date.now());
     setShowControls(prev => !prev);
   };
+  
+  // إخفاء عناصر التحكم تلقائيًا بعد مرور فترة من الزمن
+  useEffect(() => {
+    if (!showControls) return; // لا نحتاج إلى المؤقت إذا كانت عناصر التحكم مخفية بالفعل
+    
+    const timer = setTimeout(() => {
+      setShowControls(false);
+    }, 5000); // 5 ثوانٍ بعد آخر تفاعل
+    
+    return () => clearTimeout(timer);
+  }, [showControls, lastInteraction]);
   
   return (
     <div 
@@ -257,6 +271,7 @@ const KingFahdMushaf = ({
                 goToPreviousPage();
               }}
               disabled={currentPage <= 1}
+              className="bg-white/95 hover:bg-white shadow-sm"
             >
               <ChevronRight className="h-6 w-6" />
             </Button>
@@ -265,14 +280,16 @@ const KingFahdMushaf = ({
               <Button variant="ghost" size="icon" onClick={(e) => {
                 e.stopPropagation();
                 handleAddBookmark();
-              }}>
+              }}
+              className="bg-white/95 hover:bg-white shadow-sm">
                 <BookmarkPlus className="h-5 w-5" />
               </Button>
               
               <Button variant="ghost" size="icon" onClick={(e) => {
                 e.stopPropagation();
                 handleShare();
-              }}>
+              }}
+              className="bg-white/95 hover:bg-white shadow-sm">
                 <Share2 className="h-5 w-5" />
               </Button>
               
@@ -284,6 +301,7 @@ const KingFahdMushaf = ({
                   togglePlay();
                 }}
                 disabled={audioLoading}
+                className="bg-white/95 hover:bg-white shadow-sm"
               >
                 {isPlaying ? (
                   <PauseCircle className="h-5 w-5" />
@@ -301,6 +319,7 @@ const KingFahdMushaf = ({
                 goToNextPage();
               }}
               disabled={currentPage >= APP_CONFIG.TOTAL_PAGES}
+              className="bg-white/95 hover:bg-white shadow-sm"
             >
               <ChevronLeft className="h-6 w-6" />
             </Button>
@@ -311,6 +330,17 @@ const KingFahdMushaf = ({
           </div>
         </footer>
       )}
+      
+      {/* زر العودة للأعلى - يظهر عند النزول في الصفحة */}
+      <div className="floating-button" onClick={(e) => {
+        e.stopPropagation();
+        document.querySelector('.mushaf-content')?.scrollTo({
+          top: 0,
+          behavior: 'smooth'
+        });
+      }}>
+        <ChevronRight className="h-6 w-6 rotate-90" />
+      </div>
     </div>
   );
 };

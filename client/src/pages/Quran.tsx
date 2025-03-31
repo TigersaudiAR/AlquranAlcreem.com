@@ -1,12 +1,12 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'wouter';
-import KingFahdMushaf from '../components/quran/KingFahdMushaf';
+import FullScreenMushaf from '../components/quran/FullScreenMushaf';
 import { useApp } from '../context/AppContext';
 import { APP_CONFIG } from '../lib/constants';
 
 /**
  * صفحة القرآن الكريم الرئيسية
- * تعرض المصحف بتنسيق مجمع الملك فهد
+ * تعرض المصحف بتنسيق مجمع الملك فهد في وضع ملء الشاشة
  * 
  * تخطيط خاص: لاحظ أننا لا نستخدم MainLayout هنا للحصول على واجهة كاملة الشاشة للمصحف
  * مع إظهار أدوات التحكم فقط عند التفاعل مع الصفحة.
@@ -15,17 +15,13 @@ const Quran = () => {
   const params = useParams();
   const { lastRead, settings } = useApp();
   const [initialPage, setInitialPage] = useState<number>(APP_CONFIG.DEFAULT_PAGE);
-  const [initialSurah, setInitialSurah] = useState<number | undefined>(undefined);
-  const [initialAyah, setInitialAyah] = useState<number | undefined>(undefined);
   
   // تحديد الصفحة الأولية استنادًا إلى المعلمات أو آخر قراءة
   useEffect(() => {
     console.log('تحديث معلمات القرآن:', { params, lastRead });
     
-    // نستخدم متغيراً مؤقتاً لتخزين الصفحة/السورة/الآية لمنع التحديثات المتكررة
+    // نستخدم متغيراً مؤقتاً لتخزين الصفحة لمنع التحديثات المتكررة
     let newPage = APP_CONFIG.DEFAULT_PAGE;
-    let newSurah = undefined;
-    let newAyah = undefined;
     let shouldUpdate = false;
     
     // إذا كان هناك رقم صفحة في المعلمات
@@ -35,14 +31,10 @@ const Quran = () => {
     } 
     // إذا كان هناك رقم سورة في المعلمات
     else if (params.surahNumber) {
-      newSurah = parseInt(params.surahNumber, 10);
-      shouldUpdate = newSurah !== initialSurah;
-      
-      // إذا كان هناك رقم آية أيضًا
-      if (params.ayahNumber) {
-        newAyah = parseInt(params.ayahNumber, 10);
-        shouldUpdate = shouldUpdate || newAyah !== initialAyah;
-      }
+      // نحتاج إلى تنفيذ منطق إضافي لتحويل رقم السورة والآية إلى رقم الصفحة
+      // هذا سيتطلب بيانات إضافية عن توزيع السور والآيات بين صفحات المصحف
+      // حالياً سنعود إلى الصفحة الافتراضية
+      console.log('التنقل بالسورة والآية قيد التطوير');
     } 
     // إذا كان هناك آخر قراءة محفوظة وتم تفعيل خيار "حفظ آخر قراءة"
     else if (lastRead && settings.autoSaveLastRead) {
@@ -52,26 +44,14 @@ const Quran = () => {
     
     // نقوم بالتحديث فقط إذا كانت القيم الجديدة مختلفة
     if (shouldUpdate) {
-      console.log('تحديث قيم القرآن:', { newPage, newSurah, newAyah });
-      
-      if (newSurah !== undefined) {
-        setInitialSurah(newSurah);
-        if (newAyah !== undefined) {
-          setInitialAyah(newAyah);
-        }
-      } else {
-        setInitialPage(newPage);
-      }
+      console.log('تحديث صفحة القرآن:', { newPage });
+      setInitialPage(newPage);
     }
-  }, [params.pageNumber, params.surahNumber, params.ayahNumber, lastRead, settings.autoSaveLastRead, initialPage, initialSurah, initialAyah]);
+  }, [params.pageNumber, params.surahNumber, params.ayahNumber, lastRead, settings.autoSaveLastRead, initialPage]);
   
   // نعرض المصحف مباشرة بدون تخطيط إضافي للحصول على تجربة غامرة كاملة الشاشة
   return (
-    <KingFahdMushaf 
-      initialPage={initialPage}
-      initialSurah={initialSurah}
-      initialAyah={initialAyah}
-    />
+    <FullScreenMushaf initialPage={initialPage} />
   );
 };
 

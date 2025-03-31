@@ -109,18 +109,25 @@ const VersePopover = ({
   return (
     <Card 
       className={cn(
-        "verse-popover fixed bottom-0 left-0 right-0 rounded-t-xl shadow-lg z-40",
-        "bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-800",
-        "transform transition-transform",
+        "verse-popover fixed bottom-0 left-0 right-0 rounded-t-xl z-40",
+        "bg-warmth border-t border-gold/30 shadow-decorative",
+        "transform transition-transform animate-slide-up",
         className
       )}
       dir="rtl"
     >
-      <div className="flex justify-between items-center p-4 border-b">
-        <h3 className="text-lg font-semibold">
-          {verseData ? `${verseData.sura_name_ar} - الآية ${verseData.aya_no}` : 'جاري التحميل...'}
+      <div className="flex justify-between items-center p-4 border-b border-gold/20">
+        <h3 className="text-lg font-bold font-heading-arabic text-emerald-dark flex items-center">
+          {verseData ? (
+            <>
+              <span className="bg-gold/10 px-3 py-1 rounded-full border border-gold/20 text-navy/80 ml-2 text-sm">
+                {verseData.aya_no}
+              </span>
+              <span>{verseData.sura_name_ar}</span>
+            </>
+          ) : 'جاري التحميل...'}
         </h3>
-        <Button variant="ghost" size="icon" onClick={onClose}>
+        <Button variant="ghost" size="icon" onClick={onClose} className="hover:bg-gold/10">
           <X className="h-5 w-5" />
         </Button>
       </div>
@@ -128,37 +135,59 @@ const VersePopover = ({
       <div className="p-4">
         {loading ? (
           <div className="flex justify-center items-center p-8">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+            <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-gold"></div>
           </div>
         ) : (
           <Tabs value={activeTab} onValueChange={setActiveTab}>
-            <TabsList className="grid grid-cols-2 mb-4">
-              <TabsTrigger value="text">الآية</TabsTrigger>
-              <TabsTrigger value="tafsir">التفسير</TabsTrigger>
+            <TabsList className="grid grid-cols-2 mb-6 bg-gold/10">
+              <TabsTrigger value="text" className="data-[state=active]:bg-gold/20 data-[state=active]:text-navy">الآية</TabsTrigger>
+              <TabsTrigger value="tafsir" className="data-[state=active]:bg-gold/20 data-[state=active]:text-navy">التفسير</TabsTrigger>
             </TabsList>
             
-            <TabsContent value="text" className="space-y-4">
-              <div className="text-xl text-center p-4 font-quran leading-loose">
+            <TabsContent value="text" className="space-y-6">
+              <div className="quran-page islamic-pattern py-6 px-4 font-quran text-2xl leading-loose rounded-lg border border-gold/10">
                 {verseData?.aya_text_emlaey}
+                <span className="verse-number mx-1">
+                  {verseData?.aya_no}
+                </span>
               </div>
               
               <div className="flex justify-center space-x-2 rtl:space-x-reverse">
-                <Button variant="ghost" size="sm" onClick={copyVerseText}>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={copyVerseText}
+                  className="bg-white/80 hover:bg-white border-gold/20 text-navy"
+                >
                   <Copy className="h-4 w-4 ml-2 rtl:mr-2" />
                   نسخ
                 </Button>
                 
-                <Button variant="ghost" size="sm" onClick={shareVerse}>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={shareVerse}
+                  className="bg-white/80 hover:bg-white border-gold/20 text-navy"
+                >
                   <Share2 className="h-4 w-4 ml-2 rtl:mr-2" />
                   مشاركة
                 </Button>
                 
-                <Button variant="ghost" size="sm" onClick={handleAddBookmark}>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={handleAddBookmark}
+                  className="bg-white/80 hover:bg-white border-gold/20 text-navy"
+                >
                   <Bookmark className="h-4 w-4 ml-2 rtl:mr-2" />
                   حفظ
                 </Button>
                 
-                <Button variant="ghost" size="sm">
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  className="bg-white/80 hover:bg-white border-gold/20 text-navy"
+                >
                   <Volume2 className="h-4 w-4 ml-2 rtl:mr-2" />
                   استماع
                 </Button>
@@ -168,7 +197,7 @@ const VersePopover = ({
             <TabsContent value="tafsir" className="space-y-4">
               <div>
                 <select 
-                  className="w-full p-2 border rounded-md mb-4"
+                  className="w-full p-3 border rounded-lg mb-4 border-gold/20 bg-white/90 font-arabic"
                   value={settings.translation}
                   onChange={(e) => {
                     // هنا يمكن تحديث التفسير المختار
@@ -182,7 +211,7 @@ const VersePopover = ({
                   ))}
                 </select>
                 
-                <div className="prose prose-sm dark:prose-invert max-w-none">
+                <div className="prose prose-lg max-w-none bg-white/80 p-4 rounded-lg border border-gold/10 font-tafsir">
                   <p className="text-right leading-relaxed">{tafsir}</p>
                 </div>
               </div>
