@@ -30,7 +30,7 @@ export async function registerRoutes(app: Express): Promise<void> {
         message: 'تم تنفيذ سكريبت التنظيف بنجاح', 
         output 
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error executing cleanup script:', error);
       res.status(500).json({ 
         success: false, 
@@ -195,13 +195,48 @@ export async function registerRoutes(app: Express): Promise<void> {
 
   // نقطة وصول لفحص الاتصال
   app.get(`${API_PREFIX}/connection-test`, (req, res) => {
+    const os = require('os');
+    const networkInterfaces = os.networkInterfaces();
+    const interfaces: Record<string, Array<{
+      address: string;
+      family: string;
+      netmask: string;
+    }>> = {};
+    
+    // استخراج معلومات الواجهات الشبكية
+    Object.keys(networkInterfaces).forEach(ifname => {
+      interfaces[ifname] = networkInterfaces[ifname]
+        .filter((iface: any) => !iface.internal) // استبعاد الواجهات الداخلية
+        .map((iface: any) => ({
+          address: iface.address,
+          family: iface.family,
+          netmask: iface.netmask
+        }));
+    });
+    
     res.status(200).json({
       message: "الاتصال بالخادم يعمل بشكل صحيح",
       timestamp: new Date().toISOString(),
       serverInfo: {
         nodeVersion: process.version,
         environment: process.env.NODE_ENV || 'development',
-        port: process.env.PORT // Assuming PORT is defined in environment variables.
+        port: process.env.PORT || 'N/A',
+        platform: os.platform(),
+        hostname: os.hostname(),
+        arch: os.arch(),
+        memory: {
+          total: Math.round(os.totalmem() / (1024 * 1024)) + ' MB',
+          free: Math.round(os.freemem() / (1024 * 1024)) + ' MB',
+          usage: Math.round((1 - os.freemem() / os.totalmem()) * 100) + '%'
+        },
+        uptime: Math.round(os.uptime() / 60) + ' minutes',
+        cpu: os.cpus().map((cpu: any) => ({
+          model: cpu.model,
+          speed: cpu.speed + ' MHz'
+        }))[0], // نأخذ معلومات المعالج الأول فقط
+        network: {
+          interfaces
+        }
       }
     });
   });

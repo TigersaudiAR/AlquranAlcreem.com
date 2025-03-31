@@ -25,7 +25,8 @@ app.use((req, res, next) => {
 
 // Define port - we need to use port 5000 for Replit workflows to work correctly
 const isDev = process.env.NODE_ENV !== 'production';
-const PORT = Number(process.env.PORT) || (isDev ? 5000 : 4000);
+// In development, always use port 5000 for Replit to properly expose it
+const PORT = Number(process.env.PORT) || 5000;
 
 // Serve static files from the public directory with improved caching
 const staticOptions = { 
