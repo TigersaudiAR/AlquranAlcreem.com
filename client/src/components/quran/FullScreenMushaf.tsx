@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { KingFahdMushafPage } from './KingFahdMushafPage';
+import KingFahdMushafPage from './KingFahdMushafPage';
 import { Button } from '@/components/ui/button';
 import { 
   ChevronRight, 
@@ -198,11 +198,19 @@ export function FullScreenMushaf({ initialPage = 1, className }: FullScreenMusha
       {...swipeHandlers}
     >
       {/* الصفحة الحالية من المصحف */}
-      <KingFahdMushafPage 
-        page={currentPage} 
-        onClick={handleVerseClick}
-        className="max-h-[calc(100vh-4rem)]"
-      />
+      <div onClick={handlePageClick}>
+        <KingFahdMushafPage 
+          pageNumber={currentPage} 
+          onVerseSelect={(surahNumber, verseNumber, pageNumber) => {
+            setSelectedVerse({ surah: surahNumber, ayah: verseNumber });
+            const rect = document.body.getBoundingClientRect();
+            setVersePosition({ x: rect.width / 2, y: rect.height / 2 });
+            setShowVersePopover(true);
+            setShowControls(true);
+          }}
+          className="max-h-[calc(100vh-4rem)]"
+        />
+      </div>
       
       {/* شريط التنقل الجانبي */}
       <QuranNavSidebar 

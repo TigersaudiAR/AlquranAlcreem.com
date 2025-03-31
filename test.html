@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="ar">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>اختبار الاتصال</title>
+</head>
+<body>
+  <h1>صفحة اختبار</h1>
+  <p>اختبار الاتصال بالخادم</p>
+  <script>
+    // اختبار الاتصال بال API
+    fetch('/api/health')
+      .then(response => response.json())
+      .then(data => {
+        const div = document.createElement('div');
+        div.textContent = 'تم الاتصال بالخادم بنجاح: ' + JSON.stringify(data);
+        div.style.color = 'green';
+        document.body.appendChild(div);
+      })
+      .catch(error => {
+        const div = document.createElement('div');
+        div.textContent = 'فشل الاتصال بالخادم: ' + error.message;
+        div.style.color = 'red';
+        document.body.appendChild(div);
+      });
+  </script>
+</body>
+</html>

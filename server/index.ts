@@ -11,6 +11,7 @@ app.use(express.json());
 // Serve static files from the public directory
 app.use('/assets', express.static(path.join(process.cwd(), 'public/assets')));
 app.use('/fonts', express.static(path.join(process.cwd(), 'public/fonts')));
+app.use('/images', express.static(path.join(process.cwd(), 'public/images')));
 
 // Define port - use 5000 for Replit
 const PORT = Number(process.env.PORT) || 5000;

@@ -1,60 +1,77 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { getQuranPageUrl, checkQuranApiAvailability } from '@/lib/quran-api';
-import { Skeleton } from '@/components/ui/skeleton';
-import { cn } from '@/lib/utils';
+import { getQuranPageUrl, checkQuranApiAvailability } from '../../lib/quran-api';
+import { Skeleton } from '../ui/skeleton';
+import { cn } from '../../lib/utils';
+
+interface HighlightedVerse {
+  surahNumber: number;
+  verseNumber?: number;
+  pageNumber: number;
+}
 
 interface KingFahdMushafPageProps {
-  page: number;
-  onPageLoad?: () => void;
-  onError?: (error: any) => void;
+  pageNumber: number;
+  onVerseSelect?: (surahNumber: number, verseNumber: number, pageNumber: number) => void;
+  highlightedVerse?: HighlightedVerse;
   className?: string;
-  onClick?: (event: React.MouseEvent<HTMLDivElement>) => void;
 }
 
 /**
- * مكون صفحة المصحف - يعرض صفحة واحدة من المصحف الشريف.
+ * مكون صفحة المصحف - يعرض صفحة واحدة من المصحف الشريف بتنسيق مجمع الملك فهد.
  */
-export function KingFahdMushafPage({
-  page,
-  onPageLoad,
-  onError,
+const KingFahdMushafPage: React.FC<KingFahdMushafPageProps> = ({
+  pageNumber,
+  onVerseSelect,
+  highlightedVerse,
   className,
-  onClick,
-}: KingFahdMushafPageProps) {
+}) => {
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
-  const [apiAvailable, setApiAvailable] = useState<boolean>(true);
+  const [apiAvailable, setApiAvailable] = useState<boolean>(false); // بدء بالصور المحلية
   
-  const fallbackImagePath = `/images/quran_pages/page_${page}.png`;
+  const fallbackImagePath = `/images/quran_pages/page_${pageNumber}.png`;
 
   // التحقق من توفر واجهة برمجة التطبيقات
   useEffect(() => {
-    const checkApi = async () => {
-      const isAvailable = await checkQuranApiAvailability();
-      setApiAvailable(isAvailable);
-      setLoading(false);
-    };
+    // استخدم الصور المحلية فقط
+    setApiAvailable(false);
+    setLoading(false);
     
-    checkApi();
+    // في حال أردنا التحقق من API في المستقبل
+    // const checkApi = async () => {
+    //   const isAvailable = await checkQuranApiAvailability();
+    //   setApiAvailable(isAvailable);
+    //   setLoading(false);
+    // };
+    // checkApi();
   }, []);
   
   // التعامل مع تحميل الصورة
   const handleImageLoad = useCallback(() => {
     setLoading(false);
-    if (onPageLoad) onPageLoad();
-  }, [onPageLoad]);
+  }, []);
   
   // التعامل مع حدوث خطأ
-  const handleImageError = useCallback((e: any) => {
+  const handleImageError = useCallback((e: React.SyntheticEvent<HTMLImageElement, Event>) => {
     console.error('Error loading Quran page:', e);
     setError('تعذر تحميل صفحة المصحف');
     setLoading(false);
-    if (onError) onError(e);
-  }, [onError]);
+  }, []);
+
+  // معالجة النقر على صفحة المصحف
+  const handlePageClick = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+    if (onVerseSelect) {
+      // هنا يمكن إضافة منطق تحديد الآية بناءً على موقع النقر
+      // لأغراض العرض، سنستخدم قيمًا ثابتة
+      const surahNumber = 1; // سيتم تحديثه لاحقًا بمنطق الكشف الفعلي
+      const verseNumber = 1; // سيتم تحديثه لاحقًا بمنطق الكشف الفعلي
+      onVerseSelect(surahNumber, verseNumber, pageNumber);
+    }
+  }, [onVerseSelect, pageNumber]);
 
   // تحديد مصدر الصورة - من واجهة برمجة التطبيقات أو السقوط للصور المحلية
   const imageSource = apiAvailable 
-    ? getQuranPageUrl(page)
+    ? getQuranPageUrl(pageNumber)
     : fallbackImagePath;
 
   return (
@@ -63,7 +80,7 @@ export function KingFahdMushafPage({
         'relative flex items-center justify-center mushaf-page w-full max-w-xl mx-auto',
         className
       )}
-      onClick={onClick}
+      onClick={handlePageClick}
     >
       {loading && (
         <Skeleton className="w-full min-h-[600px] aspect-[0.7/1] rounded-md" />
@@ -79,15 +96,20 @@ export function KingFahdMushafPage({
       {!error && (
         <img
           src={imageSource}
-          alt={`صفحة القرآن رقم ${page}`}
+          alt={`صفحة القرآن رقم ${pageNumber}`}
           className={cn(
             'w-full h-auto object-contain mushaf-page-image',
-            loading ? 'opacity-0' : 'opacity-100 transition-opacity duration-500'
+            loading ? 'opacity-0' : 'opacity-100 transition-opacity duration-500',
+            highlightedVerse && highlightedVerse.pageNumber === pageNumber ? 'highlighted-page' : ''
           )}
           onLoad={handleImageLoad}
           onError={handleImageError}
         />
       )}
+      
+      {/* طبقة تفاعلية للكشف عن النقر على الآيات - ستضاف في المستقبل */}
     </div>
   );
-}
+};
+
+export default KingFahdMushafPage;

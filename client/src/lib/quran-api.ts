@@ -4,10 +4,9 @@
 
 /**
  * عنوان واجهة برمجة التطبيقات الأساسي
+ * نستخدم نفس الـ API من خلال خادم Express الذي يعمل بالفعل
  */
-const API_BASE_URL = window.location.hostname === "localhost" 
-  ? "http://localhost:8000"
-  : `https://${window.location.hostname.replace('.replit.dev', '')}-8000.${window.location.hostname.includes('.replit.dev') ? 'replit.dev' : window.location.hostname.split('.').slice(1).join('.')}`;
+const API_BASE_URL = '/api/quran';
 
 /**
  * واجهة لبيانات التفسير

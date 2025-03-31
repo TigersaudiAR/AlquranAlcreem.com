@@ -154,19 +154,160 @@ export async function registerRoutes(app: Express): Promise<void> {
     }
   });
   
-  // Proxy for Quran API to avoid CORS issues
-  app.get(`${API_PREFIX}/quran/:endpoint(**)`, async (req, res) => {
+  // API Quran - استخدام الملفات المحلية
+  
+  // روت الرئيسية
+  app.get(`${API_PREFIX}/quran`, (req, res) => {
+    res.status(200).json({
+      message: "Welcome to Quran API",
+      endpoints: [
+        "/api/quran/tafsir/:tafsir_id/:sura/:ayah",
+        "/api/quran/translation/:translation_id/:sura/:ayah",
+        "/api/quran/page/:page_number",
+        "/api/quran/available"
+      ]
+    });
+  });
+  
+  // الحصول على قائمة الموارد المتاحة
+  app.get(`${API_PREFIX}/quran/available`, (req, res) => {
     try {
-      const endpoint = req.params.endpoint;
-      const queryParams = new URLSearchParams(req.query as Record<string, string>).toString();
-      const url = `https://api.alquran.cloud/v1/${endpoint}${queryParams ? `?${queryParams}` : ''}`;
+      // قائمة التفاسير المتاحة
+      const tafsirs = [
+        "ar-tafsir-al-jalalayn",
+        "ar-tafsir-ibn-kathir",
+        "ar-tafsir-muyassar"
+      ];
       
+      // قائمة الترجمات المتاحة
+      const translations = [
+        "ar-muyassar",
+        "en-hilali",
+        "tr-yazir"
+      ];
+      
+      // إجمالي عدد صفحات المصحف
+      const pages = 604;
+      
+      res.status(200).json({
+        tafsirs,
+        translations,
+        pages
+      });
+    } catch (error) {
+      res.status(500).json({ message: 'Failed to get available resources', error: (error as Error).message });
+    }
+  });
+  
+  // الحصول على تفسير آية محددة
+  app.get(`${API_PREFIX}/quran/tafsir/:tafsir_id/:sura/:ayah`, async (req, res) => {
+    try {
+      const { tafsir_id, sura, ayah } = req.params;
+      
+      // استدعاء API الخارجي هنا للحصول على التفسير
+      // في هذه الحالة سنستخدم بدائل التفسير من alquran.cloud
+      const url = `https://api.alquran.cloud/v1/ayah/${sura}:${ayah}/ar.jalalayn`;
       const response = await fetch(url);
       const data = await response.json();
       
-      res.status(200).json(data);
+      if (data.code === 200 && data.data) {
+        res.status(200).json({
+          sura: parseInt(sura),
+          ayah: parseInt(ayah),
+          tafsir_id,
+          text: data.data.edition.name === "ar.jalalayn" ? data.data.text : "تفسير غير متوفر حاليًا"
+        });
+      } else {
+        res.status(404).json({ 
+          message: "Tafsir not found",
+          sura: parseInt(sura),
+          ayah: parseInt(ayah),
+          tafsir_id,
+          text: "تفسير غير متوفر حاليًا"
+        });
+      }
     } catch (error) {
-      res.status(500).json({ message: 'Failed to proxy Quran API', error: (error as Error).message });
+      res.status(500).json({ 
+        message: 'Failed to get tafsir', 
+        error: (error as Error).message,
+        sura: parseInt(req.params.sura),
+        ayah: parseInt(req.params.ayah),
+        tafsir_id: req.params.tafsir_id,
+        text: "تفسير غير متوفر حاليًا - خطأ في الخادم"
+      });
+    }
+  });
+  
+  // الحصول على ترجمة آية محددة
+  app.get(`${API_PREFIX}/quran/translation/:translation_id/:sura/:ayah`, async (req, res) => {
+    try {
+      const { translation_id, sura, ayah } = req.params;
+      let edition = "en.hilali"; // افتراضي
+      
+      // تحديد الترجمة حسب المعرف
+      if (translation_id === "ar-muyassar") {
+        edition = "ar.muyassar";
+      } else if (translation_id === "en-hilali") {
+        edition = "en.hilali";
+      } else if (translation_id === "tr-yazir") {
+        edition = "tr.yazir";
+      }
+      
+      const url = `https://api.alquran.cloud/v1/ayah/${sura}:${ayah}/${edition}`;
+      const response = await fetch(url);
+      const data = await response.json();
+      
+      if (data.code === 200 && data.data) {
+        res.status(200).json({
+          sura: parseInt(sura),
+          ayah: parseInt(ayah),
+          translation_id,
+          text: data.data.text
+        });
+      } else {
+        res.status(404).json({ 
+          message: "Translation not found",
+          sura: parseInt(sura),
+          ayah: parseInt(ayah),
+          translation_id,
+          text: "الترجمة غير متوفرة حاليًا"
+        });
+      }
+    } catch (error) {
+      res.status(500).json({ 
+        message: 'Failed to get translation', 
+        error: (error as Error).message,
+        sura: parseInt(req.params.sura),
+        ayah: parseInt(req.params.ayah),
+        translation_id: req.params.translation_id,
+        text: "الترجمة غير متوفرة حاليًا - خطأ في الخادم"
+      });
+    }
+  });
+  
+  // الحصول على صفحة القرآن
+  app.get(`${API_PREFIX}/quran/page/:page_number`, async (req, res) => {
+    try {
+      const { page_number } = req.params;
+      const pageNum = parseInt(page_number);
+      
+      // التحقق من صحة رقم الصفحة
+      if (isNaN(pageNum) || pageNum < 1 || pageNum > 604) {
+        return res.status(400).json({ message: 'Invalid page number. Must be between 1 and 604.' });
+      }
+      
+      // نقوم بتوجيه طلب الصفحة إلى واجهة برمجة التطبيقات الخارجية للحصول على الآيات
+      const url = `https://api.alquran.cloud/v1/page/${pageNum}/quran-uthmani`;
+      const response = await fetch(url);
+      const data = await response.json();
+      
+      if (data.code === 200 && data.data) {
+        res.status(200).json(data.data);
+      } else {
+        res.status(404).json({ message: `Page ${pageNum} not found` });
+      }
+    } catch (error) {
+      res.status(500).json({ message: 'Failed to get Quran page', error: (error as Error).message });
     }
   });
   
