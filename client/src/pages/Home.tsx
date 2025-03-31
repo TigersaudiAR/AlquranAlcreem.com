@@ -81,7 +81,7 @@ export default function Home() {
             </CardContent>
             <CardFooter className="pt-0">
               <Link
-                to={`/page/${lastRead.pageNumber}`}
+                to={`/quran/${lastRead.pageNumber}`}
                 className="text-primary font-medium text-sm"
               >
                 متابعة القراءة
@@ -94,7 +94,7 @@ export default function Home() {
           <h2 className="text-xl font-medium">الأقسام الرئيسية</h2>
           <div className="grid grid-cols-2 gap-4">
             {featuredItems.map((item) => (
-              <Link key={item.path} href={item.path}>
+              <Link key={item.path} to={item.path}>
                 <div className="border rounded-lg p-4 h-full hover:bg-accent/50 transition-colors">
                   <div className="flex flex-col h-full">
                     <div className={cn(
@@ -118,7 +118,7 @@ export default function Home() {
           <h2 className="text-xl font-medium">أقسام أخرى</h2>
           <div className="grid grid-cols-4 gap-3">
             {secondaryItems.map((item) => (
-              <Link key={item.path} href={item.path}>
+              <Link key={item.path} to={item.path}>
                 <div className="border rounded-lg p-3 flex flex-col items-center text-center hover:bg-accent/50 transition-colors">
                   <div className={cn(
                     "p-2 rounded-full w-10 h-10 flex items-center justify-center mb-2",

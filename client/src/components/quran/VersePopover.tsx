@@ -76,6 +76,16 @@ export function VersePopover({ surah, ayah, position, onClose }: VersePopoverPro
       setError(null);
       
       try {
+        // استخدام نص مؤقت بدلاً من الاتصال بالAPI
+        // يمكن تعديل هذا لاحقًا عندما يكون API متاحًا بالكامل
+        setTimeout(() => {
+          setTafsir(`تفسير الآية ${ayah} من سورة ${surah} - نص تفسير مؤقت حتى يتم ربط API التفسير بشكل صحيح.`);
+          setTranslation(`Translation of verse ${ayah} from Surah ${surah} - Temporary translation text until the translation API is properly connected.`);
+          setLoading(false);
+        }, 1000);
+        
+        // عند تفعيل API يمكن استخدام الكود التالي:
+        /*
         // جلب التفسير
         const tafsirData = await getTafsir('ar-muyassar', surah, ayah);
         setTafsir(tafsirData.text);
@@ -83,10 +93,10 @@ export function VersePopover({ surah, ayah, position, onClose }: VersePopoverPro
         // جلب الترجمة
         const translationData = await getTranslation('en-sahih', surah, ayah);
         setTranslation(translationData.text);
+        */
       } catch (err) {
         console.error('Error fetching verse data:', err);
         setError('حدث خطأ أثناء تحميل المعلومات');
-      } finally {
         setLoading(false);
       }
     };

@@ -157,6 +157,15 @@ export async function registerRoutes(app: Express): Promise<void> {
   // API Quran - استخدام الملفات المحلية
   
   // روت الرئيسية
+  app.get(API_PREFIX, (req, res) => {
+    res.status(200).json({
+      message: "Welcome to Quran App API",
+      status: "available",
+      version: "1.0.0"
+    });
+  });
+  
+  // روت الرئيسية للقرآن
   app.get(`${API_PREFIX}/quran`, (req, res) => {
     res.status(200).json({
       message: "Welcome to Quran API",

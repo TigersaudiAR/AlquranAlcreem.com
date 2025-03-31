@@ -26,8 +26,8 @@ function App() {
                 
                 {/* مسارات القرآن الكريم */}
                 <Route path="/quran" component={Quran} />
+                <Route path="/quran/:pageNumber" component={Quran} />
                 <Route path="/surah/:surahNumber" component={Quran} />
-                <Route path="/page/:pageNumber" component={Quran} />
                 <Route path="/juz/:juzNumber" component={Quran} />
                 
                 {/* الصفحات التي تمت إضافتها */}

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { getQuranPageUrl, checkQuranApiAvailability } from '../../lib/quran-api';
+import { getLocalQuranPageUrl } from '../../lib/quran-api';
 import { Skeleton } from '../ui/skeleton';
 import { cn } from '../../lib/utils';
 
@@ -30,7 +30,7 @@ const KingFahdMushafPage: React.FC<KingFahdMushafPageProps> = ({
   const [apiAvailable, setApiAvailable] = useState<boolean>(false); // بدء بالصور المحلية
   
   // استخدم مسار مباشر لملفات الصور الثابتة
-  const fallbackImagePath = `/images/quran_pages/page_${pageNumber}.png`;
+  const fallbackImagePath = getLocalQuranPageUrl(pageNumber);
 
   // التحقق من توفر واجهة برمجة التطبيقات
   useEffect(() => {
@@ -75,13 +75,11 @@ const KingFahdMushafPage: React.FC<KingFahdMushafPageProps> = ({
     }
   }, [onVerseSelect, pageNumber]);
 
-  // تحديد مصدر الصورة - من واجهة برمجة التطبيقات أو السقوط للصور المحلية
-  const imageSource = apiAvailable 
-    ? getQuranPageUrl(pageNumber)
-    : fallbackImagePath;
+  // تحديد مصدر الصورة - نستخدم المسار المحلي دائمًا
+  const imageSource = getLocalQuranPageUrl(pageNumber);
     
   // تسجيل مصدر الصورة للتصحيح
-  console.log('مسار الصورة:', { imageSource, fallbackImagePath, pageNumber });
+  console.log('مسار الصورة:', { imageSource, apiAvailable, pageNumber });
 
   return (
     <div

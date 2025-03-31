@@ -4,9 +4,10 @@
 
 /**
  * عنوان واجهة برمجة التطبيقات الأساسي
- * نستخدم نفس الـ API من خلال خادم Express الذي يعمل بالفعل
+ * نستخدم Express على منفذ 5000
  */
-const API_BASE_URL = '/api/quran';
+// في بيئة الإنتاج قد تحتاج إلى تغيير هذا حسب إعدادات الخادم
+const API_BASE_URL = '/api';
 
 /**
  * واجهة لبيانات التفسير
@@ -91,6 +92,14 @@ export async function getTranslation(translationId: string, sura: number, ayah: 
  */
 export function getQuranPageUrl(pageNumber: number): string {
   return `${API_BASE_URL}/page/${pageNumber}`;
+}
+
+/**
+ * الحصول على URL لملف الصورة المحلي كنسخة احتياطية
+ */
+export function getLocalQuranPageUrl(pageNumber: number): string {
+  // استخدام المسار الصحيح نسبة إلى المجلد العام
+  return `/images/quran_pages/page${pageNumber.toString().padStart(3, '0')}.png`;
 }
 
 /**

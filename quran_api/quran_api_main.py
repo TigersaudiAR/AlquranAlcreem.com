@@ -1,7 +1,8 @@
 
 from fastapi import FastAPI, HTTPException, Query
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, HTMLResponse
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 import json
 import os
 import glob
@@ -15,7 +16,7 @@ app = FastAPI(
 # إضافة CORS لسماح الوصول من الواجهة الأمامية
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # يسمح بالوصول من أي مصدر
+    allow_origins=["*", "http://localhost:5000", "http://localhost:3000", "http://localhost:8000", "http://0.0.0.0:5000"],  # يسمح بالوصول من المصادر المحددة
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -110,3 +111,22 @@ def get_available_resources():
         "translations": list(translation_data.keys()),
         "pages": len(glob.glob(os.path.join(script_dir, "images_all/page/page_*.png")))
     }
+
+@app.get("/index.html", response_class=HTMLResponse)
+def get_index():
+    """
+    صفحة البداية للتطبيق
+    """
+    with open(os.path.join(script_dir, "index.html"), "r", encoding="utf-8") as f:
+        return f.read()
+
+@app.get("/index_mobile.html", response_class=HTMLResponse)
+def get_mobile_index():
+    """
+    صفحة البداية للتطبيق (النسخة المحمولة)
+    """
+    with open(os.path.join(script_dir, "index_mobile.html"), "r", encoding="utf-8") as f:
+        return f.read()
+
+# تكوين الوصول للملفات الثابتة (الصور والملفات الأخرى)
+app.mount("/static", StaticFiles(directory=os.path.join(script_dir, "images_all")), name="static")
