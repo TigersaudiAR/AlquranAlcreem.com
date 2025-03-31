@@ -8,6 +8,7 @@ import DebugPage from './pages/DebugPage';
 import FontsTest from './pages/FontsTest';
 import ConnectionStatus from './pages/ConnectionStatus';
 import ServerStatus from './pages/ServerStatus';
+import Debug from './pages/Debug';
 import { ThemeProvider } from './components/theme-provider';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { queryClient } from './lib/queryClient';
@@ -35,7 +36,8 @@ function App() {
                 {/* الصفحات التي تمت إضافتها */}
                 <Route path="/prayer" component={Prayer} />
                 <Route path="/settings" component={Settings} />
-                <Route path="/debug" component={DebugPage} />
+                <Route path="/debug" component={Debug} />
+                <Route path="/debug-page" component={DebugPage} />
                 <Route path="/fonts" component={FontsTest} />
                 <Route path="/connection" component={ConnectionStatus} />
                 <Route path="/server-status" component={ServerStatus} />
