@@ -3,6 +3,7 @@ import { createServer } from 'http';
 import { registerRoutes } from './routes';
 import { setupVite } from './vite';
 import path from 'path';
+import fs from 'fs';
 
 // Create Express application with JSON support
 const app = express();
@@ -52,6 +53,14 @@ const server = createServer(app);
 
 // Register API routes
 registerRoutes(app);
+
+// التحقق من وجود ملف main.tsx
+const mainTsxPath = path.resolve(process.cwd(), 'client', 'src', 'main.tsx');
+if (fs.existsSync(mainTsxPath)) {
+  console.log(`Found main.tsx at ${mainTsxPath}`);
+} else {
+  console.error(`Missing main.tsx file at ${mainTsxPath}`);
+}
 
 // Setup Vite for frontend (do this after registering our routes)
 setupVite(app, server);

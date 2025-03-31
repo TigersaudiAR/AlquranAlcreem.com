@@ -95,15 +95,14 @@ export function getQuranPageUrl(pageNumber: number): string {
 }
 
 /**
- * الحصول على URL لملف الصورة المحلي كنسخة احتياطية
+ * الحصول على URL لملف الصورة المحلي
  */
 export function getLocalQuranPageUrl(pageNumber: number): string {
   // استخدام مسار واحد فقط لتجنب المشاكل وتكرار الصور
   // استخدام امتداد webp الصحيح للملفات
   
-  // بما أننا نمتلك 7 صفحات فقط للعرض التجريبي، سنقوم بالتأكد من أن رقم الصفحة
-  // يكون بين 1 و 7 فقط
-  const safePageNumber = Math.max(1, Math.min(7, pageNumber));
+  // التأكد من أن رقم الصفحة بين 1 و 604
+  const safePageNumber = Math.max(1, Math.min(604, pageNumber));
   
   return `/images/quran_pages/page_${safePageNumber}.webp`;
 }
@@ -115,9 +114,8 @@ export function getLocalQuranPageUrl(pageNumber: number): string {
 export function preloadQuranImage(pageNumber: number): Promise<string> {
   // هذه الدالة تقوم بمحاولة تحميل الصورة وإرجاع المسار الصحيح
   return new Promise((resolve, reject) => {
-    // بما أننا نمتلك 7 صفحات فقط للعرض التجريبي، سنقوم بالتأكد من أن رقم الصفحة
-    // يكون بين 1 و 7 فقط
-    const safePageNumber = Math.max(1, Math.min(7, pageNumber));
+    // التأكد من أن رقم الصفحة بين 1 و 604
+    const safePageNumber = Math.max(1, Math.min(604, pageNumber));
     
     if (pageNumber !== safePageNumber) {
       console.log(`تم طلب الصفحة ${pageNumber} ولكن تم استخدام الصفحة ${safePageNumber} بدلاً منها.`);
