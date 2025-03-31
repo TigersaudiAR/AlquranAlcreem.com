@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>تطبيق القرآن الكريم - اختبار النشر</title>
+  <style>
+    body {
+      font-family: 'Arial', sans-serif;
+      text-align: center;
+      margin: 50px;
+      direction: rtl;
+    }
+    .success {
+      color: green;
+      font-size: 24px;
+      margin: 20px 0;
+    }
+    .container {
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 20px;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>اختبار النشر</h1>
+    <p class="success">✓ تم تحميل الصفحة بنجاح!</p>
+    <p>إذا كنت ترى هذه الصفحة، فهذا يعني أن خادم الويب يعمل بشكل صحيح ويمكن الوصول إلى الملفات الثابتة.</p>
+    <p>الوقت الحالي: <span id="current-time"></span></p>
+  </div>
+
+  <script>
+    document.getElementById('current-time').textContent = new Date().toLocaleString('ar-SA');
+  </script>
+</body>
+</html>
