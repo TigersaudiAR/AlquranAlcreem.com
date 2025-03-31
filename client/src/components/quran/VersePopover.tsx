@@ -2,11 +2,12 @@ import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Loader2, X, CopyCheck, Share2, Bookmark } from 'lucide-react';
+import { Loader2, X, CopyCheck, Share2, Bookmark, Volume2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { getTafsir, getTranslation } from '@/lib/quran-api';
 import { useToast } from '@/hooks/use-toast';
 import { useApp } from '@/context/AppContext';
+import TajweedSpeechControls from './TajweedSpeechControls';
 
 interface VersePopoverProps {
   surah: number;
@@ -25,6 +26,7 @@ export function VersePopover({ surah, ayah, position, onClose }: VersePopoverPro
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<string>('tafsir');
   const [popoverPosition, setPopoverPosition] = useState({ top: 0, left: 0 });
+  const [verseText, setVerseText] = useState<string>('');
   
   const { toast } = useToast();
   const { settings } = useApp();
@@ -79,6 +81,11 @@ export function VersePopover({ surah, ayah, position, onClose }: VersePopoverPro
         // استخدام نص مؤقت بدلاً من الاتصال بالAPI
         // يمكن تعديل هذا لاحقًا عندما يكون API متاحًا بالكامل
         setTimeout(() => {
+          // النص القرآني
+          const sampleVerseText = `بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ وَالْعَصْرِ إِنَّ الْإِنْسَانَ لَفِي خُسْرٍ إِلَّا الَّذِينَ آمَنُوا وَعَمِلُوا الصَّالِحَاتِ وَتَوَاصَوْا بِالْحَقِّ وَتَوَاصَوْا بِالصَّبْرِ`;
+          setVerseText(sampleVerseText);
+          
+          // التفسير والترجمة
           setTafsir(`تفسير الآية ${ayah} من سورة ${surah} - نص تفسير مؤقت حتى يتم ربط API التفسير بشكل صحيح.`);
           setTranslation(`Translation of verse ${ayah} from Surah ${surah} - Temporary translation text until the translation API is properly connected.`);
           setLoading(false);
@@ -93,6 +100,10 @@ export function VersePopover({ surah, ayah, position, onClose }: VersePopoverPro
         // جلب الترجمة
         const translationData = await getTranslation('en-sahih', surah, ayah);
         setTranslation(translationData.text);
+        
+        // جلب نص الآية
+        const verseData = await getVerse(surah, ayah);
+        setVerseText(verseData.text);
         */
       } catch (err) {
         console.error('Error fetching verse data:', err);
@@ -142,6 +153,23 @@ export function VersePopover({ surah, ayah, position, onClose }: VersePopoverPro
             <X className="h-4 w-4" />
           </Button>
         </CardHeader>
+
+        {/* عرض نص الآية مع أدوات التجويد الصوتي */}
+        {!loading && !error && verseText && (
+          <div className="px-3 pt-2 pb-0">
+            <div className="p-3 bg-amber-50/30 rounded-md border border-amber-200/50 mb-2">
+              <p className="text-right text-lg leading-relaxed rtl font-quran">{verseText}</p>
+              <div className="flex justify-center mt-2">
+                <TajweedSpeechControls
+                  text={verseText}
+                  size="sm"
+                  variant="ghost"
+                  className="justify-center" 
+                />
+              </div>
+            </div>
+          </div>
+        )}
         
         <Tabs defaultValue="tafsir" value={activeTab} onValueChange={setActiveTab}>
           <div className="px-3 pt-2">
@@ -151,7 +179,7 @@ export function VersePopover({ surah, ayah, position, onClose }: VersePopoverPro
             </TabsList>
           </div>
           
-          <CardContent className="p-3 h-[300px] overflow-y-auto">
+          <CardContent className="p-3 h-[210px] overflow-y-auto">
             {loading ? (
               <div className="flex justify-center items-center h-full">
                 <Loader2 className="h-6 w-6 animate-spin" />
