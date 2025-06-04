@@ -18,6 +18,14 @@ export const APP_CONFIG = {
   DEFAULT_TAFSIR: 'ar.muyassar',
   DEFAULT_THEME: 'light',
   API_BASE_URL: ''
+  ,
+  // معلومات الحقوق وبيانات الاتصال لعرضها في التذييل
+  copyright: {
+    owner: 'مطور المنصة',
+    rights: 'جميع الحقوق محفوظة',
+    phone: '+966000000000',
+    email: 'info@example.com'
+  }
 };
 
 // قائمة القراء
