@@ -1,134 +1,205 @@
-import { useState } from 'react';
-import MemorizationTabs from '../components/memorization/MemorizationTabs';
-import MemorizationPlan from '../components/memorization/MemorizationPlan';
-import MemorizationTechniques from '../components/memorization/MemorizationTechniques';
-import LoadingSpinner from '../components/common/LoadingSpinner';
-import ErrorDisplay from '../components/common/ErrorDisplay';
+import { MainLayout } from '../components/layout/MainLayout';
+import TopBar from '../components/common/TopBar';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
+import { Badge } from '../components/ui/badge';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs';
+import { Button } from '../components/ui/button';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../components/ui/table';
+import {
+  Users,
+  Sparkles,
+  Crown,
+  Flame,
+  CalendarClock,
+} from 'lucide-react';
 
-const Memorization = () => {
-  const [activeTab, setActiveTab] = useState('plan');
-  const [dailyGoal, setDailyGoal] = useState(5);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  
-  // Mock data for current verse to memorize
-  // In a real app, this would come from an API based on user's progress
-  const currentVerse = {
-    surah: 'سورة البقرة',
-    ayahFrom: 6,
-    ayahTo: 10,
-    text: [
-      'إِنَّ الَّذِينَ كَفَرُوا سَوَاءٌ عَلَيْهِمْ أَأَنذَرْتَهُمْ أَمْ لَمْ تُنذِرْهُمْ لَا يُؤْمِنُونَ',
-      'خَتَمَ اللَّهُ عَلَىٰ قُلُوبِهِمْ وَعَلَىٰ سَمْعِهِمْ ۖ وَعَلَىٰ أَبْصَارِهِمْ غِشَاوَةٌ ۖ وَلَهُمْ عَذَابٌ عَظِيمٌ',
-      'وَمِنَ النَّاسِ مَن يَقُولُ آمَنَّا بِاللَّهِ وَبِالْيَوْمِ الْآخِرِ وَمَا هُم بِمُؤْمِنِينَ',
-      'يُخَادِعُونَ اللَّهَ وَالَّذِينَ آمَنُوا وَمَا يَخْدَعُونَ إِلَّا أَنفُسَهُمْ وَمَا يَشْعُرُونَ',
-      'فِي قُلُوبِهِم مَّرَضٌ فَزَادَهُمُ اللَّهُ مَرَضًا ۖ وَلَهُمْ عَذَابٌ أَلِيمٌ بِمَا كَانُوا يَكْذِبُونَ',
-    ]
-  };
-  
-  // Components for each tab
-  const renderTabContent = () => {
-    if (isLoading) {
-      return <LoadingSpinner text="جار تحميل البيانات..." />;
-    }
-    
-    if (error) {
-      return <ErrorDisplay error={error} onRetry={() => setError(null)} />;
-    }
-    
-    switch (activeTab) {
-      case 'plan':
-        return (
-          <MemorizationPlan 
-            dailyGoal={dailyGoal}
-            setDailyGoal={setDailyGoal}
-            currentVerse={currentVerse}
-          />
-        );
-      
-      case 'test':
-        return (
-          <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-md mb-6">
-            <h3 className="text-lg font-bold text-primary mb-3">اختبار الحفظ</h3>
-            <div className="quran-page p-4 rounded-lg mb-4">
-              <p className="text-center text-lg mb-4">أكمل الآية التالية:</p>
-              <p className="arabic-text text-lg text-right">
-                إِنَّ الَّذِينَ كَفَرُوا سَوَاءٌ عَلَيْهِمْ أَأَنذَرْتَهُمْ أَمْ لَمْ تُنذِرْهُمْ ...
-              </p>
-              <textarea 
-                className="w-full p-2 mt-4 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700 dark:text-white arabic-text text-lg"
-                rows={3}
-                placeholder="أكمل الآية هنا..."
-              ></textarea>
-              <div className="flex justify-center mt-4">
-                <button className="py-2 px-4 bg-primary text-white rounded-lg hover:bg-opacity-90 transition">
-                  تحقق من الإجابة
-                </button>
-              </div>
-            </div>
-          </div>
-        );
-      
-      case 'review':
-        return (
-          <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-md mb-6">
-            <h3 className="text-lg font-bold text-primary mb-3">مراجعة المحفوظات</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-              <div className="border border-gray-200 dark:border-gray-700 rounded-lg p-3">
-                <div className="font-medium mb-1">آخر مراجعة</div>
-                <p className="text-sm text-gray-700 dark:text-gray-300">
-                  سورة البقرة (1-15) - قبل 3 أيام
-                </p>
-              </div>
-              <div className="border border-gray-200 dark:border-gray-700 rounded-lg p-3">
-                <div className="font-medium mb-1">المراجعة التالية</div>
-                <p className="text-sm text-gray-700 dark:text-gray-300">
-                  سورة البقرة (16-25) - اليوم
-                </p>
-              </div>
-            </div>
-            <div className="quran-page p-4 rounded-lg arabic-text text-lg mb-4">
-              <p>
-                <span>أَلَمْ تَرَ إِلَى الَّذِي حَاجَّ إِبْرَاهِيمَ فِي رَبِّهِ أَنْ آتَاهُ اللَّهُ الْمُلْكَ إِذْ قَالَ إِبْرَاهِيمُ رَبِّيَ الَّذِي يُحْيِي وَيُمِيتُ قَالَ أَنَا أُحْيِي وَأُمِيتُ ۖ قَالَ إِبْرَاهِيمُ فَإِنَّ اللَّهَ يَأْتِي بِالشَّمْسِ مِنَ الْمَشْرِقِ فَأْتِ بِهَا مِنَ الْمَغْرِبِ فَبُهِتَ الَّذِي كَفَرَ ۗ وَاللَّهُ لَا يَهْدِي الْقَوْمَ الظَّالِمِينَ</span>
-                <span className="inline-flex justify-center items-center w-6 h-6 rounded-full bg-primary bg-opacity-20 text-primary text-sm ms-1">258</span>
-              </p>
-            </div>
-            <div className="flex justify-between">
-              <button className="py-2 px-4 bg-gray-300 dark:bg-gray-700 text-gray-800 dark:text-white rounded-lg hover:bg-gray-400 dark:hover:bg-gray-600 transition">
-                السابق
-              </button>
-              <button className="py-2 px-4 bg-primary text-white rounded-lg hover:bg-opacity-90 transition">
-                تأكيد المراجعة
-              </button>
-              <button className="py-2 px-4 bg-gray-300 dark:bg-gray-700 text-gray-800 dark:text-white rounded-lg hover:bg-gray-400 dark:hover:bg-gray-600 transition">
-                التالي
-              </button>
-            </div>
-          </div>
-        );
-      
-      case 'techniques':
-        return <MemorizationTechniques />;
-        
-      default:
-        return <MemorizationPlan dailyGoal={dailyGoal} setDailyGoal={setDailyGoal} currentVerse={currentVerse} />;
-    }
-  };
-  
+const circleTypes = [
+  {
+    id: 'kids',
+    name: 'حلقة الناشئة',
+    description: 'إشراف مباشر من المعلم، تلاوة يومية قصيرة، وتقييم أسبوعي مبسط.',
+    language: 'العربية',
+    capacity: '١٥ طالب',
+  },
+  {
+    id: 'global',
+    name: 'حلقة عالمية باللغات المتعددة',
+    description: 'مترجم فوري، بث مباشر مع تفاعلات صوتية، ومتابعة فردية لكل طالب.',
+    language: 'العربية، الإنجليزية، الأردية',
+    capacity: '٢٥ طالب',
+  },
+  {
+    id: 'tajweed',
+    name: 'حلقة التجويد المتقدم',
+    description: 'تدريب مكثف على مخارج الحروف والمدود مع تغذية راجعة لحظية.',
+    language: 'العربية',
+    capacity: '١٢ طالب',
+  },
+];
+
+const topStudents = [
+  { rank: 1, name: 'سارة العبدالله', juz: 18, points: 9840 },
+  { rank: 2, name: 'محمد اليامي', juz: 17, points: 9630 },
+  { rank: 3, name: 'ليلى التركي', juz: 16, points: 9500 },
+  { rank: 4, name: 'أحمد الشهري', juz: 15, points: 9460 },
+  { rank: 5, name: 'نور الشمري', juz: 14, points: 9325 },
+  { rank: 6, name: 'علي الزهراني', juz: 14, points: 9200 },
+  { rank: 7, name: 'مها البليهي', juz: 13, points: 9150 },
+  { rank: 8, name: 'خالد الحربي', juz: 12, points: 9030 },
+  { rank: 9, name: 'نجود السبيعي', juz: 12, points: 8990 },
+  { rank: 10, name: 'ندى السويلم', juz: 11, points: 8875 },
+];
+
+export default function Memorization() {
   return (
-    <section className="p-4 md:p-6 max-w-7xl mx-auto">
-      <div className="mb-6">
-        <h2 className="text-2xl font-bold mb-4">الحفظ والمراجعة</h2>
-        
-        <MemorizationTabs 
-          activeTab={activeTab}
-          setActiveTab={setActiveTab}
-        />
-        
-        {renderTabContent()}
-      </div>
-    </section>
-  );
-};
+    <MainLayout>
+      <TopBar />
+      <div className="pt-16 space-y-8">
+        <header className="flex flex-col items-end text-right">
+          <Badge variant="secondary" className="mb-3 bg-primary/10 text-primary">
+            حلقات تحفيظ حديثة
+          </Badge>
+          <h1 className="text-3xl font-bold">رحلة الحفظ بإشراف مباشر ولوحة شرف تفاعلية</h1>
+          <p className="mt-2 max-w-3xl text-muted-foreground">
+            اختر الحلقة المناسبة لعُمرك ولغتك، تابع تقدمك مع لوحة ترتيب لأفضل ١٠٠ قارئ، واستلم تقارير مخصصة من المعلمين والمشرفين.
+          </p>
+        </header>
 
-export default Memorization;
+        <Tabs defaultValue="kids" className="w-full">
+          <TabsList className="grid w-full grid-cols-3">
+            {circleTypes.map((circle) => (
+              <TabsTrigger key={circle.id} value={circle.id} className="text-xs sm:text-sm">
+                {circle.name}
+              </TabsTrigger>
+            ))}
+          </TabsList>
+          {circleTypes.map((circle) => (
+            <TabsContent key={circle.id} value={circle.id} className="mt-4">
+              <Card className="border border-primary/20 bg-primary/5">
+                <CardHeader className="items-end text-right">
+                  <CardTitle className="flex items-center justify-end gap-2 text-xl">
+                    <Users className="h-6 w-6 text-primary" />
+                    {circle.name}
+                  </CardTitle>
+                  <CardDescription>{circle.description}</CardDescription>
+                </CardHeader>
+                <CardContent className="grid gap-4 sm:grid-cols-2 text-sm text-muted-foreground">
+                  <div className="flex items-center justify-between rounded-lg border bg-muted/40 px-4 py-3">
+                    <span>اللغة</span>
+                    <Badge variant="outline" className="border-primary/30 text-primary">
+                      {circle.language}
+                    </Badge>
+                  </div>
+                  <div className="flex items-center justify-between rounded-lg border bg-muted/40 px-4 py-3">
+                    <span>الطاقة الاستيعابية</span>
+                    <Badge variant="outline" className="border-primary/30 text-primary">
+                      {circle.capacity}
+                    </Badge>
+                  </div>
+                  <div className="rounded-lg border bg-background/80 px-4 py-3">
+                    <p>• خطة مراجعة أسبوعية مع اختبار شفهي مسجل.</p>
+                    <p>• مشاركة التقييم مع ولي الأمر عبر البريد أو التطبيق.</p>
+                  </div>
+                  <div className="rounded-lg border bg-background/80 px-4 py-3">
+                    <p>• بث مباشر مع إمكانية رفع اليد وطلب المراجعة.</p>
+                    <p>• حفظ متدرج مع إشعارات لاستكمال الحلقة اليومية.</p>
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
+          ))}
+        </Tabs>
+
+        <section className="grid gap-4 lg:grid-cols-3">
+          <Card className="border border-primary/30 bg-primary/5">
+            <CardHeader className="items-end text-right">
+              <CardTitle className="flex items-center justify-end gap-2 text-xl">
+                <Flame className="h-6 w-6 text-primary" />
+                تحديات أسبوعية
+              </CardTitle>
+              <CardDescription>
+                انضم لتحدي "حفظ خمسة أوجه" مع متابعة جماعية وترتيب لحظي للمشاركين.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-2 text-sm leading-relaxed text-muted-foreground">
+              <p>• بث مباشر للإعلان عن الفائزين في نهاية الأسبوع.</p>
+              <p>• نقاط إضافية عند مشاركة تسجيل صوتي خالٍ من الأخطاء.</p>
+            </CardContent>
+          </Card>
+
+          <Card className="border border-dashed border-primary/40">
+            <CardHeader className="items-end text-right">
+              <CardTitle className="flex items-center justify-end gap-2 text-xl">
+                <CalendarClock className="h-6 w-6 text-primary" />
+                جدولة مرنة
+              </CardTitle>
+              <CardDescription>
+                اختر الأيام والساعات المناسبة لك، مع إمكانية التعويض عن الجلسة الغائبة عبر تسجيل مرئي.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-2 text-sm leading-relaxed text-muted-foreground">
+              <p>• تذكير قبل موعد الحلقة بربع ساعة.</p>
+              <p>• إشعار للمعلم عند تأخر الطالب ثلاث مرات متتالية.</p>
+            </CardContent>
+          </Card>
+
+          <Card className="border border-primary/20 bg-primary/5">
+            <CardHeader className="items-end text-right">
+              <CardTitle className="flex items-center justify-end gap-2 text-xl">
+                <Sparkles className="h-6 w-6 text-primary" />
+                لوحة الشرف
+              </CardTitle>
+              <CardDescription>
+                أبرز ١٠٠ مشارك يظهرون في لوحة متحركة بأسلوب الكأس مع زر لعرض المزيد من التفاصيل.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="text-sm text-muted-foreground">
+              <p>يتم تحديث القائمة في الوقت الحقيقي بناءً على النقاط المكتسبة من الحفظ والمراجعة.</p>
+            </CardContent>
+          </Card>
+        </section>
+
+        <Card className="border border-border/60">
+          <CardHeader className="flex flex-col items-end gap-3 text-right md:flex-row md:items-center md:justify-between">
+            <div>
+              <CardTitle className="text-2xl font-bold">أفضل ١٠ مشاركين هذا الأسبوع</CardTitle>
+              <CardDescription>لعرض قائمة أفضل ١٠٠ مشارك اضغط زر "المزيد" داخل لوحة الشرف.</CardDescription>
+            </div>
+            <Button variant="outline" className="border-primary/40 text-primary">عرض المزيد</Button>
+          </CardHeader>
+          <CardContent>
+            <Table>
+              <TableHeader>
+                <TableRow className="text-right">
+                  <TableHead className="text-right">الترتيب</TableHead>
+                  <TableHead className="text-right">الاسم</TableHead>
+                  <TableHead className="text-right">عدد الأجزاء</TableHead>
+                  <TableHead className="text-right">النقاط</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {topStudents.map((student) => (
+                  <TableRow key={student.rank} className="text-right">
+                    <TableCell className="font-semibold">
+                      {student.rank <= 3 ? (
+                        <Badge variant="secondary" className="bg-primary/15 text-primary">
+                          <Crown className="ml-1 h-4 w-4" />
+                          {student.rank}
+                        </Badge>
+                      ) : (
+                        student.rank
+                      )}
+                    </TableCell>
+                    <TableCell>{student.name}</TableCell>
+                    <TableCell>{student.juz}</TableCell>
+                    <TableCell>{student.points}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+      </div>
+    </MainLayout>
+  );
+}

@@ -1,215 +1,226 @@
 import { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
-import LoadingSpinner from '../components/common/LoadingSpinner';
-import ErrorDisplay from '../components/common/ErrorDisplay';
+import { MainLayout } from '../components/layout/MainLayout';
+import TopBar from '../components/common/TopBar';
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '../components/ui/card';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs';
+import { Button } from '../components/ui/button';
+import { Input } from '../components/ui/input';
+import { Switch } from '../components/ui/switch';
+import { Textarea } from '../components/ui/textarea';
+import { Badge } from '../components/ui/badge';
+import {
+  Clock,
+  MicVocal,
+  Sparkles,
+  Moon,
+  Sun,
+  Radio,
+  BellRing,
+  Plus,
+  Play,
+  Pause,
+} from 'lucide-react';
 
-// Categories of duas and adhkar
-const categories = [
-  { id: 'morning', name: 'أذكار الصباح' },
-  { id: 'evening', name: 'أذكار المساء' },
-  { id: 'salah', name: 'أذكار الصلاة' },
-  { id: 'sleep', name: 'أذكار النوم' },
-  { id: 'food', name: 'أذكار الطعام' },
-  { id: 'travel', name: 'أذكار السفر' },
-  { id: 'quran', name: 'أدعية قرآنية' },
-  { id: 'prophetic', name: 'أدعية نبوية' },
-  { id: 'masjid', name: 'أذكار المسجد' },
-  { id: 'daily', name: 'أذكار يومية' },
+const DEFAULT_DUAS = [
+  {
+    title: 'أذكار الصباح',
+    description: 'تشغيل تلقائي بعد صلاة الفجر حتى الشروق مع عدّ ذكي عبر الصوت أو اللمس.',
+    recommendedTime: 'من بعد الفجر حتى الشروق',
+  },
+  {
+    title: 'أذكار المساء',
+    description: 'يُفَعَّل بعد صلاة العصر، ويستمع للتلاوة لضبط عدد مرات التكرار بدقة.',
+    recommendedTime: 'من بعد العصر حتى العشاء',
+  },
+  {
+    title: 'أدعية النوم',
+    description: 'مسبحة هادئة بأصوات مريحة تُطفئ الشاشة تلقائياً بعد اكتمال الأذكار.',
+    recommendedTime: 'قبل النوم مباشرة',
+  },
 ];
 
-interface Dua {
-  id: string;
-  text: string;
-  translation?: string;
-  transliteration?: string;
-  reference: string;
-  benefit?: string;
-  repeat?: number;
-}
+export default function Duas() {
+  const [activeTab, setActiveTab] = useState<'audio' | 'manual'>('audio');
+  const [customDua, setCustomDua] = useState('');
+  const [reminderEnabled, setReminderEnabled] = useState(true);
+  const [selectedTime, setSelectedTime] = useState('بعد كل صلاة مغرب');
 
-const fetchDuas = async (category: string): Promise<Dua[]> => {
-  // In a full implementation, this would fetch from an API
-  // For now, we'll return some hardcoded data for the selected category
-  
-  switch (category) {
-    case 'morning':
-      return [
-        {
-          id: 'morning-1',
-          text: 'أَصْبَحْنَا وَأَصْبَحَ الْمُلْكُ لِلَّهِ، وَالْحَمْدُ لِلَّهِ، لاَ إِلَـهَ إِلاَّ اللهُ وَحْدَهُ لاَ شَرِيكَ لَهُ، لَهُ الْمُلْكُ وَلَهُ الْحَمْدُ وَهُوَ عَلَى كُلِّ شَيْءٍ قَدِيرٌ.',
-          translation: 'We have reached the morning and at this very time all sovereignty belongs to Allah. Praise be to Allah. None has the right to be worshipped except Allah, alone, without any partner. To Allah belongs all sovereignty and praise and He is over all things omnipotent.',
-          reference: 'رواه أبو داود',
-          repeat: 1
-        },
-        {
-          id: 'morning-2',
-          text: 'اللَّهُمَّ بِكَ أَصْبَحْنَا، وَبِكَ أَمْسَيْنَا، وَبِكَ نَحْيَا، وَبِكَ نَمُوتُ وَإِلَيْكَ النُّشُورُ',
-          translation: 'O Allah, by Your leave we have reached the morning and by Your leave we have reached the evening, by Your leave we live and die and unto You is our resurrection.',
-          reference: 'رواه الترمذي',
-          repeat: 1
-        },
-        {
-          id: 'morning-3',
-          text: 'سُبْحَانَ اللَّهِ وَبِحَمْدِهِ.',
-          translation: 'Glory is to Allah and praise is to Him.',
-          reference: 'رواه مسلم',
-          benefit: 'من قالها مائة مرة حين يصبح وحين يمسي، لم يأت أحد يوم القيامة بأفضل مما جاء به إلا أحد قال مثل ما قال أو زاد عليه',
-          repeat: 100
-        }
-      ];
-    
-    case 'evening':
-      return [
-        {
-          id: 'evening-1',
-          text: 'أَمْسَيْنَا وَأَمْسَى الْمُلْكُ لِلَّهِ، وَالْحَمْدُ لِلَّهِ، لاَ إِلَـهَ إِلاَّ اللهُ وَحْدَهُ لاَ شَرِيكَ لَهُ، لَهُ الْمُلْكُ وَلَهُ الْحَمْدُ وَهُوَ عَلَى كُلِّ شَيْءٍ قَدِيرٌ.',
-          translation: 'We have reached the evening and at this very time all sovereignty belongs to Allah. Praise be to Allah. None has the right to be worshipped except Allah, alone, without any partner. To Allah belongs all sovereignty and praise and He is over all things omnipotent.',
-          reference: 'رواه أبو داود',
-          repeat: 1
-        },
-        {
-          id: 'evening-2',
-          text: 'اللَّهُمَّ بِكَ أَمْسَيْنَا، وَبِكَ أَصْبَحْنَا، وَبِكَ نَحْيَا، وَبِكَ نَمُوتُ وَإِلَيْكَ الْمَصِيرُ',
-          translation: 'O Allah, by Your leave we have reached the evening and by Your leave we have reached the morning, by Your leave we live and die and unto You is our return.',
-          reference: 'رواه الترمذي',
-          repeat: 1
-        }
-      ];
-    
-    case 'quran':
-      return [
-        {
-          id: 'quran-1',
-          text: 'رَبَّنَا آتِنَا فِي الدُّنْيَا حَسَنَةً وَفِي الْآخِرَةِ حَسَنَةً وَقِنَا عَذَابَ النَّارِ',
-          translation: 'Our Lord, give us in this world [that which is] good and in the Hereafter [that which is] good and protect us from the punishment of the Fire.',
-          reference: 'البقرة: 201',
-          repeat: 1
-        },
-        {
-          id: 'quran-2',
-          text: 'رَبَّنَا لَا تُزِغْ قُلُوبَنَا بَعْدَ إِذْ هَدَيْتَنَا وَهَبْ لَنَا مِنْ لَدُنْكَ رَحْمَةً ۚ إِنَّكَ أَنْتَ الْوَهَّابُ',
-          translation: 'Our Lord, let not our hearts deviate after You have guided us and grant us from Yourself mercy. Indeed, You are the Bestower.',
-          reference: 'آل عمران: 8',
-          repeat: 1
-        }
-      ];
-      
-    default:
-      return [];
-  }
-};
-
-const Duas = () => {
-  const [selectedCategory, setSelectedCategory] = useState('morning');
-  const [filter, setFilter] = useState('');
-  
-  const { data: duas, isLoading, error, refetch } = useQuery({
-    queryKey: ['duas', selectedCategory],
-    queryFn: () => fetchDuas(selectedCategory),
-  });
-  
-  // Filter duas based on search
-  const filteredDuas = duas?.filter(dua => 
-    dua.text.includes(filter) || 
-    (dua.translation && dua.translation.toLowerCase().includes(filter.toLowerCase()))
-  );
-  
   return (
-    <section className="p-4 md:p-6 max-w-7xl mx-auto">
-      <div className="mb-6">
-        <h2 className="text-2xl font-bold mb-4">الأدعية والأذكار</h2>
-        
-        <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-md mb-6">
-          <div className="relative mb-4">
-            <input 
-              type="text" 
-              placeholder="ابحث في الأدعية والأذكار..." 
-              className="w-full py-2 px-4 pr-10 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700 focus:ring focus:ring-primary focus:ring-opacity-50 focus:border-primary dark:text-white"
-              value={filter}
-              onChange={(e) => setFilter(e.target.value)}
-            />
-            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-              <i className="fas fa-search text-gray-400"></i>
-            </div>
-          </div>
-          
-          <div className="flex flex-wrap gap-2 overflow-x-auto pb-2">
-            {categories.map((category) => (
-              <button
-                key={category.id}
-                className={`py-2 px-4 rounded-lg ${
-                  selectedCategory === category.id 
-                    ? 'bg-primary text-white' 
-                    : 'bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-white hover:bg-gray-300 dark:hover:bg-gray-600'
-                }`}
-                onClick={() => setSelectedCategory(category.id)}
-              >
-                {category.name}
-              </button>
-            ))}
-          </div>
-        </div>
-        
-        {isLoading ? (
-          <LoadingSpinner text="جار تحميل الأدعية..." />
-        ) : error ? (
-          <ErrorDisplay 
-            error={error instanceof Error ? error.message : 'حدث خطأ أثناء تحميل الأدعية'} 
-            onRetry={refetch} 
-          />
-        ) : filteredDuas && filteredDuas.length > 0 ? (
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md">
-            {filteredDuas.map((dua) => (
-              <div key={dua.id} className="p-4 border-b border-gray-200 dark:border-gray-700 last:border-0">
-                <div className="quran-page p-4 rounded-lg mb-3">
-                  <p className="arabic-text text-xl text-right leading-loose">{dua.text}</p>
-                  {dua.repeat && dua.repeat > 1 && (
-                    <div className="text-primary text-left mt-2">
-                      يكرر {dua.repeat} مرات
-                    </div>
-                  )}
-                </div>
-                
-                {dua.translation && (
-                  <div className="mb-3 text-gray-700 dark:text-gray-300">
-                    <h4 className="font-medium mb-1">المعنى:</h4>
-                    <p>{dua.translation}</p>
-                  </div>
-                )}
-                
-                {dua.benefit && (
-                  <div className="mb-3 text-green-700 dark:text-green-400">
-                    <h4 className="font-medium mb-1">الفضل:</h4>
-                    <p>{dua.benefit}</p>
-                  </div>
-                )}
-                
-                <div className="text-sm text-gray-600 dark:text-gray-400">
-                  المصدر: {dua.reference}
-                </div>
-                
-                <div className="flex justify-end mt-2">
-                  <button className="py-1 px-3 text-sm bg-primary text-white rounded-lg hover:bg-opacity-90">
-                    <i className="fas fa-volume-high mr-1"></i> استماع
-                  </button>
-                  <button className="py-1 px-3 text-sm bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-white rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 mr-2">
-                    <i className="fas fa-share mr-1"></i> مشاركة
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <div className="bg-white dark:bg-gray-800 p-8 rounded-lg shadow-md text-center">
-            <i className="fas fa-prayer-hands text-5xl text-gray-400 mb-3"></i>
-            <p className="text-gray-600 dark:text-gray-400">
-              {filter ? 'لا توجد نتائج تطابق البحث' : 'لا توجد أدعية متاحة حالياً في هذه الفئة'}
-            </p>
-          </div>
-        )}
-      </div>
-    </section>
-  );
-};
+    <MainLayout>
+      <TopBar />
+      <div className="pt-16 space-y-6">
+        <header className="text-right">
+          <p className="text-sm text-muted-foreground">مسبحة ذكية تفاعلية</p>
+          <h1 className="text-3xl font-bold">الأذكار والأدعية</h1>
+          <p className="mt-2 text-muted-foreground">
+            اضبط المسبحة لتعمل تلقائياً حسب الوقت أو الصوت، وتابع تقدمك مع توصيات الذكر المناسب لوقتك الحالي.
+          </p>
+        </header>
 
-export default Duas;
+        <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as 'audio' | 'manual')}>
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="audio">مسبحة بالصوت</TabsTrigger>
+            <TabsTrigger value="manual">مسبحة باللمس</TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="audio" className="space-y-4">
+            <Card>
+              <CardHeader>
+                <CardTitle>تحليل التكرار الصوتي</CardTitle>
+                <CardDescription>
+                  يعتمد على الذكاء الاصطناعي لرصد نهاية العبارة أو انقطاع الصوت والتأكد من دقة العدّ.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div className="rounded-xl border bg-muted/40 p-4 text-right">
+                    <div className="flex items-center justify-between text-sm text-muted-foreground">
+                      <span>الوضع الحالي</span>
+                      <Badge variant="secondary" className="bg-emerald-500/10 text-emerald-600">
+                        مستمع نشط
+                      </Badge>
+                    </div>
+                    <h3 className="mt-2 text-lg font-semibold">أذكار المساء</h3>
+                    <p className="text-sm text-muted-foreground">التعرف على الصوت مستمر، سيتم العد عند اكتمال العبارة.</p>
+                  </div>
+                  <div className="rounded-xl border bg-muted/40 p-4 text-right">
+                    <div className="flex items-center justify-between text-sm text-muted-foreground">
+                      <span>الحساسية</span>
+                      <Radio className="h-4 w-4" />
+                    </div>
+                    <p className="mt-2 text-sm text-muted-foreground">
+                      اضبط عتبة الكشف عن الصمت للتأكد من عدّ كل تكرار بدقة حتى مع اختلاف مخارج الحروف.
+                    </p>
+                    <div className="mt-3 flex items-center justify-end gap-2">
+                      <Button size="sm" variant="outline">حساسية منخفضة</Button>
+                      <Button size="sm" className="bg-primary/90 text-primary-foreground hover:bg-primary">تلقائي</Button>
+                      <Button size="sm" variant="outline">حساسية عالية</Button>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <MicVocal className="h-4 w-4" />
+                    <span>استمع للتلاوة واضغط إيقاف عند الانتهاء</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Button size="sm" className="bg-emerald-600 hover:bg-emerald-700">
+                      <Play className="mr-1 h-4 w-4" /> بدء الاستماع
+                    </Button>
+                    <Button size="sm" variant="outline">
+                      <Pause className="mr-1 h-4 w-4" /> إيقاف مؤقت
+                    </Button>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="manual" className="space-y-4">
+            <Card>
+              <CardHeader>
+                <CardTitle>مسبحة باللمس</CardTitle>
+                <CardDescription>
+                  يمكنك النقر على أي جزء من الشاشة أثناء التلاوة لزيادة العدّ، مع مؤشرات ضوئية تحفز على الاستمرار.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="grid gap-4 sm:grid-cols-2">
+                <div className="rounded-2xl border border-dashed bg-background p-6 text-center shadow-sm">
+                  <div className="text-5xl font-black text-primary">{33}</div>
+                  <p className="mt-2 text-sm text-muted-foreground">عدد التسبيحات الحالية</p>
+                  <Button className="mt-4 w-full" size="lg">زيادة باللمس</Button>
+                </div>
+                <div className="rounded-2xl border bg-muted/40 p-6 text-right">
+                  <p className="text-sm text-muted-foreground">انقر الشاشة بالكامل لزيادة العد أو استخدم العدّاد الدائري:</p>
+                  <div className="mt-4 flex items-center justify-end gap-3 text-sm">
+                    <Badge variant="secondary" className="bg-primary/10 text-primary">تفعيل النقر الشامل</Badge>
+                    <Switch defaultChecked />
+                  </div>
+                  <p className="mt-4 text-sm text-muted-foreground">
+                    يمكنك تخصيص صوت للتأكيد أو اهتزاز خفيف كل عشرة تسبيحات لمزيد من التركيز.
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
+
+        <section className="grid gap-4 md:grid-cols-2">
+          {DEFAULT_DUAS.map((dua) => (
+            <Card key={dua.title} className="border border-primary/20 bg-primary/5">
+              <CardHeader>
+                <CardTitle className="text-lg">{dua.title}</CardTitle>
+                <CardDescription>{dua.recommendedTime}</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm leading-relaxed text-muted-foreground">{dua.description}</p>
+              </CardContent>
+              <CardFooter className="flex items-center justify-between text-sm text-muted-foreground">
+                <div className="flex items-center gap-2">
+                  <Clock className="h-4 w-4" />
+                  <span>يتم تذكيرك تلقائيًا</span>
+                </div>
+                <Button variant="ghost" size="sm">عرض التفاصيل</Button>
+              </CardFooter>
+            </Card>
+          ))}
+        </section>
+
+        <Card className="border border-dashed border-primary/30">
+          <CardHeader>
+            <CardTitle>أضف دعاءً مخصصًا</CardTitle>
+            <CardDescription>
+              خصص وقتًا، تكرارًا، وتنبيهًا صوتيًا لتذكيرك بالدعاء الذي تريده قبل أو بعد الصلاة.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="grid gap-4 md:grid-cols-2">
+            <div className="space-y-3 text-right">
+              <label className="text-sm font-medium">نص الدعاء</label>
+              <Textarea
+                placeholder="اكتب دعاءك هنا ليتم تذكيرك به"
+                value={customDua}
+                onChange={(event) => setCustomDua(event.target.value)}
+                className="min-h-[120px]"
+              />
+            </div>
+            <div className="space-y-4 text-right">
+              <div className="space-y-2">
+                <label className="text-sm font-medium">وقت التذكير</label>
+                <Input
+                  value={selectedTime}
+                  onChange={(event) => setSelectedTime(event.target.value)}
+                  placeholder="مثال: قبل صلاة الفجر بعشر دقائق"
+                />
+              </div>
+              <div className="flex items-center justify-between rounded-lg border bg-muted/40 px-3 py-2">
+                <div className="text-sm text-muted-foreground">
+                  <p>تفعيل التذكير الصوتي</p>
+                  <p className="text-xs">إرسال تنبيه صوتي مع عرض الدعاء داخل التطبيق.</p>
+                </div>
+                <Switch checked={reminderEnabled} onCheckedChange={setReminderEnabled} />
+              </div>
+              <Button className="w-full" disabled={!customDua.trim()}>
+                <Plus className="ml-2 h-4 w-4" /> حفظ الدعاء
+              </Button>
+            </div>
+          </CardContent>
+          <CardFooter className="flex flex-wrap items-center justify-end gap-3 text-xs text-muted-foreground">
+            <div className="flex items-center gap-1">
+              <Sun className="h-4 w-4" />
+              <span>اقتراحات الصباح حسب موقعك</span>
+            </div>
+            <div className="flex items-center gap-1">
+              <Moon className="h-4 w-4" />
+              <span>تذكير بالأذكار المسائية عند غروب الشمس</span>
+            </div>
+            <div className="flex items-center gap-1">
+              <BellRing className="h-4 w-4" />
+              <span>تنبيهات مخصصة للمناسبات الخاصة</span>
+            </div>
+          </CardFooter>
+        </Card>
+      </div>
+    </MainLayout>
+  );
+}

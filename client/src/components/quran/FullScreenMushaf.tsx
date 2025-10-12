@@ -1,9 +1,9 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
-import KingFahdMushafPage from './KingFahdMushafPage';
-import { Button } from '@/components/ui/button';
-import { 
-  ChevronRight, 
-  ChevronLeft, 
+import React, { useState, useEffect, useRef, useCallback } from "react";
+import KingFahdMushafPage from "./KingFahdMushafPage";
+import { Button } from "@/components/ui/button";
+import {
+  ChevronRight,
+  ChevronLeft,
   BookOpen,
   Settings,
   BookmarkPlus,
@@ -12,15 +12,16 @@ import {
   Search,
   X,
   Info,
-  Bookmark
-} from 'lucide-react';
-import { cn } from '@/lib/utils';
-import { useSwipeable, SwipeableProps } from 'react-swipeable';
-import { useApp } from '@/context/AppContext';
-import { VersePopover } from './VersePopover';
-import { useIsMobile } from '@/hooks/use-mobile';
-import { QuranNavSidebar } from './QuranNavSidebar';
-import { TOTAL_PAGES } from '@/lib/constants';
+  Bookmark,
+} from "lucide-react";
+import { cn } from "@/lib/utils";
+import { useSwipeable, SwipeableProps } from "react-swipeable";
+import { useApp } from "@/context/AppContext";
+import { useProgress } from "@/context/ProgressContext";
+import { VersePopover } from "./VersePopover";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { QuranNavSidebar } from "./QuranNavSidebar";
+import { TOTAL_PAGES } from "@/lib/constants";
 
 interface FullScreenMushafProps {
   initialPage?: number;
@@ -31,24 +32,39 @@ interface FullScreenMushafProps {
  * مكون المصحف بوضع ملء الشاشة - يعرض المصحف الشريف بتنسيق مشابه لتطبيقات المصحف الخاصة.
  * يظهر أدوات التحكم فقط عند تفاعل المستخدم.
  */
-export function FullScreenMushaf({ initialPage = 1, className }: FullScreenMushafProps) {
+export function FullScreenMushaf({
+  initialPage = 1,
+  className,
+}: FullScreenMushafProps) {
   const [currentPage, setCurrentPage] = useState<number>(initialPage);
   const [showControls, setShowControls] = useState<boolean>(false);
   const [showSidebar, setShowSidebar] = useState<boolean>(false);
   const [showVersePopover, setShowVersePopover] = useState<boolean>(false);
-  const [versePosition, setVersePosition] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
-  const [selectedVerse, setSelectedVerse] = useState<{ surah: number; ayah: number } | null>(null);
-  
+  const [versePosition, setVersePosition] = useState<{ x: number; y: number }>({
+    x: 0,
+    y: 0,
+  });
+  const [selectedVerse, setSelectedVerse] = useState<{
+    surah: number;
+    ayah: number;
+  } | null>(null);
+
   const controlsTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const isMobile = useIsMobile();
-  const { 
-    settings, 
-    updateSettings, 
-    bookmarks, 
-    addBookmark, 
+  const {
+    settings,
+    updateSettings,
+    bookmarks,
+    addBookmark,
     lastRead,
-    updateLastRead 
+    updateLastRead,
   } = useApp();
+  const { startTracking, stopTracking, incrementVerses } = useProgress();
+
+  // تحديث الصفحة الحالية إذا تغيّر المدخل الأولي (مثلاً عند التنقل من خلال رابط خارجي)
+  useEffect(() => {
+    setCurrentPage(initialPage);
+  }, [initialPage]);
 
   // إعداد المؤقت لإخفاء أدوات التحكم بعد فترة من عدم التفاعل
   useEffect(() => {
@@ -56,14 +72,14 @@ export function FullScreenMushaf({ initialPage = 1, className }: FullScreenMusha
       if (controlsTimeoutRef.current) {
         clearTimeout(controlsTimeoutRef.current);
       }
-      
+
       controlsTimeoutRef.current = setTimeout(() => {
         if (!showSidebar && !showVersePopover) {
           setShowControls(false);
         }
       }, 3000); // إخفاء بعد 3 ثوانٍ
     }
-    
+
     return () => {
       if (controlsTimeoutRef.current) {
         clearTimeout(controlsTimeoutRef.current);
@@ -73,33 +89,41 @@ export function FullScreenMushaf({ initialPage = 1, className }: FullScreenMusha
 
   // التعامل مع التحميل الأولي
   useEffect(() => {
+    startTracking();
     // مراقبة مفاتيح الأسهم
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'ArrowRight') {
+      if (e.key === "ArrowRight") {
         handlePreviousPage();
-      } else if (e.key === 'ArrowLeft') {
+      } else if (e.key === "ArrowLeft") {
         handleNextPage();
-      } else if (e.key === 'Escape') {
+      } else if (e.key === "Escape") {
         setShowSidebar(false);
         setShowVersePopover(false);
       }
     };
 
-    window.addEventListener('keydown', handleKeyDown);
-    
+    window.addEventListener("keydown", handleKeyDown);
+
     // حفظ آخر قراءة عند التحميل الأولي
     if (settings.autoSaveLastRead) {
       updateLastRead({
         surahNumber: 1, // يجب تحديث هذه القيمة لاحقًا بناءً على رقم الصفحة
         ayahNumber: 1,
-        pageNumber: currentPage
+        pageNumber: currentPage,
       });
     }
-    
+
     return () => {
-      window.removeEventListener('keydown', handleKeyDown);
+      stopTracking();
+      window.removeEventListener("keydown", handleKeyDown);
     };
-  }, []);
+  }, [
+    startTracking,
+    stopTracking,
+    currentPage,
+    settings.autoSaveLastRead,
+    updateLastRead,
+  ]);
 
   // التعامل مع النقر على الصفحة
   const handlePageClick = useCallback(() => {
@@ -111,46 +135,50 @@ export function FullScreenMushaf({ initialPage = 1, className }: FullScreenMusha
     if (currentPage > 1) {
       setCurrentPage((prev) => {
         const newPage = prev - 1;
-        
+
         // حفظ آخر قراءة
         if (settings.autoSaveLastRead) {
           updateLastRead({
             surahNumber: 1, // يجب تحديث هذه القيمة لاحقًا
             ayahNumber: 1,
-            pageNumber: newPage
+            pageNumber: newPage,
           });
         }
-        
+
+        incrementVerses(15);
+
         return newPage;
       });
     }
-  }, [currentPage, settings.autoSaveLastRead, updateLastRead]);
+  }, [currentPage, settings.autoSaveLastRead, updateLastRead, incrementVerses]);
 
   const handleNextPage = useCallback(() => {
     if (currentPage < TOTAL_PAGES) {
       setCurrentPage((prev) => {
         const newPage = prev + 1;
-        
+
         // حفظ آخر قراءة
         if (settings.autoSaveLastRead) {
           updateLastRead({
             surahNumber: 1, // يجب تحديث هذه القيمة لاحقًا
             ayahNumber: 1,
-            pageNumber: newPage
+            pageNumber: newPage,
           });
         }
-        
+
+        incrementVerses(15);
+
         return newPage;
       });
     }
-  }, [currentPage, settings.autoSaveLastRead, updateLastRead]);
+  }, [currentPage, settings.autoSaveLastRead, updateLastRead, incrementVerses]);
 
   // إضافة الصفحة الحالية للإشارات المرجعية
   const handleAddBookmark = useCallback(() => {
     addBookmark({
       surahNumber: 1, // يجب تحديث هذه القيمة لاحقًا
       ayahNumber: 1,
-      pageNumber: currentPage
+      pageNumber: currentPage,
     });
   }, [currentPage, addBookmark]);
 
@@ -159,29 +187,32 @@ export function FullScreenMushaf({ initialPage = 1, className }: FullScreenMusha
     onSwipedRight: handlePreviousPage,
     onSwipedLeft: handleNextPage,
     // التالي استخدم كخيارات للمكتبة
-    trackMouse: true
+    trackMouse: true,
   } as SwipeableProps);
 
   // التعامل مع النقر على آية للعرض في نافذة منبثقة
-  const handleVerseClick = useCallback((e: React.MouseEvent) => {
-    const element = e.target as HTMLElement;
-    const verseElement = element.closest('[data-verse]');
-    
-    if (verseElement) {
-      const surah = parseInt(verseElement.getAttribute('data-surah') || '1');
-      const ayah = parseInt(verseElement.getAttribute('data-verse') || '1');
-      
-      setSelectedVerse({ surah, ayah });
-      setVersePosition({ 
-        x: e.clientX, 
-        y: e.clientY 
-      });
-      setShowVersePopover(true);
-      setShowControls(true);
-    } else {
-      handlePageClick();
-    }
-  }, [handlePageClick]);
+  const handleVerseClick = useCallback(
+    (e: React.MouseEvent) => {
+      const element = e.target as HTMLElement;
+      const verseElement = element.closest("[data-verse]");
+
+      if (verseElement) {
+        const surah = parseInt(verseElement.getAttribute("data-surah") || "1");
+        const ayah = parseInt(verseElement.getAttribute("data-verse") || "1");
+
+        setSelectedVerse({ surah, ayah });
+        setVersePosition({
+          x: e.clientX,
+          y: e.clientY,
+        });
+        setShowVersePopover(true);
+        setShowControls(true);
+      } else {
+        handlePageClick();
+      }
+    },
+    [handlePageClick],
+  );
 
   // التعامل مع تغيير الصفحة من شريط التنقل
   const handlePageChange = useCallback((page: number) => {
@@ -190,17 +221,39 @@ export function FullScreenMushaf({ initialPage = 1, className }: FullScreenMusha
   }, []);
 
   return (
-    <div 
+    <div
       className={cn(
-        "relative w-full min-h-screen bg-background mushaf-container flex flex-col items-center justify-center",
-        className
+        "relative flex min-h-screen w-full flex-col items-center justify-center bg-[#fdfaf1] text-foreground",
+        className,
       )}
       {...swipeHandlers}
     >
+      {/* الشريط العلوي الدائم الظهور */}
+      <header className="pointer-events-auto fixed top-0 left-0 right-0 z-40 flex items-center justify-between bg-gradient-to-b from-black/50 via-black/10 to-transparent px-4 py-2 text-xs text-white">
+        <button
+          onClick={() => window.history.back()}
+          className="flex items-center gap-2 rounded-full bg-black/30 px-3 py-1 transition hover:bg-black/50"
+        >
+          <Home className="h-4 w-4" />
+          <span className="hidden sm:inline">الرئيسية</span>
+        </button>
+        <div className="flex items-center gap-3">
+          <span className="rounded-full bg-black/30 px-3 py-1 text-[0.75rem] tracking-wide">
+            تجربة قراءة المصحف
+          </span>
+          <button
+            onClick={() => setShowControls((prev) => !prev)}
+            className="rounded-full bg-black/30 px-3 py-1 text-[0.75rem] transition hover:bg-black/50"
+          >
+            {showControls ? "إخفاء الأدوات" : "إظهار الأدوات"}
+          </button>
+        </div>
+      </header>
+
       {/* الصفحة الحالية من المصحف */}
-      <div onClick={handlePageClick}>
-        <KingFahdMushafPage 
-          pageNumber={currentPage} 
+      <div className="flex w-full justify-center pt-16 pb-10" onClick={handlePageClick}>
+        <KingFahdMushafPage
+          pageNumber={currentPage}
           onVerseSelect={(surahNumber, verseNumber, pageNumber) => {
             setSelectedVerse({ surah: surahNumber, ayah: verseNumber });
             const rect = document.body.getBoundingClientRect();
@@ -211,9 +264,9 @@ export function FullScreenMushaf({ initialPage = 1, className }: FullScreenMusha
           className="max-h-[calc(100vh-4rem)]"
         />
       </div>
-      
+
       {/* شريط التنقل الجانبي */}
-      <QuranNavSidebar 
+      <QuranNavSidebar
         isOpen={showSidebar}
         onClose={() => setShowSidebar(false)}
         currentPage={currentPage}
@@ -221,7 +274,7 @@ export function FullScreenMushaf({ initialPage = 1, className }: FullScreenMusha
         bookmarks={bookmarks}
         lastRead={lastRead}
       />
-      
+
       {/* نافذة تفسير الآية المنبثقة */}
       {showVersePopover && selectedVerse && (
         <VersePopover
@@ -231,23 +284,24 @@ export function FullScreenMushaf({ initialPage = 1, className }: FullScreenMusha
           onClose={() => setShowVersePopover(false)}
         />
       )}
-      
+
       {/* أزرار التحكم - تظهر فقط عند showControls=true */}
-      <div 
+      <div
         className={cn(
           "absolute inset-0 pointer-events-none transition-opacity duration-300",
-          showControls ? "opacity-100" : "opacity-0"
+          showControls ? "opacity-100" : "opacity-0",
         )}
       >
         {/* شريط علوي */}
-        <div className="absolute top-0 left-0 right-0 bg-gradient-to-b from-black/50 to-transparent h-16 pointer-events-auto">
-          <div className="container flex items-center justify-between h-full px-4">
-            <Button variant="ghost" size="icon" onClick={() => window.history.back()}>
-              <Home className="h-5 w-5 text-white" />
-            </Button>
+        <div className="pointer-events-auto absolute top-10 left-0 right-0 h-16 bg-gradient-to-b from-black/60 via-black/20 to-transparent">
+          <div className="container flex h-full items-center justify-end gap-2 px-4">
             
             <div className="flex items-center gap-2">
-              <Button variant="ghost" size="icon" onClick={() => setShowSidebar(true)}>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setShowSidebar(true)}
+              >
                 <BookOpen className="h-5 w-5 text-white" />
               </Button>
               <Button variant="ghost" size="icon">
@@ -259,9 +313,9 @@ export function FullScreenMushaf({ initialPage = 1, className }: FullScreenMusha
             </div>
           </div>
         </div>
-        
+
         {/* أزرار التنقل بين الصفحات */}
-        <div className="absolute top-1/2 transform -translate-y-1/2 w-full flex justify-between px-4 pointer-events-auto">
+        <div className="pointer-events-auto absolute top-1/2 flex w-full -translate-y-1/2 justify-between px-4">
           <Button
             variant="ghost"
             size="icon"
@@ -271,7 +325,7 @@ export function FullScreenMushaf({ initialPage = 1, className }: FullScreenMusha
           >
             <ChevronRight className="h-8 w-8 text-white" />
           </Button>
-          
+
           <Button
             variant="ghost"
             size="icon"
@@ -282,15 +336,17 @@ export function FullScreenMushaf({ initialPage = 1, className }: FullScreenMusha
             <ChevronLeft className="h-8 w-8 text-white" />
           </Button>
         </div>
-        
+
         {/* شريط سفلي */}
-        <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/50 to-transparent h-16 pointer-events-auto">
-          <div className="container flex items-center justify-between h-full px-4">
+        <div className="pointer-events-auto absolute bottom-0 left-0 right-0 h-20 bg-gradient-to-t from-black/60 via-black/20 to-transparent">
+          <div className="container flex h-full items-center justify-between px-4">
             <div className="text-white">
               <span className="font-medium">صفحة {currentPage}</span>
-              <span className="text-sm text-white/70 ml-2">من {TOTAL_PAGES}</span>
+              <span className="text-sm text-white/70 ml-2">
+                من {TOTAL_PAGES}
+              </span>
             </div>
-            
+
             <div className="flex items-center gap-2">
               <Button variant="ghost" size="icon" onClick={handleAddBookmark}>
                 <BookmarkPlus className="h-5 w-5 text-white" />
